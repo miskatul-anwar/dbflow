@@ -5,6 +5,7 @@
  *   bun run bench            # default scales
  *   bun run bench --scale 5 --json
  */
+import '../src/engine/nodeInit';
 import { retail, university } from '../src/eval/datasets';
 import { evaluate } from '../src/eval/harness';
 

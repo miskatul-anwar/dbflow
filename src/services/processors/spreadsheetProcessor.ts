@@ -24,6 +24,8 @@
  *   - Entirely empty columns are dropped.
  */
 
+import { spreadsheetToCsvRust } from '../../engine';
+
 export const SPREADSHEET_EXTENSIONS = [
   'xlsx', 'xlsm', 'xlsb', 'xltx', 'xltm', 'xlam',
   'xls', 'xlt', 'xla', 'xlw',
@@ -115,7 +117,33 @@ export interface SpreadsheetConversion {
   notes: string[];
 }
 
+/**
+ * Workbook to CSV. The Rust engine (calamine, crates/dbflow-core/src/spreadsheet.rs) reads every
+ * modern format; SheetJS remains only as a fallback for the legacy formats calamine cannot read
+ * (.xlsb with short cell records, BIFF2-5 .xls, SpreadsheetML 2003 .xml and flat .fods).
+ */
 export async function spreadsheetToCsvFiles(file: File): Promise<SpreadsheetConversion> {
+  if (file.size > MAX_BYTES) {
+    throw new Error(`${file.name}: file exceeds the 100MB limit.`);
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  // Binary .xlsb sheets often use the compact "short cell" records the Rust reader does not decode.
+  if (extOf(file.name) === 'xlsb') return legacySpreadsheetToCsvFiles(file);
+  try {
+    const r = spreadsheetToCsvRust(file.name, bytes);
+    return {
+      files: r.files.map(f => new File([f.text], f.name, { type: 'text/csv' })),
+      notes: r.notes,
+    };
+  } catch (e) {
+    const msg = (e as Error).message ?? String(e);
+    // Definitive answers from the Rust reader are final; only unreadable formats fall back.
+    if (!/could not read the spreadsheet|XML spreadsheets are converted/.test(msg)) throw e;
+  }
+  return legacySpreadsheetToCsvFiles(file);
+}
+
+async function legacySpreadsheetToCsvFiles(file: File): Promise<SpreadsheetConversion> {
   if (file.size > MAX_BYTES) {
     throw new Error(`${file.name}: file exceeds the 100MB limit.`);
   }

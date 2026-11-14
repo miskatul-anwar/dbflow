@@ -23,7 +23,21 @@ jobs:
         with:
           node-version: 24
 
+      # The engine is Rust; the frontend tests and the web build use its WebAssembly build.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.130
+
       - run: bun install --frozen-lockfile
+
+      - name: Build the Rust engine (WebAssembly)
+        run: bun run build:engine
 
       - name: Typecheck
         run: bun run typecheck
@@ -52,8 +66,6 @@ jobs:
           components: clippy, rustfmt
 
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
 
       - name: Install Tauri system dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -62,14 +74,11 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Format check
-        working-directory: src-tauri
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        working-directory: src-tauri
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Tests
-        working-directory: src-tauri
-        run: cargo test
+      - name: Tests (engine and desktop shell)
+        run: cargo test --workspace
 

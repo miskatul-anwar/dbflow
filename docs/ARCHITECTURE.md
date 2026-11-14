@@ -5,41 +5,76 @@ important algorithms live.
 
 ## Overview
 
-DBFlow is a [Tauri 2](https://tauri.app) desktop app. All analysis runs in
-TypeScript inside the webview; the Rust side only hosts the window. One
-engine therefore serves the installed app and `bun run dev` in a browser, and
-every result is the same regardless of file count or runtime.
+DBFlow is a [Tauri 2](https://tauri.app) desktop app with a **Rust engine** and a **React UI**.
+Every parser and algorithm lives in one Rust crate, `crates/dbflow-core`. The desktop app links
+it natively and runs analyses on a background thread; the same crate is compiled to WebAssembly
+(`crates/dbflow-wasm`) for browser development, Web Workers, the CLI and the test suite. One
+engine therefore serves every runtime, and results are the same everywhere.
 
 ```
-┌──────────────────────────── WebView (frontend) ────────────────────────────┐
+┌──────────────────────────── WebView (UI only) ─────────────────────────────┐
 │  App.tsx (Workspace)                                                       │
 │  ├── OperationPalette   add pipeline nodes (click or drag)                 │
 │  ├── FlowCanvas         React Flow canvas rendering the pipeline           │
 │  └── OutputPage         ERD, SQL, FDs, keys, normal forms, report          │
 │                                                                            │
 │  Hooks:     useWorkflowGraph (nodes, edges, undo/redo)                     │
-│             useNormalization (run lifecycle)                               │
-│                                                                            │
-│  Engine (src/services):                                                    │
-│    api/databaseService      orchestration: analyzeRows, processFile(s)     │
-│    processors/fdMiner       partition-refinement FD mining                 │
-│    processors/keySelection  primary-key choice, surrogate keys             │
-│    processors/normalizationEngine   keys, closure, 2NF/3NF/BCNF, chase     │
-│    processors/instanceVerification  lossless check on the data             │
-│    processors/foreignKeyDetector    cross-file FKs from inclusion deps     │
-│    processors/schemaGraph   merge per-file results, ERD, DDL input         │
-│    nlp/semanticProfiler     column classification                          │
-└──────────────────────────────────┬─────────────────────────────────────────┘
-                                   │ window only
-┌──────────────────────────────────▼─────────────────────────────────────────┐
-│ Rust shell (src-tauri): Tauri window, opener plugin, CSP                   │
+│             useNormalization (run lifecycle) → engineClient                │
+│  src/engine: WebAssembly loader + JSON bridge (`engine('nf.findKeys', …)`) │
+│  src/services: thin TypeScript APIs over the engine; NL workflow builder;  │
+│                on-device naming model (Web Worker)                         │
+└───────────────┬───────────────────────────────────────┬────────────────────┘
+                │ Tauri commands (desktop)               │ WebAssembly (browser,
+                │ engine_upload / prepare / finish /     │ worker, tests, CLI)
+                │ cancel / call                          │
+┌───────────────▼───────────────────────────────────────▼────────────────────┐
+│ Rust engine — crates/dbflow-core                                           │
+│   csv · encoding · spreadsheet (calamine)   ingest                         │
+│   data_utils · data_processor               cleaning, atomicity, profiling │
+│   relations                                 column classifier, cross-file FKs│
+│   fd_miner                                  partition-refinement FD mining │
+│   keys                                      primary keys, 1NF child tables,│
+│                                             re-join check on the data      │
+│   normalization                             closures, keys, cover, 2NF/3NF/│
+│                                             BCNF, chase, preservation      │
+│   naming                                    relation ids and names         │
+│   schema · ddl · legacy · reports · erd_dot outputs                        │
+│   analysis · pipeline                       per-table analysis, whole runs │
+│   api                                       JSON dispatcher for every call │
+│   js                                        JavaScript-compatible number,  │
+│                                             date and collation semantics   │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
+### Runs in two phases
+
+The on-device naming model runs in the webview, between the engine's two phases:
+
+1. `prepare` reads every file (spreadsheets become one table per sheet), runs the selected
+   operations for each table and returns the naming questions (column lists only).
+2. The UI asks the naming model, then `finish` applies user and model names, detects
+   cross-file foreign keys, assembles the schema and builds every output.
+
+In the desktop app the files are sent to Rust once as raw bytes (`engine_upload`), progress
+streams back over a Tauri channel and `engine_cancel` sets a flag the engine checks between
+steps and inside FD mining. In the browser the WebAssembly build runs in a Web Worker and
+cancelling terminates the worker.
+
+### Compatibility layer
+
+The engine replaced a TypeScript implementation. `js.rs` reproduces the JavaScript behaviour
+the outputs depended on (`Number()` coercion, `toFixed`, `toLocaleString`, `localeCompare`,
+`Date.parse`), and the TypeScript modules in `src/services` keep their original APIs as thin
+wrappers, so the existing test suite (golden files included) runs unchanged against Rust.
+
+Spreadsheets are read by `calamine` in Rust. SheetJS remains only as a fallback for formats
+calamine does not decode (`.xlsb` short-cell records, BIFF2-5 `.xls`, SpreadsheetML 2003 `.xml`
+and flat `.fods`).
+
 ## The processing pipeline
 
-The canvas selects which operations run. `DatabaseService.analyzeRows`
-executes them for one table; `processFile` and `processFiles` call it for one
+The canvas selects which operations run. `analysis::analyze_rows` (Rust)
+executes them for one table; `pipeline::prepare` / `finish` call it for one
 file or for every file.
 
 1. **Ingest** — `spreadsheetProcessor` first turns each visible sheet of an Excel or OpenDocument workbook into an in-memory CSV (so a workbook is a multi-file run with one table per sheet); then `CSVProcessor` parses each file (delimiter sniffing, quoted
@@ -128,10 +163,11 @@ in `useWorkflowGraph`.
 | Algorithms (FD mining, keys, normal forms, chase, FK detection, SQL types) | Vitest | `src/**/*.test.ts`, `src/tests/` |
 | End-to-end pipelines (single and multi-file) | Vitest | `src/tests/pipelineSoundness.test.ts`, `e2ePlatformIntegration.test.ts` |
 | Types | `tsc` strict | CI |
-| Rust shell | `cargo check` / `clippy` | CI |
+| Rust engine and shell | `cargo test --workspace`, `clippy`, `fmt` | `crates/*/src`, `src-tauri/src` |
 
-CI (`.github/workflows/ci.yml`) runs typecheck → tests → build for the
-frontend, and fmt → clippy → test for Rust on Linux, Windows and macOS.
+CI (`.github/workflows/ci.yml`) builds the WebAssembly engine, then runs typecheck → lint →
+tests → build for the frontend, and fmt → clippy → test for the Rust workspace on Linux,
+Windows and macOS. The Vitest suite exercises the Rust engine through its WebAssembly build.
 
 ## Release engineering
 

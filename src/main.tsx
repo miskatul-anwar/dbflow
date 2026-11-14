@@ -9,12 +9,22 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/theme.css';
 import { initTheme } from './theme/theme';
+import { initEngine } from './engine';
 
 // Set data-theme before the first render so there is no flash of the wrong theme.
 initTheme();
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+const render = () =>
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+
+// The Rust engine (WebAssembly build) serves the small synchronous calls the UI makes (diagram
+// builders, relation signatures); full runs use the native engine in the desktop app.
+initEngine().then(render, err => {
+  console.error('Failed to load the DBFlow engine', err);
+  render();
+});

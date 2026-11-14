@@ -1,11 +1,11 @@
 /// <reference lib="webworker" />
 /**
- * Runs the normalization engine off the UI thread. The page sends the files
- * and selected operations; progress and the final result come back as
- * messages. Cancelling is done by terminating this worker from the page.
+ * Runs the Rust engine (WebAssembly build) off the UI thread. The page sends the files and the
+ * selected operations; progress and the final result come back as messages. Cancelling is done by
+ * terminating this worker from the page. The desktop app uses the native engine instead.
  */
-import DatabaseService from '../services/api/databaseService';
-import type { NamerFn } from '../services/naming/applyNames';
+import { initEngine, enginePrepare, engineFinish } from '../engine';
+import { prepareEngineFiles, engineOptions } from '../services/api/databaseService';
 
 export type EngineRequest = {
   files: File[];
@@ -32,37 +32,42 @@ export type EngineMessage =
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
 let nextNameId = 1;
-const waiting = new Map<number, { resolve: (n: Record<string, string>) => void; reject: (e: Error) => void; onProgress?: (d: number, t: number) => void }>();
+const waiting = new Map<number, { resolve: (n: Record<string, string>) => void; reject: (e: Error) => void }>();
 
-/** Asks the page to name relations; resolves with raw model text by key. */
-const askPageToName: NamerFn = (items, onProgress) =>
-  new Promise((resolve, reject) => {
+function askPage(items: Array<{ key: string; columns: string[] }>): Promise<Record<string, string>> {
+  return new Promise((resolve, reject) => {
     const id = nextNameId++;
-    waiting.set(id, { resolve, reject, onProgress });
+    waiting.set(id, { resolve, reject });
     ctx.postMessage({ type: 'name-request', id, items } satisfies EngineMessage);
   });
+}
 
 ctx.onmessage = async (event: MessageEvent<EngineRequest | NameReply>) => {
   const data = event.data;
   if ('type' in data) {
     const w = waiting.get(data.id);
-    if (!w) return;
-    if (data.type === 'names-progress') w.onProgress?.(data.done, data.total);
-    else {
-      waiting.delete(data.id);
-      if (data.type === 'names') w.resolve(data.names);
-      else w.reject(new Error(data.message));
-    }
+    if (!w || data.type === 'names-progress') return;
+    waiting.delete(data.id);
+    if (data.type === 'names') w.resolve(data.names);
+    else w.reject(new Error(data.message));
     return;
   }
   const { files, operations, options, canName } = data;
+  const progress = (p: unknown) => ctx.postMessage({ type: 'progress', progress: p } satisfies EngineMessage);
   try {
-    const result = await DatabaseService.processFiles(
-      files,
-      operations,
-      progress => ctx.postMessage({ type: 'progress', progress } satisfies EngineMessage),
-      canName ? { ...options, namer: askPageToName } : options,
-    );
+    await initEngine();
+    const prepared = await prepareEngineFiles(files);
+    const run = enginePrepare(prepared.files, operations, engineOptions(options, prepared.notes), progress);
+    let answers: Record<string, string> | null = null;
+    let namerError: string | null = null;
+    if (canName && run.naming.length > 0) {
+      try {
+        answers = await askPage(run.naming);
+      } catch (e) {
+        namerError = (e as Error)?.message ?? String(e);
+      }
+    }
+    const result = engineFinish(run.session, answers, namerError, progress);
     try {
       ctx.postMessage({ type: 'done', result } satisfies EngineMessage);
     } catch {

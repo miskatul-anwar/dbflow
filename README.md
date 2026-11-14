@@ -38,7 +38,7 @@ Drop in one or many CSV or spreadsheet files (Excel `.xlsx` `.xlsm` `.xlsb` `.xl
 | | |
 |---|---|
 | 🔒 **Private by design** | All processing happens locally; no network calls are made. The natural-language box runs a small model that ships inside the installer. |
-| ⚡ **One engine** | The same TypeScript analysis runs for one file or many, in the desktop app and in the browser. |
+| 🦀 **Rust engine** | Parsing, dependency mining, normalization and every output come from one Rust engine: native in the desktop app, WebAssembly in the browser, the same code for one file or many. |
 | 🧮 **Sound algorithms** | Functional-dependency mining, closure-based key discovery, 3NF synthesis. Only dependencies that hold on every row shape the schema. |
 | 🖱️ **Visual pipelines** | Build workflows on an interactive React Flow canvas — click or drag the operations you want. |
 | 📦 **Portable outputs** | Mermaid, `.sql`, `.md` and workflow `.json` files you can commit to your repo. |
@@ -61,13 +61,18 @@ Use the [**download page**](https://miskatul-anwar.github.io/dbflow/), which pic
 
 ### Build from source
 
-Prerequisites: **[Bun](https://bun.sh)**, **Rust ≥ 1.77**, and the [Tauri v2 system dependencies](https://tauri.app/start/prerequisites/).
+Prerequisites: **[Bun](https://bun.sh)**, **Rust ≥ 1.80** with the WebAssembly target, **wasm-bindgen-cli** (same version as the `wasm-bindgen` crate), and the [Tauri v2 system dependencies](https://tauri.app/start/prerequisites/).
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.130
+```
 
 ```bash
 git clone https://github.com/miskatul-anwar/dbflow.git
 cd dbflow
 bun install
-bun run tauri dev    # development
+bun run tauri dev    # development (builds the engine first)
 bun run tauri build  # production bundle
 ```
 
@@ -110,15 +115,16 @@ Options: `--out`, `--dialect` (`postgresql`, `mysql`, `sqlite`, `ansi`), `--ops 
 ## Architecture at a glance
 
 ```
-┌──────────────────────────── WebView (frontend) ────────────────────────────┐
-│  React 18 + TypeScript + Tailwind + React Flow                             │
+┌──────────────────────────── WebView (UI only) ─────────────────────────────┐
+│  React 19 + TypeScript + Tailwind + React Flow                             │
 │  ├─ Workflow canvas (nodes = pipeline operations)                          │
-│  └─ Engine: CSV ingest · FD mining · keys · 2NF/3NF/BCNF · lossless and    │
-│     preservation checks · foreign keys · ERD · SQL · report                │
+│  └─ Output pages (diagrams, SQL, reports), on-device naming model          │
 └──────────────────────────────────┬─────────────────────────────────────────┘
-                                   │ window only
+                                   │ Tauri commands (desktop) / WebAssembly (browser)
 ┌──────────────────────────────────▼─────────────────────────────────────────┐
-│  Rust shell (Tauri 2): native window, CSP                                  │
+│  Rust engine (crates/dbflow-core): CSV & spreadsheet parsing · cleaning ·  │
+│  FD mining · keys · 1NF/2NF/3NF/BCNF · chase and preservation checks ·     │
+│  foreign keys · schema · ERD · SQL · reports                               │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -131,10 +137,14 @@ dbflow/
 ├── src/                  # React frontend
 │   ├── components/       # UI components (canvas nodes, panels, output views)
 │   ├── hooks/            # Reusable state logic (workflow graph, execution)
-│   ├── services/         # Engine services (FD mining, NLP profiler)
+│   ├── engine/           # Bridge to the Rust engine (WebAssembly loader, JSON calls)
+│   ├── services/         # Thin TypeScript APIs over the engine, NL workflow builder
 │   ├── config/           # Operation registry
 │   └── utils/            # Pure helpers (validation, edge rules, result cache)
-├── src-tauri/            # Rust shell (window, CSP)
+├── crates/
+│   ├── dbflow-core/      # The Rust engine: every parser and algorithm
+│   └── dbflow-wasm/      # WebAssembly bindings of the engine
+├── src-tauri/            # Desktop shell: window, CSP, native engine commands
 ├── docs/                 # Architecture & release docs
 └── .github/              # CI, release automation, issue/PR templates
 ```

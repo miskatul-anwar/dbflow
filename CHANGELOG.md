@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-11-14
+
+### Changed — the engine is now Rust
+- **Every parser and algorithm moved from TypeScript to Rust** (`crates/dbflow-core`): CSV parsing (delimiter sniffing, quotes, encodings), spreadsheet reading (calamine), cleaning, atomicity and type profiling, the column classifier, functional-dependency mining, key selection, closures and canonical cover, 1NF/2NF/3NF/BCNF, the chase, dependency preservation and the re-join check, cross-file foreign keys, schema assembly, the Mermaid/Chen/Barker/UML diagram builders, SQL DDL in every dialect, normalized-data export and all reports. React keeps only the UI.
+- **Native in the desktop app.** Runs execute on a background thread of the app process through Tauri commands (`engine_upload`, `engine_prepare`, `engine_finish`, `engine_cancel`), with progress streamed over a channel and cancellation by flag. Per-column and per-relation work runs on all CPU cores.
+- **WebAssembly everywhere else.** The same crate is compiled to WebAssembly (`crates/dbflow-wasm`, built by `bun run build:engine`) for browser development, the Web Worker fallback, the CLI and the test suite, so every runtime uses one implementation.
+- **Faster.** On a 150 000-row, 10-column file with all 19 operations, a full run takes 2.8 s natively and 4.4 s as WebAssembly, against 6.5 s for the TypeScript engine of 5.0.0. Results are the same: the 671 existing tests, golden snapshots included, pass unchanged against the Rust engine, and the generated files match 5.0.0 except for time stamps and JSON key order.
+- The TypeScript modules under `src/services` keep their APIs as thin wrappers over the engine (`engine('nf.findKeys', …)`); a JSON dispatcher (`api.rs`) exposes every engine function to both WebAssembly and Tauri (`engine_call`).
+- Spreadsheets are read by the Rust engine. SheetJS remains only as a fallback for formats it cannot decode (`.xlsb` short-cell records, BIFF2-5 `.xls`, SpreadsheetML 2003 `.xml`, flat `.fods`).
+- The process log of a single-file run now covers that run only (it used to accumulate across runs), and the performance report lists the Rust engine among the optimizations.
+
+### Build
+- New prerequisites for building from source: the `wasm32-unknown-unknown` Rust target and `wasm-bindgen-cli` 0.2.130. `bun run dev`, `bun run build` and `bun run test` build the engine first; `bun run test:rust` runs the Rust tests.
+- The Rust code is a Cargo workspace at the repository root (`crates/dbflow-core`, `crates/dbflow-wasm`, `src-tauri`); CI runs `cargo fmt`, `clippy` and `cargo test` for the whole workspace and builds the WebAssembly engine before the frontend checks.
+- Minimum Rust version is 1.80.
+
 ## [5.0.0] - 2026-11-14
 
 ### Changed

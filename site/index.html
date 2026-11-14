@@ -92,6 +92,7 @@
       <dl class="terms">
         <div><dt>Request box</dt><dd>Type a goal, such as “normalize to 3NF and generate SQL” or “run all steps”. The preview lists the steps before anything runs.</dd></div>
         <div><dt>Pipeline</dt><dd>Nineteen steps from loading to the report, on a canvas you can edit. Each workspace keeps its own files, pipeline and results.</dd></div>
+        <div><dt>Engine</dt><dd>Parsing, dependency mining, normalization and every generated file come from one engine written in Rust. It runs natively in the desktop app, so large files are analyzed at full speed without freezing the window.</dd></div>
         <div><dt>Checks</dt><dd>Every decomposition is tested for lossless join and dependency preservation, on the data as well as on the dependencies.</dd></div>
         <div><dt>Output</dt><dd>ER diagram in Chen, Crow’s foot, Barker or UML notation. SQL DDL for PostgreSQL, MySQL, SQLite or ANSI. Normalized data and a PDF report.</dd></div>
         <div><dt>Input</dt><dd>CSV, XLSX, XLS and ODS. Each sheet of a workbook becomes a table, and several files are linked by detected foreign keys.</dd></div>

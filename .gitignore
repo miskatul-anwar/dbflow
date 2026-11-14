@@ -41,3 +41,4 @@ public/ort/
 # Relation-naming model: fetched by scripts/prepare-nl-assets.mjs (too large to commit)
 public/models/HuggingFaceTB/
 *.part
+src/engine/pkg/

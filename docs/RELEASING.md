@@ -11,13 +11,14 @@ We follow [Semantic Versioning](https://semver.org):
 - **MINOR** — new features (new operations, new output formats…)
 - **PATCH** — bug fixes and docs
 
-Three files carry the version and must stay in sync:
+Four files carry the version and must stay in sync:
 
 | File | Field |
 |---|---|
 | `package.json` | `version` |
 | `src-tauri/tauri.conf.json` | `version` |
 | `src-tauri/Cargo.toml` | `version` |
+| `Cargo.toml` (workspace) | `workspace.package.version` (engine crates) |
 
 ## Release checklist
 
@@ -25,7 +26,7 @@ Three files carry the version and must stay in sync:
    ```bash
    bun run typecheck
    bun run test --run
-   cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
+   cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings
    bun run build
    ```
 2. **Update `CHANGELOG.md`** — move the `Unreleased` section into a new

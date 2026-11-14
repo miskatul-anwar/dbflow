@@ -1,0 +1,19 @@
+[package]
+name = "dbflow-wasm"
+description = "WebAssembly bindings of the DBFlow engine"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dbflow-core = { path = "../dbflow-core" }
+wasm-bindgen = "=0.2.130"
+js-sys = "0.3"
+serde_json = { version = "1", features = ["preserve_order"] }

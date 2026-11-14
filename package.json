@@ -1,6 +1,6 @@
 {
   "name": "dbflow",
-  "description": "Turn raw CSV files into normalized database schemas \u2014 ERDs, SQL DDL and normalization reports. Local-first desktop app built with Tauri + React.",
+  "description": "Turn raw CSV files into normalized database schemas \u2014 ERDs, SQL DDL and normalization reports. Local-first desktop app: a Rust engine (native in Tauri, WebAssembly in the browser) with a React UI.",
   "keywords": [
     "erd",
     "entity-relationship-diagram",
@@ -11,11 +11,13 @@
     "sql-generator",
     "mermaid",
     "tauri",
-    "react"
+    "react",
+    "rust",
+    "webassembly"
   ],
   "license": "MIT",
   "private": true,
-  "version": "5.0.0",
+  "version": "6.0.0",
   "type": "module",
   "repository": {
     "type": "git",
@@ -30,9 +32,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "predev": "node scripts/prepare-nl-assets.mjs",
+    "build:engine": "node scripts/build-engine.mjs",
+    "predev": "node scripts/build-engine.mjs && node scripts/prepare-nl-assets.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/prepare-nl-assets.mjs",
+    "prebuild": "node scripts/build-engine.mjs && node scripts/prepare-nl-assets.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
@@ -40,12 +43,14 @@
     "cli": "tsx scripts/cli.ts",
     "bench": "tsx scripts/bench.ts",
     "bench:nl": "tsx scripts/bench-nl.ts",
-    "lint": "eslint . --max-warnings 383",
+    "lint": "eslint . --max-warnings 175",
+    "pretest": "node scripts/build-engine.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "fmt:rust": "cargo fmt --all --manifest-path src-tauri/Cargo.toml",
+    "fmt:rust": "cargo fmt --all",
+    "test:rust": "cargo test --workspace",
     "audit:a11y": "node scripts/a11y-audit.cjs",
-    "quality": "bun run typecheck && bun run lint && vitest run && bun audit --prod --audit-level=high",
+    "quality": "bun run build:engine && bun run typecheck && bun run lint && vitest run && cargo test --workspace && bun audit --prod --audit-level=high",
     "audit:ui": "node scripts/ui-audit.cjs"
   },
   "dependencies": {
@@ -54,6 +59,7 @@
     "@huggingface/transformers": "^4.3.2",
     "@radix-ui/react-slot": "^1.5.0",
     "@tailwindcss/vite": "^4.3.5",
+    "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-notification": "^2.8.1",
     "@xyflow/react": "^12.12.1",
     "class-variance-authority": "^0.7.1",

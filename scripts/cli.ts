@@ -13,6 +13,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import '../src/engine/nodeInit';
 import { DatabaseService, type SQLDialect } from '../src/services/api/databaseService';
 import { ALL_OPERATION_NAMES, canonicalOperationName } from '../src/config/operations';
 

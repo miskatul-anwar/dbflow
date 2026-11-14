@@ -37,8 +37,10 @@ By participating you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md)
 git clone https://github.com/<your-username>/dbflow.git
 cd dbflow
 
-# 2. Install JS dependencies
+# 2. Install JS dependencies and the Rust → WebAssembly tooling
 bun install
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.130
 
 # 3. Run the app in dev mode (hot reload for both UI and Rust)
 bun run tauri dev
@@ -46,7 +48,7 @@ bun run tauri dev
 # 4. Verify everything passes before you start
 bun run typecheck   # TypeScript strict check
 bun run test        # Vitest unit tests
-cargo test          # Rust unit tests (run inside src-tauri/)
+cargo test --workspace   # Rust engine and desktop shell tests
 ```
 
 ## Development workflow
@@ -66,7 +68,7 @@ cargo test          # Rust unit tests (run inside src-tauri/)
 
 ```bash
 bun run typecheck && bun run test --run   # frontend
-cd src-tauri && cargo test && cargo clippy   # backend
+cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings   # engine
 ```
 
 CI runs the same checks on every push/PR — matching them locally avoids surprises.
@@ -80,24 +82,25 @@ src/
 │   ├── flow/         # React Flow node/edge components
 │   └── output/       # Result-page sections
 ├── hooks/            # Reusable stateful logic (useWorkflowGraph, useNormalization…)
+├── engine/           # WebAssembly loader and JSON bridge to the Rust engine
 ├── services/
-│   ├── processors/   # FD mining, normalization engine
-│   ├── nlp/          # Semantic column profiler
+│   ├── processors/   # TypeScript APIs over the engine (CSV, FD mining, normalization…)
+│   ├── nlp/          # Natural-language workflow builder (embedding model)
 │   └── utils/        # Logger, file helpers
 ├── config/           # Operation registry (single source of truth for pipeline ops)
 ├── types/            # Shared TypeScript types
 └── utils/            # Pure functions (validation, JSON extraction…)
-src-tauri/src/
-├── engine/           # CSV parsing, type inference, FK detection, ERD/SQL/report generators
-├── ner.rs            # Semantic classification
-└── db.rs             # SQLite history
+crates/dbflow-core/src/   # The engine: every parser and algorithm (csv, fd_miner, normalization,
+                          # keys, relations, schema, legacy/reports generators, pipeline, api)
+crates/dbflow-wasm/src/   # WebAssembly bindings (built by `bun run build:engine`)
+src-tauri/src/lib.rs      # Desktop shell and the native engine commands
 ```
 
 **Rules of thumb:**
 
 - New pipeline operations must be registered in `src/config/operations.ts` (name, phase, dependencies).
 - Keep components presentational; put stateful logic into hooks.
-- Pure algorithms (FD mining, closures, profilers) should have zero DOM/React dependencies so they stay unit-testable.
+- Parsing and computation belong in the Rust engine (`crates/dbflow-core`); expose new functions through `api.rs` and call them with `engine('…')` from TypeScript. Keep TypeScript to UI and orchestration.
 - Rust commands return `Result<T, String>` with descriptive messages.
 
 ## Coding standards
@@ -116,8 +119,7 @@ We use [Vitest](https://vitest.dev) for the frontend and built-in `#[cfg(test)]`
 bun run test              # watch mode
 bun run test --run     # single run (CI mode)
 
-cd src-tauri
-cargo test                # Rust tests
+cargo test --workspace    # Rust engine and shell tests
 ```
 
 When fixing a bug, add a regression test that fails without your fix. When adding an algorithm (e.g., FD mining heuristics), cover edge cases: empty input, single row, duplicate rows, unicode values.

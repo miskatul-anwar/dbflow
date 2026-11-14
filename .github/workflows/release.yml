@@ -61,11 +61,14 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin,wasm32-unknown-unknown' || 'wasm32-unknown-unknown' }}
 
       - uses: Swatinem/rust-cache@v2
+
+      # The web build embeds the WebAssembly build of the engine (scripts/build-engine.mjs).
+      - uses: taiki-e/install-action@v2
         with:
-          workspaces: src-tauri
+          tool: wasm-bindgen@0.2.130
 
       - name: Install Tauri system dependencies (Linux)
         if: matrix.platform == 'ubuntu-22.04'
