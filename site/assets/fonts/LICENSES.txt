@@ -1,4 +1,0 @@
-Inter (latin 400 and 600), via @fontsource/inter
-Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
-Licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org/).
-The font files are redistributed unmodified.

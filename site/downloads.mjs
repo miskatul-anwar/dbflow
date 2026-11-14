@@ -2,9 +2,9 @@ export const RELEASES_URL = "https://github.com/miskatul-anwar/dbflow/releases";
 export const RELEASE_API_URL =
   "https://api.github.com/repos/miskatul-anwar/dbflow/releases/latest";
 export const SYSTEMS = [
-  { id: "windows", name: "Windows", symbol: "▦" },
-  { id: "macos", name: "macOS", symbol: "⌘" },
-  { id: "linux", name: "Linux", symbol: "⌁" },
+  { id: "windows", name: "Windows" },
+  { id: "macos", name: "macOS" },
+  { id: "linux", name: "Linux" },
 ];
 
 export function detectSystem(navigatorInfo) {

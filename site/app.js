@@ -24,16 +24,37 @@ function node(tag, className, content) {
   return element;
 }
 
+const iconPaths = {
+  windows: ["M3 4h8v7H3z", "M13 4h8v7h-8z", "M3 13h8v7H3z", "M13 13h8v7h-8z"],
+  macos: ["M4 5h16v11H4z", "M2 19h20"],
+  linux: ["M4 5h16v14H4z", "m8 9 3 3-3 3", "M13 16h4"],
+};
+
+function systemIcon(systemId) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "system-icon");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+  for (const shape of iconPaths[systemId] || []) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", shape);
+    svg.append(path);
+  }
+  return svg;
+}
+
 function renderTabs() {
   const tabs = $("system-tabs");
   tabs.replaceChildren();
   for (const system of SYSTEMS) {
-    const button = node(
-      "button",
-      "system-tab",
-      `${system.symbol}  ${system.name}`,
-    );
+    const button = node("button", "system-tab");
     button.type = "button";
+    button.append(systemIcon(system.id), node("span", "", system.name));
     button.setAttribute("aria-pressed", String(state.system === system.id));
     button.addEventListener("click", () => {
       state.system = system.id;
