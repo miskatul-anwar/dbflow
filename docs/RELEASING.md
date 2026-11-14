@@ -23,10 +23,10 @@ Three files carry the version and must stay in sync:
 
 1. **Freeze & verify**
    ```bash
-   npm run typecheck
-   npm run test -- --run
+   bun run typecheck
+   bun run test --run
    cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
-   npm run build
+   bun run build
    ```
 2. **Update `CHANGELOG.md`** — move the `Unreleased` section into a new
    `## [X.Y.Z] - YYYY-MM-DD` heading following

@@ -22,8 +22,8 @@ Closes #
 
 <!-- Describe how you verified your changes. Include commands run. -->
 
-- [ ] `npm run typecheck`
-- [ ] `npm run test -- --run`
+- [ ] `bun run typecheck`
+- [ ] `bun run test --run`
 - [ ] `cd src-tauri && cargo test && cargo clippy`
 - [ ] Manual testing (describe below)
 

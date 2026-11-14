@@ -15,26 +15,27 @@ jobs:
     name: Frontend (typecheck, tests, build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
 
       - name: Typecheck
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Lint (warning count may only go down)
-        run: npm run lint
+        run: bun run lint
 
       - name: Unit tests
-        run: npm run test -- --run
+        run: bun run test --run
 
       - name: Build (vite)
-        run: npm run build
+        run: bun run build
 
   rust:
     name: Rust (${{ matrix.os }})
@@ -44,7 +45,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
         with:

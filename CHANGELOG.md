@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-11-14
+
+### Changed
+- **React 19** (from 18), with React Router, React Markdown 10, Framer Motion 14, Lucide 1, Mermaid 12, Vite 8, `@vitejs/plugin-react` 6, Tailwind 4.3 and the other frontend packages at their latest releases. The Rust side moves to the latest Tauri 2 patch release and crate versions.
+- **TypeScript 6.0**: the `baseUrl` option is dropped (the `@/` alias uses a relative `paths` entry). TypeScript 7 is not used yet because typescript-eslint does not support it.
+- **Bun** is the package manager: `bun.lock` replaces `package-lock.json`, and CI, the release workflow, the Tauri dev/build hooks and the docs use `bun`.
+- CI actions moved to current major versions; Node 24 is used for the tooling that still needs it.
+
 ## [4.5.0] - 2026-11-14
 
 ### Changed

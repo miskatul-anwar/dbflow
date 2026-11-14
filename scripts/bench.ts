@@ -2,8 +2,8 @@
  * Evaluation harness: precision / recall / F1 for primary keys, foreign keys
  * and recovered relations on ground-truth databases, plus runtime.
  *
- *   npm run bench            # default scales
- *   npm run bench -- --scale 5 --json
+ *   bun run bench            # default scales
+ *   bun run bench --scale 5 --json
  */
 import { retail, university } from '../src/eval/datasets';
 import { evaluate } from '../src/eval/harness';

@@ -26,7 +26,7 @@ Do not write one-off `<button className="…">` styles.
 Status chips and tags (for example the pipeline step chips) are small rounded rectangles and are not clickable. Underlined tabs
 (Normal Forms) and the Output page navigation are navigation, not actions.
 
-## Consistency rules (checked by `npm run audit:design`)
+## Consistency rules (checked by `bun run audit:design`)
 
 "Seamless, connected, well crafted" is judged by people, but its parts are measurable, so they are measured:
 
@@ -40,5 +40,5 @@ Status chips and tags (for example the pipeline step chips) are small rounded re
 | Motion | One 150 ms ease for hover and focus on every button; section content fades in over 180 ms; everything stops under `prefers-reduced-motion` |
 | Themes | Every colour comes from a token, so light and dark are the same layout |
 
-`npm run audit:design` reads computed styles on the pipeline page and every Output tab in both themes and fails when a
-view drifts outside these values. `npm run audit:ui` checks layout, errors and accessibility on 144 views.
+`bun run audit:design` reads computed styles on the pipeline page and every Output tab in both themes and fails when a
+view drifts outside these values. `bun run audit:ui` checks layout, errors and accessibility on 144 views.

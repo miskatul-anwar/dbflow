@@ -7,7 +7,7 @@ important algorithms live.
 
 DBFlow is a [Tauri 2](https://tauri.app) desktop app. All analysis runs in
 TypeScript inside the webview; the Rust side only hosts the window. One
-engine therefore serves the installed app and `npm run dev` in a browser, and
+engine therefore serves the installed app and `bun run dev` in a browser, and
 every result is the same regardless of file count or runtime.
 
 ```

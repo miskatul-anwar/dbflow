@@ -1,7 +1,7 @@
 /**
  * DBFlow command-line mode: the same engine as the desktop app.
  *
- *   npm run cli -- analyze data/*.csv --out out/ --dialect postgresql --json
+ *   bun run cli analyze data/*.csv --out out/ --dialect postgresql --json
  *
  * Options
  *   --out <dir>        write every generated file here (default: ./dbflow-out)

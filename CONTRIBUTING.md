@@ -38,14 +38,14 @@ git clone https://github.com/<your-username>/dbflow.git
 cd dbflow
 
 # 2. Install JS dependencies
-npm install
+bun install
 
 # 3. Run the app in dev mode (hot reload for both UI and Rust)
-npm run tauri dev
+bun run tauri dev
 
 # 4. Verify everything passes before you start
-npm run typecheck   # TypeScript strict check
-npm run test        # Vitest unit tests
+bun run typecheck   # TypeScript strict check
+bun run test        # Vitest unit tests
 cargo test          # Rust unit tests (run inside src-tauri/)
 ```
 
@@ -65,7 +65,7 @@ cargo test          # Rust unit tests (run inside src-tauri/)
 ### Full local check suite
 
 ```bash
-npm run typecheck && npm run test -- --run   # frontend
+bun run typecheck && bun run test --run   # frontend
 cd src-tauri && cargo test && cargo clippy   # backend
 ```
 
@@ -102,7 +102,7 @@ src-tauri/src/
 
 ## Coding standards
 
-- **TypeScript**: `strict` mode is on — no `any` unless justified; run `npm run typecheck`.
+- **TypeScript**: `strict` mode is on — no `any` unless justified; run `bun run typecheck`.
 - **Formatting**: Prettier defaults (2 spaces, double quotes are fine). Consistency within a file wins over personal preference.
 - **Rust**: `cargo fmt` + `cargo clippy` clean.
 - No secrets, keys, or personal data in commits.
@@ -113,8 +113,8 @@ src-tauri/src/
 We use [Vitest](https://vitest.dev) for the frontend and built-in `#[cfg(test)]` for Rust.
 
 ```bash
-npm run test              # watch mode
-npm run test -- --run     # single run (CI mode)
+bun run test              # watch mode
+bun run test --run     # single run (CI mode)
 
 cd src-tauri
 cargo test                # Rust tests

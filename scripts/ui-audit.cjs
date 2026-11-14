@@ -7,7 +7,7 @@
  *     that are meant to scroll (diagrams, code, chip rows),
  *   - no console or page errors,
  *   - no axe-core violations (WCAG 2.1 AA + best practice).
- * Exits non-zero on any finding. Needs a built app: `npm run build && npx vite preview --port 4311`.
+ * Exits non-zero on any finding. Needs a built app: `bun run build && bunx vite preview --port 4311`.
  */
 const { chromium } = require('playwright');
 const fs = require('fs');

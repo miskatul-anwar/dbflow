@@ -28,7 +28,7 @@ export interface Thresholds {
   floor: number;
 }
 /**
- * Tuned for the bundled all-MiniLM-L6-v2 model with `npm run bench:nl -- --sweep`: the
+ * Tuned for the bundled all-MiniLM-L6-v2 model with `bun run bench:nl --sweep`: the
  * middle of a plateau where plan accuracy is 94% and all junk is rejected. Tuned and scored
  * on the same 77 cases, so expect real-world accuracy to be somewhat lower.
  */

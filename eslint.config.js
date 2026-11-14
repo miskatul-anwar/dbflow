@@ -8,7 +8,7 @@ export default tseslint.config(
   {
     files: ['src/**/*.{ts,tsx}', 'scripts/**/*.ts'],
     rules: {
-      // Ratchet: warnings are capped in `npm run lint` (see --max-warnings) and lowered over time.
+      // Ratchet: warnings are capped in `bun run lint` (see --max-warnings) and lowered over time.
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-useless-assignment': 'warn',
       'no-useless-escape': 'warn',

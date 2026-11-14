@@ -1,6 +1,6 @@
 # Evaluation
 
-`npm run bench` (or `npm run bench -- --scale 5 --json`) runs the engine on
+`bun run bench` (or `bun run bench --scale 5 --json`) runs the engine on
 ground-truth databases defined in `src/eval/datasets.ts` and reports
 precision / recall for:
 
@@ -35,7 +35,7 @@ keys and foreign keys at or above 90%).
 
 ## Natural-language workflow builder
 
-`npm run bench:nl` runs 77 labelled requests (`src/eval/nlWorkflowCases.ts`: direct keywords, acronyms, compound requests, negations, paraphrases, typos, and 10 junk sentences that must build nothing).
+`bun run bench:nl` runs 77 labelled requests (`src/eval/nlWorkflowCases.ts`: direct keywords, acronyms, compound requests, negations, paraphrases, typos, and 10 junk sentences that must build nothing).
 
 | Resolver | Plan accuracy | Junk rejected | By kind |
 |---|---|---|---|
@@ -43,10 +43,10 @@ keys and foreign keys at or above 90%).
 | Bundled model only | 79% | 10 / 10 | keyword 19/20, acronym 7/10, compound 3/8, negation 3/4, paraphrase 15/17, typo 6/8 |
 | **Hybrid (shipped)** | **94%** | **10 / 10** | keyword 20/20, acronym 10/10, compound 8/8, negation 4/4, paraphrase 15/17, typo 6/8 |
 
-The model is `Xenova/all-MiniLM-L6-v2` (int8, 384-dim). Thresholds in `DEFAULT_THRESHOLDS` (`accept 0.40`, `margin 0.02`, `floor 0.30`) are the middle of a plateau found with `npm run bench:nl -- --sweep`; the best single point (margin 0, 96%) was not used because it sits on the edge of the plateau.
+The model is `Xenova/all-MiniLM-L6-v2` (int8, 384-dim). Thresholds in `DEFAULT_THRESHOLDS` (`accept 0.40`, `margin 0.02`, `floor 0.30`) are the middle of a plateau found with `bun run bench:nl --sweep`; the best single point (margin 0, 96%) was not used because it sits on the edge of the plateau.
 
 **Caveat.** Thresholds were tuned and scored on the same 77 cases, so real-world accuracy will be lower. Remaining misses: "is anything lost when the tables are joined back together" (picks Relation Detector instead of Lossless Check), "make sure the split kept all the dependencies" (Lossless Check instead of Dependency Preservation) and "clen the dat". Add held-out cases before trusting the figure.
 
 An earlier attempt used EmbeddingGemma through a local Ollama server. It was dropped because it required users to install and run a separate program; a 23 MB bundled model gives good results without that.
 
-Reproduce: `npm run bench:nl -- --sweep --failures`.
+Reproduce: `bun run bench:nl --sweep --failures`.

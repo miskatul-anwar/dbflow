@@ -1,6 +1,6 @@
 // Copies the ONNX WebAssembly runtime from node_modules into public/ort so the
 // installer carries it (no CDN). The embedding model itself is committed under
-// public/models. Runs before `dev`, `build` and `tauri` via npm pre-scripts.
+// public/models. Runs before `dev`, `build` and `tauri` via package.json pre-scripts.
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
@@ -9,7 +9,7 @@ const src = 'node_modules/onnxruntime-web/dist';
 mkdirSync('public/ort', { recursive: true });
 for (const f of FILES) {
   if (!existsSync(`${src}/${f}`)) {
-    console.error(`missing ${src}/${f}; run npm install`);
+    console.error(`missing ${src}/${f}; run bun install`);
     process.exit(1);
   }
   copyFileSync(`${src}/${f}`, `public/ort/${f}`);

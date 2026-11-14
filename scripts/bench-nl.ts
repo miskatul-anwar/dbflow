@@ -1,9 +1,9 @@
 /**
  * Accuracy of the natural-language workflow builder.
  *
- *   npm run bench:nl                 # keywords, fake vectors, and the bundled model
- *   npm run bench:nl -- --sweep      # also search the decision thresholds
- *   npm run bench:nl -- --failures   # list the wrong answers
+ *   bun run bench:nl                 # keywords, fake vectors, and the bundled model
+ *   bun run bench:nl --sweep      # also search the decision thresholds
+ *   bun run bench:nl --failures   # list the wrong answers
  */
 import { NL_CASES } from '../src/eval/nlWorkflowCases';
 import { evaluateNL } from '../src/eval/nlWorkflow';

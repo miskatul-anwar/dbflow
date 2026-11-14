@@ -7,7 +7,7 @@
  *   - at most 7 distinct text sizes, none below 10 px;
  *   - standard buttons at fixed heights with a 6 or 8 px radius (list rows are square);
  *   - bordered cards only at the radii 4, 8 or the 13.6 px panel radius.
- * Needs a built app: npm run build && npx vite preview --port 4311
+ * Needs a built app: bun run build && bunx vite preview --port 4311
  */
 const { chromium } = require('playwright');
 const fs = require('fs');

@@ -5,10 +5,10 @@
  * Runs axe-core against the pipeline page and every Output tab, in light and dark, on a small generated
  * dataset. Exits non-zero when anything is found, so it can gate a release.
  *
- *   npm run build && npx vite preview --port 4311 &
- *   npm run audit:a11y                 # URL=http://localhost:4311 by default
+ *   bun run build && bunx vite preview --port 4311 &
+ *   bun run audit:a11y                 # URL=http://localhost:4311 by default
  *
- * Needs Playwright with a browser installed (`npx playwright install chromium`).
+ * Needs Playwright with a browser installed (`bunx playwright install chromium`).
  */
 const { chromium } = require('playwright');
 const fs = require('fs');
