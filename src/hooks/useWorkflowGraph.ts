@@ -105,8 +105,7 @@ export function buildChainEdges(nodes: Node[]): Edge[] {
 function isSupportedSnapshot(data: unknown): boolean {
   if (!data || typeof data !== 'object') return false;
   const record = data as Record<string, unknown>;
-  // 'normaflow-workflow' is the id written before the rename to DBFlow.
-  if (record.format === SNAPSHOT_FORMAT || record.format === 'normaflow-workflow') return true;
+  if (record.format === SNAPSHOT_FORMAT) return true;
   // Legacy v1 marker.
   return record['06062003'] === true && Array.isArray(record.nodes) && Array.isArray(record.edges);
 }

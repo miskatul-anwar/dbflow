@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The software is renamed from NormaFlow to **DBFlow**: app name, window title, package and crate names, bundle identifier, repository links, documentation and the download page. The logo and all behaviour are unchanged.
-- Browser storage keys and the workflow snapshot format id use the `dbflow` prefix now; snapshot files saved before the rename still import; settings and saved results stored under the old `normaflow` keys are not carried over.
+- Browser storage keys and the workflow snapshot format id use the `dbflow` prefix now; settings and saved results stored under the old `normaflow` keys are not carried over.
 
 ## [4.0.0] - 2026-11-13
 
