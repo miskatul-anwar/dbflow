@@ -4,16 +4,16 @@
 
 # DBFlow
 
-**Turn raw CSV files into normalized database schemas — ERDs, SQL DDL and full normalization reports — in seconds.**
+**Turn CSV and spreadsheet files into normalized database schemas, ERDs, SQL DDL and normalization reports.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-115e59.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/miskatul-anwar/dbflow?logo=github&color=0284c7)](https://github.com/miskatul-anwar/dbflow/releases)
 [![CI](https://github.com/miskatul-anwar/dbflow/actions/workflows/ci.yml/badge.svg)](https://github.com/miskatul-anwar/dbflow/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%202-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
-[![React](https://img.shields.io/badge/Frontend-React%2018-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
+[![Frontend: React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black)](https://react.dev)
 
-*One desktop app for CSV → 1NF → 2NF → 3NF → ERD → SQL. Private by design — your data never leaves your machine.*
+*One desktop app for tabular files → 1NF → 2NF → 3NF → ERD → SQL. Private by design — your data never leaves your machine.*
 
 </div>
 
@@ -21,28 +21,28 @@
 
 ## What is DBFlow?
 
-DBFlow is a **free & open-source cross-platform desktop app** that reverse-engineers relational databases from CSV exports.
+DBFlow is a **free and open-source cross-platform desktop app** that reverse-engineers relational databases from tabular data.
 
-Drop in one or many CSV or spreadsheet files (Excel `.xlsx` `.xlsm` `.xlsb` `.xls`, LibreOffice `.ods`; every sheet becomes a table) and DBFlow will:
+Drop in one or many supported files. DBFlow accepts CSV, Excel workbooks and templates (`.xlsx`, `.xlsm`, `.xlsb`, `.xls`, `.xltx`, `.xltm`, `.xlam`, `.xlt`, `.xla`, `.xlw`), OpenDocument spreadsheets (`.ods`, `.ots`, `.fods`), and Excel 2003 SpreadsheetML (`.xml`). Each visible, non-empty sheet becomes a table. DBFlow will:
 
-- 🧹 **Clean & validate** your data (atomicity checks, null handling, type profiling)
-- ⛏️ **Mine functional dependencies** with a fast partition-refinement algorithm (TANE-inspired lattice pruning)
-- 🔑 **Discover candidate keys** using attribute-closure search over the FD lattice
-- 🧩 **Decompose to 3NF / BCNF** with lossless-join verification (chase, plus a re-join on your data) and dependency-preservation analysis
-- 🕸️ **Detect cross-table foreign keys** from the data (inclusion dependencies scored by containment, coverage, name and type evidence)
-- 🧠 **Classify columns semantically** (NLP profiler: names, e-mails, prices, dates, locations, organizations…)
-- 📊 **Generate Mermaid ERDs**, consolidated SQL DDL, and a Markdown normalization report
+- **Clean and validate** your data (atomicity checks, null handling, type profiling)
+- **Mine functional dependencies** with a partition-refinement algorithm (TANE-inspired lattice pruning)
+- **Discover candidate keys** using attribute-closure search over the FD lattice
+- **Decompose to 3NF / BCNF** with lossless-join verification (chase, plus a re-join on your data) and dependency-preservation analysis
+- **Detect cross-table foreign keys** from the data (inclusion dependencies scored by containment, coverage, name and type evidence)
+- **Classify columns semantically** (NLP profiler: names, e-mails, prices, dates, locations, organizations…)
+- **Generate Mermaid ERDs**, consolidated SQL DDL, and a Markdown normalization report
 
 ## Highlights
 
 | | |
 |---|---|
-| 🔒 **Private by design** | All processing happens locally; no network calls are made. The natural-language box runs a small model that ships inside the installer. |
-| 🦀 **Rust engine** | Parsing, dependency mining, normalization and every output come from one Rust engine: native in the desktop app, WebAssembly in the browser, the same code for one file or many. |
-| 🧮 **Sound algorithms** | Functional-dependency mining, closure-based key discovery, 3NF synthesis. Only dependencies that hold on every row shape the schema. |
-| 🖱️ **Visual pipelines** | Build workflows on an interactive React Flow canvas — click or drag the operations you want. |
-| 📦 **Portable outputs** | Mermaid, `.sql`, `.md` and workflow `.json` files you can commit to your repo. |
-| 🪶 **Lightweight** | Native binary, tiny footprint compared to Electron alternatives. |
+| **Private by design** | All processing happens locally; no network calls are made. The natural-language box runs a small model that ships inside the installer. |
+| **Rust engine** | Parsing, dependency mining, normalization and every output come from one Rust engine: native in the desktop app, WebAssembly in the browser, the same code for one file or many. |
+| **Sound algorithms** | Functional-dependency mining, closure-based key discovery, 3NF synthesis. Only dependencies that hold on every row shape the schema. |
+| **Visual pipelines** | Build workflows on an interactive React Flow canvas — click or drag the operations you want. |
+| **Portable outputs** | Mermaid, `.sql`, `.md` and workflow `.json` files you can commit to your repo. |
+| **Lightweight** | Native binary, tiny footprint compared to Electron alternatives. |
 
 ## Installation
 
@@ -86,7 +86,7 @@ sudo apt update && sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev l
 
 ## Quick start
 
-1. Launch DBFlow and upload one or more CSV or spreadsheet files with the **Upload** button.
+1. Launch DBFlow and upload one or more supported tabular files with the **Upload** button.
 2. Build your pipeline by clicking operations in the sidebar (a locked step adds the steps it needs), by describing it in the text box, or by typing a request such as "normalize to 3NF and generate SQL".
 3. Press **Run**.
 4. Open the **Output** tab to browse the ERD, SQL DDL, FDs, keys, cardinalities and the full report — then download what you need.
@@ -116,19 +116,20 @@ Options: `--out`, `--dialect` (`postgresql`, `mysql`, `sqlite`, `ansi`), `--ops 
 
 ```
 ┌──────────────────────────── WebView (UI only) ─────────────────────────────┐
-│  React 19 + TypeScript + Tailwind + React Flow                             │
+│  React + TypeScript + Tailwind CSS + React Flow                            │
 │  ├─ Workflow canvas (nodes = pipeline operations)                          │
 │  └─ Output pages (diagrams, SQL, reports), on-device naming model          │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ Tauri commands (desktop) / WebAssembly (browser)
 ┌──────────────────────────────────▼─────────────────────────────────────────┐
-│  Rust engine (crates/dbflow-core): CSV & spreadsheet parsing · cleaning ·  │
+│  Rust engine (crates/dbflow-core): tabular input · cleaning ·              │
 │  FD mining · keys · 1NF/2NF/3NF/BCNF · chase and preservation checks ·     │
 │  foreign keys · schema · ERD · SQL · reports                               │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
 Read the full story in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+For current package versions, see [`package.json`](package.json) and [`Cargo.lock`](Cargo.lock).
 
 ## Project structure
 
@@ -167,7 +168,7 @@ Found a vulnerability? Please follow our [security policy](SECURITY.md) and repo
 
 <div align="center">
 
-If DBFlow saves you time, please consider giving the repo a ⭐ — it helps others discover the project!
+If DBFlow saves you time, please consider starring the repo to help others discover the project.
 
 [Report Bug](https://github.com/miskatul-anwar/dbflow/issues/new?template=bug_report.yml) · [Request Feature](https://github.com/miskatul-anwar/dbflow/issues/new?template=feature_request.yml)
 
