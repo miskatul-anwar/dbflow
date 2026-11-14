@@ -1,6 +1,8 @@
 import { test, vi } from "vitest";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { setTimeout } from "node:timers";
+import { URL } from "node:url";
 import { JSDOM } from "jsdom";
 
 const html = readFileSync(
