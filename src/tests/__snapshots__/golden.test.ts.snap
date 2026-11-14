@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`golden output > multi-file DDL (postgres) 1`] = `
-"-- NormaFlow Relational Schema DDL
+"-- DBFlow Relational Schema DDL
 -- Dialect: POSTGRESQL
 -- Generated: <time>
 
@@ -25,7 +25,7 @@ COMMIT;
 `;
 
 exports[`golden output > multi-file DDL (sqlite) 1`] = `
-"-- NormaFlow Relational Schema DDL
+"-- DBFlow Relational Schema DDL
 -- Dialect: SQLITE
 -- Generated: <time>
 
@@ -91,7 +91,7 @@ exports[`golden output > single-file ER diagram and DDL 1`] = `
 
 exports[`golden output > single-file ER diagram and DDL 2`] = `
 "-- ================================================================
--- NormaFlow schema DDL
+-- DBFlow schema DDL
 -- Relations: 1 (Simple schema)
 -- Lossless join and dependency preservation are reported per run in the analysis, not guaranteed here.
 -- ================================================================

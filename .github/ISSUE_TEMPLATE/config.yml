@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Ask a Question / Discussions
-    url: https://github.com/miskatul-anwar/normaflow/discussions
+    url: https://github.com/miskatul-anwar/dbflow/discussions
     about: Ask questions, get help, and discuss ideas with the community.
   - name: Architecture & Developer Documentation
-    url: https://github.com/miskatul-anwar/normaflow/blob/main/docs/ARCHITECTURE.md
-    about: Read how the NormaFlow engine, algorithms, and UI are structured.
+    url: https://github.com/miskatul-anwar/dbflow/blob/main/docs/ARCHITECTURE.md
+    about: Read how the DBFlow engine, algorithms, and UI are structured.
   - name: Security Vulnerability Reporting
-    url: https://github.com/miskatul-anwar/normaflow/security/advisories/new
+    url: https://github.com/miskatul-anwar/dbflow/security/advisories/new
     about: Report a security vulnerability privately and securely.

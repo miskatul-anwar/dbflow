@@ -35,7 +35,7 @@ describe('Column Classifier (formerly NER Classifier)', () => {
     const { result } = renderHook(() => useWorkflowGraph({ log: () => {} }));
     const mk = (id: string, label: string, operationId: string) => ({ id, type: 'operation', position: { x: 0, y: 0 }, data: { label, phase: 'PREP', operationId } });
     const snapshot = {
-      format: 'normaflow-workflow', version: 2, nextId: 6,
+      format: 'dbflow-workflow', version: 2, nextId: 6,
       nodes: [
         { id: '0', type: 'start', position: { x: 0, y: 0 }, data: { label: 'Start' } },
         mk('1', 'CSV Data Loader', 'csv-loader'), mk('2', 'Data Cleaner', 'data-cleaner'),

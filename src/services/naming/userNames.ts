@@ -2,8 +2,8 @@
  * Names the user typed and the on-device naming switch, remembered on this machine (localStorage) by relation signature,
  * i.e. table + columns + key. The same set of columns is found again on the next run and keeps the user's name.
  */
-const NAMES_KEY = 'normaflow.relationNames';
-const MODEL_KEY = 'normaflow.modelNaming';
+const NAMES_KEY = 'dbflow.relationNames';
+const MODEL_KEY = 'dbflow.modelNaming';
 
 export function loadUserNames(): Record<string, string> {
   try {

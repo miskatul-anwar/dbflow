@@ -41,7 +41,7 @@ export function nodePosition(n: number): { x: number; y: number } {
   return { x: INITIAL_X + (n % COLUMNS) * NODE_SPACING, y: INITIAL_Y + Math.floor(n / COLUMNS) * ROW_SPACING };
 }
 
-export const SNAPSHOT_FORMAT = 'normaflow-workflow';
+export const SNAPSHOT_FORMAT = 'dbflow-workflow';
 export const SNAPSHOT_VERSION = 2;
 
 export interface WorkflowSnapshot {

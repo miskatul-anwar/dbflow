@@ -1,6 +1,6 @@
-# Contributing to NormaFlow
+# Contributing to DBFlow
 
-First off — **thank you** for considering a contribution! 🎉 NormaFlow is a community project and every kind of help counts: code, documentation, bug reports, feature ideas, design, and spreading the word.
+First off — **thank you** for considering a contribution! 🎉 DBFlow is a community project and every kind of help counts: code, documentation, bug reports, feature ideas, design, and spreading the word.
 
 This document explains how to set up a development environment, our conventions, and how to get your pull request merged quickly.
 
@@ -29,13 +29,13 @@ By participating you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md)
 | 🐛 Bug report | Open an issue using the [bug template](.github/ISSUE_TEMPLATE/bug_report.yml) |
 | ✨ Feature request | Open an issue using the [feature template](.github/ISSUE_TEMPLATE/feature_request.yml) |
 | 📝 Documentation | Improve README/docs — typos count too |
-| 💻 Code | Pick an issue labeled [`good first issue`](https://github.com/miskatul-anwar/normaflow/labels/good%20first%20issue) or propose your own |
+| 💻 Code | Pick an issue labeled [`good first issue`](https://github.com/miskatul-anwar/dbflow/labels/good%20first%20issue) or propose your own |
 | 🧪 Tests | More coverage in `src/*.test.ts` or `src-tauri/src/
 └── lib.rs            # Tauri shell (window, plugins); all analysis lives in src/services
 ```bash
 # 1. Fork & clone
-git clone https://github.com/<your-username>/normaflow.git
-cd normaflow
+git clone https://github.com/<your-username>/dbflow.git
+cd dbflow
 
 # 2. Install JS dependencies
 npm install
@@ -150,7 +150,7 @@ Scope is optional but encouraged. CI enforces nothing today, but maintainers squ
 
 Please use the issue templates so we can reproduce quickly. For bugs include:
 
-- NormaFlow version & platform
+- DBFlow version & platform
 - Steps to reproduce (and a minimal CSV if possible)
 - Expected vs actual behavior
 - Console logs from the in-app console panel

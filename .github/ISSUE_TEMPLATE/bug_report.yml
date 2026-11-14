@@ -1,5 +1,5 @@
 name: Bug report
-description: Report something broken in NormaFlow
+description: Report something broken in DBFlow
 labels: ["bug", "triage"]
 body:
   - type: markdown
@@ -58,7 +58,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: NormaFlow version
+      label: DBFlow version
       placeholder: "2.3.0"
     validations:
       required: true

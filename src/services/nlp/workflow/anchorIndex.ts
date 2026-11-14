@@ -24,7 +24,7 @@ export function anchorsHash(): string {
   return hash(JSON.stringify(Object.entries(ANCHORS).map(([k, v]) => [k, v.phrases])));
 }
 
-const DB = 'normaflow-nl';
+const DB = 'dbflow-nl';
 const STORE = 'anchors';
 
 function withStore<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T | undefined> {

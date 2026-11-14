@@ -35,7 +35,7 @@ fs.writeFileSync(csv, rows.join('\n'));
     const page = await browser.newPage({ viewport: { width: 1300, height: 820 } });
     await page.addInitScript(t => {
       try {
-        localStorage.setItem('normaflow.theme', t);
+        localStorage.setItem('dbflow.theme', t);
       } catch {
         /* storage blocked */
       }

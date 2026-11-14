@@ -1,11 +1,17 @@
 # Changelog
 
-All notable changes to NormaFlow are documented in this file.
+All notable changes to DBFlow are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [4.5.0] - 2026-11-14
+
+### Changed
+- The software is renamed from NormaFlow to **DBFlow**: app name, window title, package and crate names, bundle identifier, repository links, documentation and the download page. The logo and all behaviour are unchanged.
+- Browser storage keys and the workflow snapshot format id use the `dbflow` prefix now; settings and saved results stored under the old `normaflow` keys are not carried over.
 
 ## [4.0.0] - 2026-11-13
 
@@ -22,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The **NER Classifier** operation is now the **Column Classifier**. It was never named-entity recognition: it is a rule-based step that labels each column (identifier, person name, price, date, ...) from its header and sample values, and the labels are shown in the multi-file overview only. Saved pipelines, scripts and command-line calls that use the old name still work, and "run ner" still finds the step.
 
 ### Changed (quality document)
-- `docs/QUALITY.md` now states that NormaFlow follows the ISO/IEC 25000 SQuaRE series as a self-assessment (not a certification), with current numbers (646 tests, 0 accessibility violations), the Windows, Linux and macOS install check, and the limits of the on-device naming model.
+- `docs/QUALITY.md` now states that DBFlow follows the ISO/IEC 25000 SQuaRE series as a self-assessment (not a certification), with current numbers (646 tests, 0 accessibility violations), the Windows, Linux and macOS install check, and the limits of the on-device naming model.
 
 ### Removed
 - Root-level leftovers: `NOT_DONE.md`, `IMPROVEMENTS.md` (the audit work list and its open-items file; both remain in git history), a duplicate `icon.png` (the app uses `public/icon.png`) and `shell.nix`.
@@ -188,7 +194,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The active workspace tab now joins the header with no gap: they share one surface colour and the header sits directly under the tab strip.
-- The header shows only the app icon; the "NormaFlow" title and subtitle are gone.
+- The header shows only the app icon; the "DBFlow" title and subtitle are gone.
 - Removed the "Embeddings: ready/offline" label under the natural-language box. The bundled model needs no setup, and keyword matching works regardless.
 
 ### Added

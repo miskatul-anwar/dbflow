@@ -1,14 +1,14 @@
 <div align="center">
 
-<img src="public/icon.png" alt="NormaFlow logo" width="120" />
+<img src="public/icon.png" alt="DBFlow logo" width="120" />
 
-# NormaFlow
+# DBFlow
 
 **Turn raw CSV files into normalized database schemas — ERDs, SQL DDL and full normalization reports — in seconds.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-115e59.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/miskatul-anwar/normaflow?logo=github&color=0284c7)](https://github.com/miskatul-anwar/normaflow/releases)
-[![CI](https://github.com/miskatul-anwar/normaflow/actions/workflows/ci.yml/badge.svg)](https://github.com/miskatul-anwar/normaflow/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/miskatul-anwar/dbflow?logo=github&color=0284c7)](https://github.com/miskatul-anwar/dbflow/releases)
+[![CI](https://github.com/miskatul-anwar/dbflow/actions/workflows/ci.yml/badge.svg)](https://github.com/miskatul-anwar/dbflow/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%202-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
 [![React](https://img.shields.io/badge/Frontend-React%2018-61DAFB?logo=react&logoColor=black)](https://react.dev)
@@ -19,11 +19,11 @@
 
 ---
 
-## What is NormaFlow?
+## What is DBFlow?
 
-NormaFlow is a **free & open-source cross-platform desktop app** that reverse-engineers relational databases from CSV exports.
+DBFlow is a **free & open-source cross-platform desktop app** that reverse-engineers relational databases from CSV exports.
 
-Drop in one or many CSV or spreadsheet files (Excel `.xlsx` `.xlsm` `.xlsb` `.xls`, LibreOffice `.ods`; every sheet becomes a table) and NormaFlow will:
+Drop in one or many CSV or spreadsheet files (Excel `.xlsx` `.xlsm` `.xlsb` `.xls`, LibreOffice `.ods`; every sheet becomes a table) and DBFlow will:
 
 - 🧹 **Clean & validate** your data (atomicity checks, null handling, type profiling)
 - ⛏️ **Mine functional dependencies** with a fast partition-refinement algorithm (TANE-inspired lattice pruning)
@@ -48,7 +48,7 @@ Drop in one or many CSV or spreadsheet files (Excel `.xlsx` `.xlsm` `.xlsb` `.xl
 
 ### Download (recommended)
 
-Use the [**download page**](https://miskatul-anwar.github.io/normaflow/), which picks the installer for your system, or grab one from the [**Releases page**](https://github.com/miskatul-anwar/normaflow/releases):
+Use the [**download page**](https://miskatul-anwar.github.io/dbflow/), which picks the installer for your system, or grab one from the [**Releases page**](https://github.com/miskatul-anwar/dbflow/releases):
 
 | Platform | Artifact |
 |---|---|
@@ -64,8 +64,8 @@ Use the [**download page**](https://miskatul-anwar.github.io/normaflow/), which 
 Prerequisites: **Node.js ≥ 18**, **Rust ≥ 1.77**, and the [Tauri v2 system dependencies](https://tauri.app/start/prerequisites/).
 
 ```bash
-git clone https://github.com/miskatul-anwar/normaflow.git
-cd normaflow
+git clone https://github.com/miskatul-anwar/dbflow.git
+cd dbflow
 npm install
 npm run tauri dev    # development
 npm run tauri build  # production bundle
@@ -81,7 +81,7 @@ sudo apt update && sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev l
 
 ## Quick start
 
-1. Launch NormaFlow and upload one or more CSV or spreadsheet files with the **Upload** button.
+1. Launch DBFlow and upload one or more CSV or spreadsheet files with the **Upload** button.
 2. Build your pipeline by clicking operations in the sidebar (a locked step adds the steps it needs), by describing it in the text box, or by typing a request such as "normalize to 3NF and generate SQL".
 3. Press **Run**.
 4. Open the **Output** tab to browse the ERD, SQL DDL, FDs, keys, cardinalities and the full report — then download what you need.
@@ -92,7 +92,7 @@ Work on several datasets at once: each tab is a separate workspace with its own 
 
 ## Natural-language box
 
-Type a request such as *“Can you pls convert it to 1NF”* in the bar above the canvas (`Ctrl/Cmd+K` focuses it). NormaFlow shows the pipeline it would build, including the steps added because others need them, and you press **Apply** or **Apply & Run**.
+Type a request such as *“Can you pls convert it to 1NF”* in the bar above the canvas (`Ctrl/Cmd+K` focuses it). DBFlow shows the pipeline it would build, including the steps added because others need them, and you press **Apply** or **Apply & Run**.
 
 Nothing extra to install: exact keywords are matched first, and a small sentence-embedding model (all-MiniLM-L6-v2, int8, 23 MB, Apache-2.0) bundled in the installer handles paraphrases the keywords miss. It runs inside the app on WebAssembly; your sentence never leaves the machine, and neither does your data. Accuracy: [docs/EVALUATION.md](docs/EVALUATION.md).
 
@@ -127,7 +127,7 @@ Read the full story in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 ## Project structure
 
 ```
-normaflow/
+dbflow/
 ├── src/                  # React frontend
 │   ├── components/       # UI components (canvas nodes, panels, output views)
 │   ├── hooks/            # Reusable state logic (workflow graph, execution)
@@ -141,7 +141,7 @@ normaflow/
 
 ## Contributing
 
-Contributions are welcome — code, docs, bug reports, feature ideas! See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started. Good first issues are labeled [`good first issue`](https://github.com/miskatul-anwar/normaflow/labels/good%20first%20issue).
+Contributions are welcome — code, docs, bug reports, feature ideas! See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started. Good first issues are labeled [`good first issue`](https://github.com/miskatul-anwar/dbflow/labels/good%20first%20issue).
 
 Please read our [`Code of Conduct`](CODE_OF_CONDUCT.md) — be kind, be constructive.
 
@@ -157,9 +157,9 @@ Found a vulnerability? Please follow our [security policy](SECURITY.md) and repo
 
 <div align="center">
 
-If NormaFlow saves you time, please consider giving the repo a ⭐ — it helps others discover the project!
+If DBFlow saves you time, please consider giving the repo a ⭐ — it helps others discover the project!
 
-[Report Bug](https://github.com/miskatul-anwar/normaflow/issues/new?template=bug_report.yml) · [Request Feature](https://github.com/miskatul-anwar/normaflow/issues/new?template=feature_request.yml)
+[Report Bug](https://github.com/miskatul-anwar/dbflow/issues/new?template=bug_report.yml) · [Request Feature](https://github.com/miskatul-anwar/dbflow/issues/new?template=feature_request.yml)
 
 </div>
 

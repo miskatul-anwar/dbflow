@@ -24,12 +24,12 @@ describe('theme', () => {
 
   it('a stored choice wins over the system', () => {
     mockSystem(true);
-    localStorage.setItem('normaflow.theme', 'light');
+    localStorage.setItem('dbflow.theme', 'light');
     expect(currentTheme()).toBe('light');
   });
 
   it('ignores a corrupt stored value', () => {
-    localStorage.setItem('normaflow.theme', 'purple');
+    localStorage.setItem('dbflow.theme', 'purple');
     expect(currentTheme()).toBe('light');
   });
 
@@ -38,7 +38,7 @@ describe('theme', () => {
     render(<ThemeToggle />);
     fireEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
     expect(document.documentElement.dataset.theme).toBe('dark');
-    expect(localStorage.getItem('normaflow.theme')).toBe('dark');
+    expect(localStorage.getItem('dbflow.theme')).toBe('dark');
     fireEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }));
     expect(document.documentElement.dataset.theme).toBe('light');
   });

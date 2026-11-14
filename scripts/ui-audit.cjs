@@ -81,7 +81,7 @@ const overflowProbe = () => {
         const errors = [];
         page.on('pageerror', e => errors.push(e.message));
         page.on('console', m => m.type() === 'error' && errors.push(m.text()));
-        await page.addInitScript(t => localStorage.setItem('normaflow.theme', t), theme);
+        await page.addInitScript(t => localStorage.setItem('dbflow.theme', t), theme);
         const tag = `${theme} ${W}px, ${runName}`;
         const check = async view => {
           views++;

@@ -33,7 +33,7 @@ describe('notification content', () => {
   });
   it('falls back to the app name, tidies whitespace and bounds the body', async () => {
     const { composeNotification } = await load();
-    expect(composeNotification('a\n\n b').title).toBe('NormaFlow');
+    expect(composeNotification('a\n\n b').title).toBe('DBFlow');
     expect(composeNotification('a\n\n b').body).toBe('a b');
     expect(composeNotification('x'.repeat(1000), 'W').body.length).toBeLessThanOrEqual(240);
   });

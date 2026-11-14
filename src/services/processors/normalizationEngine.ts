@@ -3709,7 +3709,7 @@ private static validatePrimaryKeyUniqueness(relation: RelationSchema): Validatio
     let sql = '';
     
     sql += '-- ================================================================\n';
-    sql += '-- NormaFlow schema DDL\n';
+    sql += '-- DBFlow schema DDL\n';
     sql += `-- Generated: ${new Date().toISOString()}\n`;
     sql += `-- Relations: ${relations.length} (${this.calculateDiagramComplexity(relations)} schema)\n`;
     sql += '-- Lossless join and dependency preservation are reported per run in the analysis, not guaranteed here.\n';

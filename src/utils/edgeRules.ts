@@ -21,7 +21,7 @@ export type EdgeConnectionCandidate =
 
 /**
  * Validates whether an incoming -> outgoing edge connection between two nodes
- * satisfies all NormaFlow pipeline rules.
+ * satisfies all DBFlow pipeline rules.
  */
 export function validateEdgeConnection(
   connection: EdgeConnectionCandidate,

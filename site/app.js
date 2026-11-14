@@ -1,6 +1,6 @@
 'use strict';
 (function () {
-  var REPO = 'miskatul-anwar/normaflow';
+  var REPO = 'miskatul-anwar/dbflow';
   var RELEASES = 'https://github.com/' + REPO + '/releases';
   var $ = function (id) { return document.getElementById(id); };
 
@@ -56,7 +56,7 @@
 
     var mine = files.filter(function (f) { return f.c.os === os; }).sort(function (x, y) { return x.c.rank - y.c.rank; });
     if (mine.length) {
-      card.appendChild(el('p', 'ver', 'NormaFlow ' + version));
+      card.appendChild(el('p', 'ver', 'DBFlow ' + version));
       var btns = el('div', 'btns');
       var shown = os === 'macos' ? mine.slice(0, 2) : mine.slice(0, 1);
       shown.forEach(function (f, i) {
@@ -78,9 +78,9 @@
       }
       var d = $('n-' + os); if (d) d.open = true;
     } else {
-      card.appendChild(el('p', 'ver', 'NormaFlow ' + version));
+      card.appendChild(el('p', 'ver', 'DBFlow ' + version));
       card.appendChild(el('p', 'meta', os === 'mobile'
-        ? 'NormaFlow is a desktop app for Windows, macOS and Linux. Open this page on a computer to download it.'
+        ? 'DBFlow is a desktop app for Windows, macOS and Linux. Open this page on a computer to download it.'
         : 'Pick your system from the list below.'));
     }
 

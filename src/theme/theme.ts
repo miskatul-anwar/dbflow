@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export type Theme = 'light' | 'dark';
-const KEY = 'normaflow.theme';
+const KEY = 'dbflow.theme';
 
 function read(): Theme | null {
   try {

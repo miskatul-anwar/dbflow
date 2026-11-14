@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 // v2: the sidebar is now a list; widths saved by the old icon grid would open it as a thin rail.
-const STORAGE_KEY_WIDTH = 'normaflow_palette_width_v2';
-const STORAGE_KEY_COLLAPSED = 'normaflow_palette_collapsed';
+const STORAGE_KEY_WIDTH = 'dbflow_palette_width_v2';
+const STORAGE_KEY_COLLAPSED = 'dbflow_palette_collapsed';
 /** Default width: a list with names and one-line descriptions. */
 export const DEFAULT_PALETTE_WIDTH = 248;
 /** Narrowest width; this is the icon-only rail. */

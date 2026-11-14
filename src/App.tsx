@@ -39,7 +39,7 @@ function downloadJson(snapshot: WorkflowSnapshot): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `normaflow-workflow-${snapshot.timestamp.slice(0, 19).replace(/[:T]/g, '-')}.json`;
+  link.download = `dbflow-workflow-${snapshot.timestamp.slice(0, 19).replace(/[:T]/g, '-')}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

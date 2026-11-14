@@ -1,11 +1,11 @@
-# NormaFlow Architecture
+# DBFlow Architecture
 
-How NormaFlow is structured, how data flows through it, and where the
+How DBFlow is structured, how data flows through it, and where the
 important algorithms live.
 
 ## Overview
 
-NormaFlow is a [Tauri 2](https://tauri.app) desktop app. All analysis runs in
+DBFlow is a [Tauri 2](https://tauri.app) desktop app. All analysis runs in
 TypeScript inside the webview; the Rust side only hosts the window. One
 engine therefore serves the installed app and `npm run dev` in a browser, and
 every result is the same regardless of file count or runtime.
@@ -108,7 +108,7 @@ in `useWorkflowGraph`.
 
 - State updaters are pure; logging and id bookkeeping happen outside them
   (React StrictMode double-invokes render-phase functions).
-- Snapshots are versioned JSON (`format: "normaflow-workflow"`, `version: 2`);
+- Snapshots are versioned JSON (`format: "dbflow-workflow"`, `version: 2`);
   the legacy format still loads.
 - Operations are registered in `src/config/operations.ts`, the single source
   of truth for phases, dependencies and ordering.

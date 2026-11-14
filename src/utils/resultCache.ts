@@ -7,7 +7,7 @@
  * does not fit is dropped, never half-written.
  */
 
-const STORAGE_KEY = 'normaflow_latest_results';
+const STORAGE_KEY = 'dbflow_latest_results';
 const DEFAULT_KEY = 'default';
 const storageKey = (key: string) => (key === DEFAULT_KEY ? STORAGE_KEY : `${STORAGE_KEY}:${key}`);
 const ROW_PREVIEW = 50;

@@ -1,5 +1,5 @@
 {
-  "name": "normaflow",
+  "name": "dbflow",
   "description": "Turn raw CSV files into normalized database schemas \u2014 ERDs, SQL DDL and normalization reports. Local-first desktop app built with Tauri + React.",
   "keywords": [
     "erd",
@@ -15,15 +15,15 @@
   ],
   "license": "MIT",
   "private": true,
-  "version": "4.0.0",
+  "version": "4.5.0",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/miskatul-anwar/normaflow.git"
+    "url": "git+https://github.com/miskatul-anwar/dbflow.git"
   },
-  "homepage": "https://github.com/miskatul-anwar/normaflow#readme",
+  "homepage": "https://github.com/miskatul-anwar/dbflow#readme",
   "bugs": {
-    "url": "https://github.com/miskatul-anwar/normaflow/issues"
+    "url": "https://github.com/miskatul-anwar/dbflow/issues"
   },
   "author": "Miskatul Anwar <miskatul.anwar.csecu@gmail.com>",
   "engines": {

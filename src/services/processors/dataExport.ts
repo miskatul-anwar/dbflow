@@ -54,7 +54,7 @@ export function exportNormalizedData(schema: BuiltSchema, dialect: SQLDialect = 
   const bySource = new Map(schema.relations.map(r => [r.name, r]));
   const files: ExportedFile[] = [];
   const inserts: string[] = [
-    '-- NormaFlow normalized data',
+    '-- DBFlow normalized data',
     `-- Dialect: ${dialect.toUpperCase()}`,
     '-- Load after the CREATE TABLE statements; tables are ordered so parents come first.',
     '',

@@ -82,7 +82,7 @@ export default function Heading({
     <div className="grid h-full w-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 py-1.5 relative z-30">
       <div className="flex min-w-0 items-center gap-2.5">
         {/* Brand: icon only */}
-        <img src="/icon.png" alt="NormaFlow" title="NormaFlow" className="h-9 w-9 shrink-0 object-contain drop-shadow-xs" />
+        <img src="/icon.png" alt="DBFlow" title="DBFlow" className="h-9 w-9 shrink-0 object-contain drop-shadow-xs" />
 
         <div className="flex items-center gap-1">
           <IconButton label="Undo (Ctrl+Z)" icon={<Undo2 />} onClick={onUndo} disabled={!canUndo || isRunning} />

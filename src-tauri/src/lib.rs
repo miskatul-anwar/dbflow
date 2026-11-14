@@ -1,4 +1,4 @@
-//! NormaFlow — Tauri application entry point.
+//! DBFlow — Tauri application entry point.
 //!
 //! All analysis (CSV parsing, functional-dependency mining, normalization,
 //! foreign-key detection, ERD/SQL/report generation) runs in the TypeScript

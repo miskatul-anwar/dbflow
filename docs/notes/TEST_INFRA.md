@@ -1,4 +1,4 @@
-# E2E Test Infra: Normaflow Platform
+# E2E Test Infra: DBFlow Platform
 
 ## Test Philosophy
 - Opaque-box, requirement-driven end-to-end integration testing.

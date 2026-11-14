@@ -53,7 +53,7 @@ const probe = () => {
   };
   for (const theme of ['light', 'dark']) {
     const page = await browser.newPage({ viewport: { width: 1300, height: 820 } });
-    await page.addInitScript(t => localStorage.setItem('normaflow.theme', t), theme);
+    await page.addInitScript(t => localStorage.setItem('dbflow.theme', t), theme);
     await page.goto(URL);
     await page.getByRole('button', { name: 'Start' }).click(); // the launch dialog asks for a workspace name
     await page.setInputFiles('input[type=file]', FILES);

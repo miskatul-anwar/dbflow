@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src https://api.github.com; base-uri 'none'; form-action 'none'">
-  <title>NormaFlow</title>
-  <meta name="description" content="NormaFlow is a desktop app that finds functional dependencies and keys in CSV files, splits the table to 3NF or BCNF, and checks every split for lossless join and dependency preservation.">
+  <title>DBFlow</title>
+  <meta name="description" content="DBFlow is a desktop app that finds functional dependencies and keys in CSV files, splits the table to 3NF or BCNF, and checks every split for lossless join and dependency preservation.">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="preload" href="assets/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
@@ -15,11 +15,11 @@
 
   <header class="top">
     <div class="wrap bar">
-      <a class="brand" href="./"><img src="assets/icon.webp" width="26" height="26" alt="">NormaFlow</a>
+      <a class="brand" href="./"><img src="assets/icon.webp" width="26" height="26" alt="">DBFlow</a>
       <nav aria-label="Project">
-        <a href="https://github.com/miskatul-anwar/normaflow">Source</a>
-        <a href="https://github.com/miskatul-anwar/normaflow/blob/main/CHANGELOG.md">Changelog</a>
-        <a href="https://github.com/miskatul-anwar/normaflow/blob/main/docs/QUALITY.md">Quality</a>
+        <a href="https://github.com/miskatul-anwar/dbflow">Source</a>
+        <a href="https://github.com/miskatul-anwar/dbflow/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="https://github.com/miskatul-anwar/dbflow/blob/main/docs/QUALITY.md">Quality</a>
       </nav>
     </div>
   </header>
@@ -28,11 +28,11 @@
     <section class="wrap hero">
       <div class="intro">
         <h1><span>Find the keys.</span> <span>Split the table.</span> <span>Check what you lost.</span></h1>
-        <p class="lead">NormaFlow reads a CSV or spreadsheet, mines its functional dependencies, splits it to 3NF or BCNF, and tests every split for lossless join and dependency preservation. It runs on your computer.</p>
+        <p class="lead">DBFlow reads a CSV or spreadsheet, mines its functional dependencies, splits it to 3NF or BCNF, and tests every split for lossless join and dependency preservation. It runs on your computer.</p>
 
         <div id="download" class="dl" aria-live="polite">
           <p id="dl-status" class="muted">Looking up the latest version…</p>
-          <noscript><p><a href="https://github.com/miskatul-anwar/normaflow/releases/latest">Open the latest release on GitHub.</a></p></noscript>
+          <noscript><p><a href="https://github.com/miskatul-anwar/dbflow/releases/latest">Open the latest release on GitHub.</a></p></noscript>
         </div>
       </div>
 
@@ -119,11 +119,11 @@
       </details>
       <details id="n-macos">
         <summary>macOS</summary>
-        <p>Open the <code>.dmg</code> and drag NormaFlow to Applications. Choose Apple Silicon for an M1 or later Mac and Intel for an older one (Apple menu, About This Mac). The app is not notarized, so the first time, right-click it and choose <em>Open</em>.</p>
+        <p>Open the <code>.dmg</code> and drag DBFlow to Applications. Choose Apple Silicon for an M1 or later Mac and Intel for an older one (Apple menu, About This Mac). The app is not notarized, so the first time, right-click it and choose <em>Open</em>.</p>
       </details>
       <details id="n-linux">
         <summary>Linux</summary>
-        <p><strong>AppImage:</strong> <code>chmod +x NormaFlow_*.AppImage</code>, then run it. <strong>Debian, Ubuntu:</strong> <code>sudo apt install ./NormaFlow_*.deb</code>. <strong>Fedora, RHEL:</strong> <code>sudo dnf install ./NormaFlow-*.rpm</code>.</p>
+        <p><strong>AppImage:</strong> <code>chmod +x DBFlow_*.AppImage</code>, then run it. <strong>Debian, Ubuntu:</strong> <code>sudo apt install ./DBFlow_*.deb</code>. <strong>Fedora, RHEL:</strong> <code>sudo dnf install ./DBFlow-*.rpm</code>.</p>
       </details>
       <details>
         <summary>Check a download</summary>
@@ -134,7 +134,7 @@
 
   <footer class="wrap foot">
     <p>Open source, MIT licence. This page asks the GitHub API for the latest release when it loads and sets no cookies.</p>
-    <p><a href="https://github.com/miskatul-anwar/normaflow/releases">All releases</a> · <a href="https://github.com/miskatul-anwar/normaflow/issues">Report a problem</a> · <a href="https://github.com/miskatul-anwar/normaflow/blob/main/LICENSE">Licence</a></p>
+    <p><a href="https://github.com/miskatul-anwar/dbflow/releases">All releases</a> · <a href="https://github.com/miskatul-anwar/dbflow/issues">Report a problem</a> · <a href="https://github.com/miskatul-anwar/dbflow/blob/main/LICENSE">Licence</a></p>
   </footer>
 
   <script src="app.js"></script>

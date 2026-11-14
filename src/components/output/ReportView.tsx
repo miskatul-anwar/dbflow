@@ -140,7 +140,7 @@ export function ReportView({ results, markdown, fdData, levels, filename = 'norm
   const download = async () => {
     setBusy(true);
     try {
-      await downloadMarkdownAsPdf(markdown, `${filename}.pdf`, 'NormaFlow report');
+      await downloadMarkdownAsPdf(markdown, `${filename}.pdf`, 'DBFlow report');
     } finally {
       setBusy(false);
     }

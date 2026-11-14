@@ -9,11 +9,11 @@
 
 ## Reporting a vulnerability
 
-We take security seriously. If you discover a vulnerability in NormaFlow, please
+We take security seriously. If you discover a vulnerability in DBFlow, please
 **do not open a public GitHub issue**.
 
 Instead, report it privately via
-[GitHub private vulnerability reporting](https://github.com/miskatul-anwar/normaflow/security/advisories/new)
+[GitHub private vulnerability reporting](https://github.com/miskatul-anwar/dbflow/security/advisories/new)
 or email **miskatul.anwar.csecu@gmail.com** with:
 
 1. A description of the vulnerability and its impact
@@ -27,7 +27,7 @@ Credit is given to reporters unless anonymity is requested.
 
 ## Scope notes
 
-NormaFlow processes files entirely locally. Areas of particular interest:
+DBFlow processes files entirely locally. Areas of particular interest:
 
 - The Tauri IPC surface (`src-tauri/src/*.rs` commands) — input validation on file contents passed from the WebView
 - Workflow state import/export (`*.json` files loaded into the app)

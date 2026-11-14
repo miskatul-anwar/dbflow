@@ -94,7 +94,7 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   transition: none !important;
 }
 
-/* React Flow CSS variables — tuned to NormaFlow's teal/cyan identity. */
+/* React Flow CSS variables — tuned to DBFlow's teal/cyan identity. */
 .react-flow {
   --xy-edge-stroke-default: #94a3b8;
   --xy-edge-stroke-width-default: 2.5;
@@ -217,7 +217,7 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
 }
 
 /* ============================================================
-   NORMAFLOW SHELL LAYOUT (Responsive Workspace Grid)
+   DBFLOW SHELL LAYOUT (Responsive Workspace Grid)
    Full-screen, distraction-free canvas with left palette
    ============================================================ */
 

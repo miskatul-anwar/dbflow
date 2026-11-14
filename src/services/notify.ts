@@ -11,7 +11,7 @@
  */
 export type NotifyLevel = 'success' | 'error' | 'warning' | 'info';
 
-export const APP_NAME = 'NormaFlow';
+export const APP_NAME = 'DBFlow';
 
 type WorkspaceNameResolver = (workspaceId: string) => string | undefined;
 let resolveWorkspaceName: WorkspaceNameResolver = () => undefined;

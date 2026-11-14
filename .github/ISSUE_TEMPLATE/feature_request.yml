@@ -1,11 +1,11 @@
 name: Feature request
-description: Suggest an idea or improvement for NormaFlow
+description: Suggest an idea or improvement for DBFlow
 labels: ["enhancement", "triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping shape NormaFlow's roadmap!
+        Thanks for helping shape DBFlow's roadmap!
 
   - type: textarea
     id: problem

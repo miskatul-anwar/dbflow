@@ -104,7 +104,7 @@ describe('DataUtils', () => {
       });
 
       it('infers url for web addresses', () => {
-        expect(DataUtils.inferDataType(['https://normaflow.dev', 'http://example.com/api'])).toBe('url');
+        expect(DataUtils.inferDataType(['https://dbflow.dev', 'http://example.com/api'])).toBe('url');
       });
 
       it('infers phone for standard phone numbers', () => {

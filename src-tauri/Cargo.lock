@@ -2175,8 +2175,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "normaflow"
-version = "4.0.0"
+name = "dbflow"
+version = "4.5.0"
 dependencies = [
  "serde",
  "serde_json",

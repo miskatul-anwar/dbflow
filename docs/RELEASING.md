@@ -1,4 +1,4 @@
-# Releasing NormaFlow
+# Releasing DBFlow
 
 This guide is for maintainers. The release process is fully automated once a
 tag is pushed.
@@ -48,9 +48,9 @@ Three files carry the version and must stay in sync:
    - Linux: `.deb`, `.rpm`, `.AppImage`
    
    and publishes them on an automatically created GitHub Release named
-   `NormaFlow vX.Y.Z`.
+   `DBFlow vX.Y.Z`.
 7. **Post-release**
-   - Verify assets on the [releases page](https://github.com/miskatul-anwar/normaflow/releases)
+   - Verify assets on the [releases page](https://github.com/miskatul-anwar/dbflow/releases)
    - Announce in Discussions / socials as appropriate
 
 ## Hotfixes

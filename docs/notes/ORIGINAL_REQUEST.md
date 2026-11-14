@@ -2,9 +2,9 @@
 
 ## Initial Request — 2026-10-13T07:47:23Z
 
-Thoroughly audit the Normaflow codebase, identify all functional bugs, logical flaws, and edge-case errors across data ingestion, normalization algorithms, and UI workflows, resolve them directly in the codebase, and verify all fixes with automated test suites.
+Thoroughly audit the DBFlow codebase, identify all functional bugs, logical flaws, and edge-case errors across data ingestion, normalization algorithms, and UI workflows, resolve them directly in the codebase, and verify all fixes with automated test suites.
 
-Working directory: c:\Users\Miskatul Anwar\Desktop\normaflow
+Working directory: c:\Users\Miskatul Anwar\Desktop\dbflow
 Integrity mode: development
 
 ## Requirements

@@ -284,7 +284,7 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
       <header className="nf-header">
         <div className="flex w-full items-center justify-between gap-3 px-3 py-1.5">
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/icon.png" alt="NormaFlow" title="NormaFlow" className="h-9 w-9 shrink-0 object-contain drop-shadow-xs" />
+            <img src="/icon.png" alt="DBFlow" title="DBFlow" className="h-9 w-9 shrink-0 object-contain drop-shadow-xs" />
             <Button onClick={() => navigate('/')} title="Return to the workflow canvas" aria-label="Back to the workflow canvas">
               <ArrowLeft />
               <span>Back to workflow</span>

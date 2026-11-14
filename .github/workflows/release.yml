@@ -81,9 +81,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ steps.tag.outputs.tag }}
-          releaseName: "NormaFlow ${{ steps.tag.outputs.tag }}"
+          releaseName: "DBFlow ${{ steps.tag.outputs.tag }}"
           releaseBody: |
-            See the assets below to download and install NormaFlow for your platform.
+            See the assets below to download and install DBFlow for your platform.
 
             **Changes**: see [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md).
 

@@ -1,5 +1,5 @@
 /**
- * Centralized Type Definitions for NormaFlow (Multi-CSV & AI Pipeline Enhanced)
+ * Centralized Type Definitions for DBFlow (Multi-CSV & AI Pipeline Enhanced)
  * Author: miskatul-anwar
  */
 

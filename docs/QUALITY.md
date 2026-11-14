@@ -1,13 +1,13 @@
 # Quality model (ISO/IEC 25000 SQuaRE)
 
-NormaFlow follows the **ISO/IEC 25000 SQuaRE** series (Systems and software Quality Requirements and Evaluation).
+DBFlow follows the **ISO/IEC 25000 SQuaRE** series (Systems and software Quality Requirements and Evaluation).
 Its product quality is specified and evaluated with the **ISO/IEC 25010** quality model, the data it produces with
 **ISO/IEC 25012**, and its measures are reported in the style of **ISO/IEC 25020 / 25023**. This page says, for each
 characteristic, what the requirement is, how it is checked, and what is **not** covered.
 
 **What this does and does not claim.** It is a self-assessment by the project, carried out on the model and
 measures above. It is **not** a third-party evaluation and **not** a certificate: SQuaRE gives a model and
-a process, not a pass mark, and no accredited body has evaluated NormaFlow. Say "evaluated against ISO/IEC 25010
+a process, not a pass mark, and no accredited body has evaluated DBFlow. Say "evaluated against ISO/IEC 25010
 (SQuaRE)", not "ISO certified" or "compliant with ISO/IEC 25000".
 
 `npm run quality` runs the automated gates (typecheck, lint, tests, production-dependency audit).
