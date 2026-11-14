@@ -61,14 +61,14 @@ Use the [**download page**](https://miskatul-anwar.github.io/dbflow/), which pic
 
 ### Build from source
 
-Prerequisites: **Node.js ≥ 18**, **Rust ≥ 1.77**, and the [Tauri v2 system dependencies](https://tauri.app/start/prerequisites/).
+Prerequisites: **[Bun](https://bun.sh)**, **Rust ≥ 1.77**, and the [Tauri v2 system dependencies](https://tauri.app/start/prerequisites/).
 
 ```bash
 git clone https://github.com/miskatul-anwar/dbflow.git
 cd dbflow
-npm install
-npm run tauri dev    # development
-npm run tauri build  # production bundle
+bun install
+bun run tauri dev    # development
+bun run tauri build  # production bundle
 ```
 
 <details>
@@ -101,11 +101,11 @@ Nothing extra to install: exact keywords are matched first, and a small sentence
 The same engine runs without the window:
 
 ```bash
-npm run cli -- analyze data/orders.csv data/customers.csv --out out/ --dialect postgresql --json
+bun run cli analyze data/orders.csv data/customers.csv --out out/ --dialect postgresql --json
 ```
 
 Options: `--out`, `--dialect` (`postgresql`, `mysql`, `sqlite`, `ansi`), `--ops "FD Miner,3NF"`, `--max-lhs`, `--json`, `--verbose`.
-`npm run bench` scores key, foreign-key and relation recovery on ground-truth schemas (see [docs/EVALUATION.md](docs/EVALUATION.md)).
+`bun run bench` scores key, foreign-key and relation recovery on ground-truth schemas (see [docs/EVALUATION.md](docs/EVALUATION.md)).
 
 ## Architecture at a glance
 
