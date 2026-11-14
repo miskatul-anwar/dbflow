@@ -1,144 +1,346 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src https://api.github.com; base-uri 'none'; form-action 'none'">
-  <title>DBFlow</title>
-  <meta name="description" content="DBFlow is a desktop app that finds functional dependencies and keys in CSV files, splits the table to 3NF or BCNF, and checks every split for lossless join and dependency preservation.">
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="preload" href="assets/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <a class="skip" href="#download">Skip to download</a>
-
-  <header class="top">
-    <div class="wrap bar">
-      <a class="brand" href="./"><img src="assets/icon.webp" width="26" height="26" alt="">DBFlow</a>
-      <nav aria-label="Project">
-        <a href="https://github.com/miskatul-anwar/dbflow">Source</a>
-        <a href="https://github.com/miskatul-anwar/dbflow/blob/main/CHANGELOG.md">Changelog</a>
-        <a href="https://github.com/miskatul-anwar/dbflow/blob/main/docs/QUALITY.md">Quality</a>
-      </nav>
-    </div>
-  </header>
-
-  <main>
-    <section class="wrap hero">
-      <div class="intro">
-        <h1><span>Find the keys.</span> <span>Split the table.</span> <span>Check what you lost.</span></h1>
-        <p class="lead">DBFlow reads a CSV or spreadsheet, mines its functional dependencies, splits it to 3NF or BCNF, and tests every split for lossless join and dependency preservation. It runs on your computer.</p>
-
-        <div id="download" class="dl" aria-live="polite">
-          <p id="dl-status" class="muted">Looking up the latest version…</p>
-          <noscript><p><a href="https://github.com/miskatul-anwar/dbflow/releases/latest">Open the latest release on GitHub.</a></p></noscript>
-        </div>
-        <p class="release-fallback"><a href="https://github.com/miskatul-anwar/dbflow/releases/latest">View the latest release on GitHub</a></p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f8faf9" />
+    <meta
+      name="description"
+      content="Download the latest DBFlow desktop release for Windows, macOS, or Linux. Find the right installer and turn CSV files into database schemas."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src https://api.github.com; base-uri 'none'; form-action 'none'"
+    />
+    <title>
+      Download DBFlow — Latest release for Windows, macOS &amp; Linux
+    </title>
+    <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#downloads">Skip to downloads</a>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="./" aria-label="DBFlow home"
+          ><img src="assets/icon.webp" width="32" height="32" alt="" />
+          <span>DBFlow<span class="brand-dot">.</span></span></a
+        >
+        <nav aria-label="Main navigation">
+          <a href="#downloads">Download</a>
+          <a href="#inside">Inside the app</a>
+          <a href="#install">Install help</a>
+          <a class="nav-source" href="https://github.com/miskatul-anwar/dbflow"
+            >GitHub <span aria-hidden="true">↗</span></a
+          >
+        </nav>
       </div>
+    </header>
 
-      <figure class="spec" aria-labelledby="spec-cap">
-        <div class="spec-head">
-          <span class="mono">enrollment.csv, 120 rows</span>
-          <div class="seg" role="group" aria-label="Normal form">
-            <button type="button" id="b-3nf" aria-pressed="false" aria-controls="p-3nf">3NF</button>
-            <button type="button" id="b-bcnf" aria-pressed="true" aria-controls="p-bcnf">BCNF</button>
+    <main>
+      <section class="hero container" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">
+            <span class="eyebrow-line"></span> A better way to understand your
+            data
+          </p>
+          <h1 id="hero-title">From messy tables to <em>clear schemas.</em></h1>
+          <p class="hero-description">
+            DBFlow turns CSV and spreadsheet files into normalized tables, ER
+            diagrams, and SQL. Follow every dependency and check what your
+            decomposition preserves. Your files stay on your computer.
+          </p>
+          <a class="hero-link" href="#downloads"
+            >Find your download <span aria-hidden="true">↓</span></a
+          >
+        </div>
+        <div
+          class="hero-visual"
+          aria-label="Preview of DBFlow's pipeline editor"
+        >
+          <div class="visual-top">
+            <span class="window-dots" aria-hidden="true"
+              ><i></i><i></i><i></i></span
+            ><span>DBFlow / Workflow</span
+            ><span class="visual-status">LOCAL WORKSPACE</span>
+          </div>
+          <img
+            src="assets/shot-pipeline.webp"
+            width="1600"
+            height="1000"
+            alt="DBFlow pipeline editor showing connected steps for cleaning data, discovering keys, normalizing tables, and generating output."
+          />
+          <div class="visual-caption">
+            <span>01 / VISUAL PIPELINE</span
+            ><span>Build a path from raw data to a schema</span>
           </div>
         </div>
-        <div class="spec-body">
-          <p class="label">Table</p>
-          <p class="mono rel">Enrollment(<u>student_id</u>, <u>course</u>, teacher)</p>
-          <p class="label">Dependencies found</p>
-          <p class="mono fd">{student_id, course} <span class="arr">→</span> teacher</p>
-          <p class="mono fd">teacher <span class="arr">→</span> course</p>
+      </section>
 
-          <div id="p-bcnf" class="panel">
-            <p class="label">BCNF</p>
-            <p class="mono rel">R<sub>1</sub>(<u>teacher</u>, course)</p>
-            <p class="mono rel">R<sub>2</sub>(<u>student_id</u>, <u>teacher</u>)</p>
-            <dl class="verdict">
-              <div><dt>Lossless join</dt><dd class="ok">holds</dd></div>
-              <div><dt>Dependencies kept</dt><dd class="bad">1 of 2</dd></div>
-            </dl>
-            <p class="note"><span class="bad">Lost:</span> <span class="mono">{student_id, course} <span class="arr">→</span> teacher</span>. No single relation holds it any more.</p>
+      <section
+        class="download-section"
+        id="downloads"
+        aria-labelledby="downloads-title"
+      >
+        <div class="container download-layout">
+          <div class="section-intro">
+            <p class="section-kicker">GET THE APP <span>01 / 03</span></p>
+            <h2 id="downloads-title">The right build, <br />right here.</h2>
+            <p>
+              Choose your system and download the installer straight from the
+              latest GitHub release.
+            </p>
+            <div class="release-aside">
+              <span class="live-dot" aria-hidden="true"></span> Automatically
+              checks for the newest release when this page opens.
+            </div>
           </div>
-
-          <div id="p-3nf" class="panel" hidden>
-            <p class="label">3NF</p>
-            <p class="mono rel">Enrollment(<u>student_id</u>, <u>course</u>, teacher)</p>
-            <dl class="verdict">
-              <div><dt>Lossless join</dt><dd class="ok">holds</dd></div>
-              <div><dt>Dependencies kept</dt><dd class="ok">2 of 2</dd></div>
-            </dl>
-            <p class="note">The table is already in 3NF, so nothing is lost. <span class="mono">teacher <span class="arr">→</span> course</span> still repeats a course for each of a teacher's students; BCNF removes that.</p>
+          <div class="release-panel" aria-live="polite">
+            <div class="release-header">
+              <div>
+                <p class="panel-overline" id="release-status">
+                  Checking GitHub Releases
+                </p>
+                <h3 id="release-version">Latest version</h3>
+                <p class="release-date" id="release-date">One moment…</p>
+              </div>
+              <span class="release-mark" aria-hidden="true">↘</span>
+            </div>
+            <p id="loading-state" class="loading-state" role="status">
+              Looking up available installers…
+            </p>
+            <div id="release-content" hidden>
+              <p class="field-label">SELECT YOUR SYSTEM</p>
+              <div
+                class="system-tabs"
+                id="system-tabs"
+                role="group"
+                aria-label="Choose operating system"
+              ></div>
+              <div id="installer-list"></div>
+              <a class="all-files-link" href="#all-downloads"
+                >See every download and checksum
+                <span aria-hidden="true">↗</span></a
+              >
+            </div>
+            <div class="release-footer">
+              <a
+                id="release-link"
+                href="https://github.com/miskatul-anwar/dbflow/releases/latest"
+                >View latest release on GitHub
+                <span aria-hidden="true">↗</span></a
+              ><button
+                id="refresh-release"
+                type="button"
+                aria-label="Refresh release information"
+              >
+                Refresh
+              </button>
+            </div>
+            <noscript
+              ><p class="noscript-note">
+                JavaScript is needed to list installers here. Use the GitHub
+                release link above to download.
+              </p></noscript
+            >
           </div>
         </div>
-        <figcaption id="spec-cap">Output of a real run. Underlined attributes form the key.</figcaption>
-      </figure>
-    </section>
+      </section>
 
-    <section class="wrap files" aria-labelledby="files-h" id="more" hidden>
-      <h2 id="files-h">All downloads</h2>
-      <div class="tablewrap">
-        <table>
-          <thead><tr><th scope="col">System</th><th scope="col">File</th><th scope="col">Size</th><th scope="col">SHA-256</th></tr></thead>
-          <tbody id="files"></tbody>
-        </table>
+      <section
+        class="inside-section container"
+        id="inside"
+        aria-labelledby="inside-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">WHAT YOU GET <span>02 / 03</span></p>
+            <h2 id="inside-title">
+              A complete path<br />from file to database.
+            </h2>
+          </div>
+          <p>Explore and verify your schema before you export it.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-number">01</span>
+            <h3>Bring in your data</h3>
+            <p>
+              Open CSV or spreadsheet files. DBFlow profiles columns and finds
+              relationships across your tables.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-number">02</span>
+            <h3>Follow the logic</h3>
+            <p>
+              Discover functional dependencies and candidate keys. Normalize to
+              3NF or BCNF and check lossless joins and dependency preservation.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-number">03</span>
+            <h3>Take the result</h3>
+            <p>
+              Export an ER diagram, SQL DDL, normalized data, and a report you
+              can inspect and share.
+            </p>
+          </article>
+        </div>
+        <figure class="product-preview">
+          <div class="preview-image">
+            <img
+              src="assets/shot-erd.webp"
+              width="1600"
+              height="1091"
+              loading="lazy"
+              alt="DBFlow results screen showing a Crow's foot ER diagram, related tables, and export controls."
+            />
+          </div>
+          <figcaption>
+            <span>02 / RESULTS VIEW</span
+            ><strong>See the relationships your data was hiding.</strong
+            ><span
+              >ER diagrams, schema details and export controls in one
+              workspace.</span
+            >
+          </figcaption>
+        </figure>
+        <div class="privacy-strip">
+          <div class="privacy-icon" aria-hidden="true">✳</div>
+          <p>
+            <strong>Built for your machine.</strong> DBFlow runs its analysis
+            locally. The small models it uses ship with the installer.
+          </p>
+          <a href="https://github.com/miskatul-anwar/dbflow"
+            >Explore the source <span aria-hidden="true">↗</span></a
+          >
+        </div>
+      </section>
+
+      <section
+        class="install-section"
+        id="install"
+        aria-labelledby="install-title"
+      >
+        <div class="container install-layout">
+          <div>
+            <p class="section-kicker">GET STARTED <span>03 / 03</span></p>
+            <h2 id="install-title">Install and<br />get moving.</h2>
+            <p class="install-lead">
+              The downloads above are installers for desktop computers. Select
+              your system to see the matching instructions.
+            </p>
+          </div>
+          <div class="install-help">
+            <h3>Installing on <span id="install-system">Windows</span></h3>
+            <div data-install="windows">
+              <p>
+                Run the EXE installer. The MSI is available for managed Windows
+                installs.
+              </p>
+              <p>
+                Windows may show a SmartScreen warning because the installer is
+                not signed. Choose <strong>More info</strong>, then
+                <strong>Run anyway</strong>.
+              </p>
+            </div>
+            <div data-install="macos" hidden>
+              <p>
+                Open the DMG and drag DBFlow into Applications. Pick Apple
+                Silicon for an M1 or newer Mac, or Intel for an older one.
+              </p>
+              <p>
+                The app is not notarized. On first launch, right-click DBFlow
+                and choose <strong>Open</strong>.
+              </p>
+            </div>
+            <div data-install="linux" hidden>
+              <p>
+                For AppImage, make the file executable and run it. On Debian or
+                Ubuntu, install the DEB package. On Fedora, RHEL or openSUSE,
+                use the RPM package.
+              </p>
+              <p>
+                Check the architecture shown next to each installer before
+                installing on your device.
+              </p>
+            </div>
+            <a href="https://github.com/miskatul-anwar/dbflow/issues"
+              >Need help? Open an issue <span aria-hidden="true">↗</span></a
+            >
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="container all-downloads-section"
+        id="all-downloads"
+        aria-labelledby="all-downloads-title"
+      >
+        <div class="all-downloads-heading">
+          <div>
+            <p class="section-kicker">RELEASE FILES</p>
+            <h2 id="all-downloads-title">Every installer.</h2>
+          </div>
+          <p>
+            Compare formats and verify a downloaded file with its SHA-256
+            checksum.
+          </p>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">System</th>
+                <th scope="col">Format</th>
+                <th scope="col">File</th>
+                <th scope="col">Size</th>
+                <th scope="col">SHA-256</th>
+              </tr>
+            </thead>
+            <tbody id="all-files">
+              <tr>
+                <td colspan="5">Loading release files…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="checksum-help">
+          To verify a file: run <code>sha256sum FILE</code> on Linux,
+          <code>shasum -a 256 FILE</code> on macOS, or
+          <code>Get-FileHash FILE</code> in PowerShell.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>
+          <a class="brand" href="./"
+            ><img src="assets/icon.webp" width="30" height="30" alt="" /><span
+              >DBFlow<span class="brand-dot">.</span></span
+            ></a
+          >
+          <p>Make sense of your data.</p>
+        </div>
+        <div class="footer-links">
+          <a href="https://github.com/miskatul-anwar/dbflow/releases"
+            >All releases</a
+          ><a
+            href="https://github.com/miskatul-anwar/dbflow/blob/main/CHANGELOG.md"
+            >Changelog</a
+          ><a href="https://github.com/miskatul-anwar/dbflow">Source code</a
+          ><a href="https://github.com/miskatul-anwar/dbflow/blob/main/LICENSE"
+            >MIT licence</a
+          >
+        </div>
       </div>
-      <p class="muted small" id="size-note"></p>
-    </section>
-
-    <section class="wrap how" aria-labelledby="how-h">
-      <h2 id="how-h">What is in the app</h2>
-      <dl class="terms">
-        <div><dt>Request box</dt><dd>Type a goal, such as “normalize to 3NF and generate SQL” or “run all steps”. The preview lists the steps before anything runs.</dd></div>
-        <div><dt>Pipeline</dt><dd>Nineteen steps from loading to the report, on a canvas you can edit. Each workspace keeps its own files, pipeline and results.</dd></div>
-        <div><dt>Engine</dt><dd>Parsing, dependency mining, normalization and every generated file come from one engine written in Rust. It runs natively in the desktop app, so large files are analyzed at full speed without freezing the window.</dd></div>
-        <div><dt>Checks</dt><dd>Every decomposition is tested for lossless join and dependency preservation, on the data as well as on the dependencies.</dd></div>
-        <div><dt>Output</dt><dd>ER diagram in Chen, Crow’s foot, Barker or UML notation. SQL DDL for PostgreSQL, MySQL, SQLite or ANSI. Normalized data and a PDF report.</dd></div>
-        <div><dt>Input</dt><dd>CSV, XLSX, XLS and ODS. Each sheet of a workbook becomes a table, and several files are linked by detected foreign keys.</dd></div>
-        <div><dt>Table names</dt><dd>A small model suggests names for new tables and marks them <em>suggested</em>. It was right for about two tables in three in our test, so check them. You can rename any of them.</dd></div>
-        <div><dt>Privacy</dt><dd>Files are analyzed on your machine. The two small models ship in the installer, and the app makes no network requests while it runs.</dd></div>
-      </dl>
-    </section>
-
-    <section class="wrap shots" aria-label="Screenshots">
-      <figure>
-        <img src="assets/shot-pipeline.webp" width="1600" height="1000" loading="lazy" alt="The pipeline page: operations on the left, the request box above the canvas, and the pipeline drawn as connected steps.">
-        <figcaption><strong>Pipeline page.</strong> The request box turns a sentence into steps; the canvas shows them and lets you edit them.</figcaption>
-      </figure>
-      <figure>
-        <img src="assets/shot-erd.webp" width="1600" height="1091" loading="lazy" alt="An ER diagram in Crow's foot notation with four tables and their keys.">
-        <figcaption><strong>ER diagram.</strong> Crow’s foot notation, with keys marked. It exports as SVG or as diagram source.</figcaption>
-      </figure>
-    </section>
-
-    <section class="wrap install" aria-labelledby="install-h">
-      <h2 id="install-h">Installing</h2>
-      <details id="n-windows">
-        <summary>Windows</summary>
-        <p>Run the <code>.exe</code> installer, or the <code>.msi</code> for managed installs. The installer is not code-signed, so Windows may show “Windows protected your PC”. Choose <em>More info</em>, then <em>Run anyway</em>.</p>
-      </details>
-      <details id="n-macos">
-        <summary>macOS</summary>
-        <p>Open the <code>.dmg</code> and drag DBFlow to Applications. Choose Apple Silicon for an M1 or later Mac and Intel for an older one (Apple menu, About This Mac). The app is not notarized, so the first time, right-click it and choose <em>Open</em>.</p>
-      </details>
-      <details id="n-linux">
-        <summary>Linux</summary>
-        <p><strong>AppImage:</strong> <code>chmod +x DBFlow_*.AppImage</code>, then run it. <strong>Debian, Ubuntu:</strong> <code>sudo apt install ./DBFlow_*.deb</code>. <strong>Fedora, RHEL:</strong> <code>sudo dnf install ./DBFlow-*.rpm</code>.</p>
-      </details>
-      <details>
-        <summary>Check a download</summary>
-        <p>Compare the SHA-256 in the table with the one you compute: <code>sha256sum FILE</code> on Linux, <code>shasum -a 256 FILE</code> on macOS, <code>Get-FileHash FILE</code> in Windows PowerShell.</p>
-      </details>
-    </section>
-  </main>
-
-  <footer class="wrap foot">
-    <p>Open source, MIT licence. This page asks the GitHub API for the latest release when it loads and sets no cookies.</p>
-    <p><a href="https://github.com/miskatul-anwar/dbflow/releases">All releases</a> · <a href="https://github.com/miskatul-anwar/dbflow/issues">Report a problem</a> · <a href="https://github.com/miskatul-anwar/dbflow/blob/main/LICENSE">Licence</a></p>
-  </footer>
-
-  <script src="app.js"></script>
-</body>
+      <div class="container footer-bottom">
+        <span>Open source. No accounts. Your data stays local.</span
+        ><span>© DBFlow</span>
+      </div>
+    </footer>
+  </body>
 </html>

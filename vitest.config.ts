@@ -9,7 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'tests/site/**/*.test.mjs'],
     // The engine is Rust compiled to WebAssembly; load it before any test runs.
     setupFiles: ['src/engine/nodeInit.ts'],
     // Spreadsheet fixtures are written by SheetJS, whose date serials depend on the local time zone.
