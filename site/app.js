@@ -2,33 +2,32 @@
 (function () {
   var REPO = 'miskatul-anwar/dbflow';
   var RELEASES = 'https://github.com/' + REPO + '/releases';
+  var OS_NAME = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
   var $ = function (id) { return document.getElementById(id); };
 
-  /** Which system is the visitor on? macOS cannot be told apart by chip, so it shows both builds. */
-  function detectOS() {
+  function detectSystem() {
     var ua = navigator.userAgent || '';
-    var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
-    if (/android|iphone|ipod/i.test(ua)) return 'mobile';
-    if (/mac/i.test(plat + ua) && navigator.maxTouchPoints > 1) return 'mobile'; // iPadOS reports a Mac
-    if (/win/i.test(plat) || /windows/i.test(ua)) return 'windows';
-    if (/mac/i.test(plat) || /macintosh/i.test(ua)) return 'macos';
-    if (/linux|x11|cros/i.test(plat + ua)) return 'linux';
-    return 'unknown';
+    var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    if (/android|iphone|ipad|ipod/i.test(platform + ua) || (/mac/i.test(platform) && navigator.maxTouchPoints > 1)) return { os: 'mobile' };
+    if (/win/i.test(platform) || /windows/i.test(ua)) return { os: 'windows' };
+    if (/mac/i.test(platform) || /macintosh/i.test(ua)) return { os: 'macos' };
+    if (/linux|x11|cros/i.test(platform + ua)) {
+      return { os: 'linux', arm: /aarch64|arm64|armv[78]/i.test(platform + ua) };
+    }
+    return { os: 'unknown' };
   }
 
-  var OS_NAME = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
-
-  /** Sort release files into the ones a person would download. Updater bundles (.app.tar.gz) are left out. */
+  // Tauri updater bundles are not standalone installers.
   function classify(asset) {
-    var n = asset.name;
-    if (/\.app\.tar\.gz$/i.test(n) || /\.sig$/i.test(n) || /latest\.json$/i.test(n)) return null;
-    if (/-setup\.exe$/i.test(n) || /\.exe$/i.test(n)) return { os: 'windows', kind: '.exe installer', note: 'Windows, 64-bit', rank: 1 };
-    if (/\.msi$/i.test(n)) return { os: 'windows', kind: '.msi installer', note: 'Windows, 64-bit, for managed installs', rank: 2 };
-    if (/aarch64\.dmg$/i.test(n) || /arm64\.dmg$/i.test(n)) return { os: 'macos', kind: 'Apple Silicon', note: 'macOS, M1 or later', rank: 1, arch: 'arm' };
-    if (/\.dmg$/i.test(n)) return { os: 'macos', kind: 'Intel', note: 'macOS, Intel', rank: 2, arch: 'intel' };
-    if (/\.AppImage$/i.test(n)) return { os: 'linux', kind: 'AppImage', note: 'Linux x86_64, runs anywhere', rank: 1 };
-    if (/\.deb$/i.test(n)) return { os: 'linux', kind: '.deb', note: 'Debian, Ubuntu', rank: 2 };
-    if (/\.rpm$/i.test(n)) return { os: 'linux', kind: '.rpm', note: 'Fedora, RHEL, openSUSE', rank: 3 };
+    var n = asset.name || '';
+    if (/\.app\.tar\.gz$|\.sig$|latest\.json$/i.test(n)) return null;
+    if (/-setup\.exe$/i.test(n) || /\.exe$/i.test(n)) return { os: 'windows', label: '.exe installer', note: 'Windows, x64', rank: 1 };
+    if (/\.msi$/i.test(n)) return { os: 'windows', label: '.msi installer', note: 'Windows, x64 · managed installs', rank: 2 };
+    if (/(?:aarch64|arm64)\.dmg$/i.test(n)) return { os: 'macos', label: 'Apple Silicon', note: 'macOS, Apple Silicon', rank: 1 };
+    if (/\.dmg$/i.test(n)) return { os: 'macos', label: 'Intel', note: 'macOS, Intel', rank: 2 };
+    if (/\.AppImage$/i.test(n)) return { os: 'linux', label: 'AppImage', note: 'Linux, x86_64', rank: 1 };
+    if (/\.deb$/i.test(n)) return { os: 'linux', label: '.deb package', note: 'Debian / Ubuntu, x86_64', rank: 2 };
+    if (/\.rpm$/i.test(n)) return { os: 'linux', label: '.rpm package', note: 'Fedora / RHEL, x86_64', rank: 3 };
     return null;
   }
 
@@ -36,91 +35,152 @@
     if (!bytes) return '';
     return bytes >= 1e9 ? (bytes / 1e9).toFixed(2) + ' GB' : (bytes / 1e6).toFixed(bytes >= 1e8 ? 0 : 1) + ' MB';
   }
-  function safeUrl(u) { return typeof u === 'string' && u.indexOf('https://github.com/' + REPO + '/') === 0 ? u : RELEASES; }
-  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-  function link(href, text, cls) { var a = el('a', cls, text); a.href = safeUrl(href); return a; }
-
-  function fail(why) {
-    var box = $('dl-status'); box.textContent = '';
-    box.appendChild(document.createTextNode(why + ' '));
-    box.appendChild(link(RELEASES + '/latest', 'Open the latest release on GitHub.'));
+  function safeUrl(url) {
+    return typeof url === 'string' && url.startsWith(RELEASES + '/download/') ? url : RELEASES + '/latest';
+  }
+  function el(tag, cls, value) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (value != null) node.textContent = value;
+    return node;
+  }
+  function link(href, value, cls) {
+    var node = el('a', cls, value);
+    node.href = safeUrl(href);
+    return node;
+  }
+  function fail(message) {
+    $('dl-status').textContent = message;
   }
 
-  function render(rel) {
-    var files = (rel.assets || []).map(function (a) { var c = classify(a); return c && { a: a, c: c }; }).filter(Boolean);
-    if (!files.length) return fail('This release has no installers yet.');
-    var version = String(rel.tag_name || '').replace(/^v/, '');
-    var os = detectOS();
-    var box = $('dl-status'); var card = box.parentNode;
-    box.remove();
+  function render(release) {
+    var files = (release.assets || []).map(function (asset) {
+      var type = classify(asset);
+      return type && { asset: asset, type: type };
+    }).filter(Boolean);
+    if (!files.length) return fail('This release has no installers yet. Open the release on GitHub for details.');
 
-    var mine = files.filter(function (f) { return f.c.os === os; }).sort(function (x, y) { return x.c.rank - y.c.rank; });
-    if (mine.length) {
-      card.appendChild(el('p', 'ver', 'DBFlow ' + version));
-      var btns = el('div', 'btns');
-      var shown = os === 'macos' ? mine.slice(0, 2) : mine.slice(0, 1);
-      shown.forEach(function (f, i) {
-        var label = os === 'macos' ? 'Download for macOS (' + f.c.kind + ')' : 'Download for ' + OS_NAME[os];
-        var b = link(f.a.browser_download_url, label, 'btn' + (i > 0 ? ' alt' : '')); b.setAttribute('download', '');
-        btns.appendChild(b);
+    var box = $('download');
+    box.textContent = '';
+    var version = String(release.tag_name || '').replace(/^v/, '');
+    box.appendChild(el('p', 'ver', 'Latest release · DBFlow ' + version));
+    box.appendChild(el('p', 'picker-label', 'Choose your system'));
+    var picker = el('div', 'os-picker');
+    picker.setAttribute('role', 'group');
+    picker.setAttribute('aria-label', 'Choose your system');
+    box.appendChild(picker);
+    var choice = el('div', 'download-choice');
+    box.appendChild(choice);
+    var detected = detectSystem();
+    var selected = OS_NAME[detected.os] ? detected.os : null;
+
+    function show(os) {
+      selected = os;
+      Array.prototype.forEach.call(picker.children, function (button) {
+        button.setAttribute('aria-pressed', String(button.dataset.os === os));
       });
-      card.appendChild(btns);
-      var f0 = shown[0];
-      card.appendChild(el('p', 'meta', os === 'macos'
-        ? 'Not sure which Mac you have? Apple menu, About This Mac: “Apple M…” means Apple Silicon, “Intel” means Intel. ' + shown.map(function (f) { return f.c.kind + ' ' + size(f.a.size); }).join(' · ') + '.'
-        : f0.c.kind + ' · ' + size(f0.a.size) + ' · ' + f0.c.note));
-      if (os === 'windows' || os === 'macos') {
-        var w = el('p', 'warn'); w.appendChild(el('b', null, 'First launch. '));
-        w.appendChild(document.createTextNode(os === 'windows'
-          ? 'The installer is not code-signed, so Windows may warn you. Choose More info, then Run anyway.'
-          : 'The app is not notarized. The first time, right-click it and choose Open.'));
-        card.appendChild(w);
+      choice.textContent = '';
+      var mine = files.filter(function (file) { return file.type.os === os; })
+        .sort(function (a, b) { return a.type.rank - b.type.rank; });
+      if (!mine.length) {
+        choice.appendChild(el('p', 'meta', 'No ' + OS_NAME[os] + ' installer is available in this release.'));
+        return;
       }
-      var d = $('n-' + os); if (d) d.open = true;
-    } else {
-      card.appendChild(el('p', 'ver', 'DBFlow ' + version));
-      card.appendChild(el('p', 'meta', os === 'mobile'
-        ? 'DBFlow is a desktop app for Windows, macOS and Linux. Open this page on a computer to download it.'
-        : 'Pick your system from the list below.'));
+      if (os === 'linux' && detected.os === 'linux' && detected.arm) {
+        choice.appendChild(el('p', 'compat-note', 'Your device appears to use ARM. The current Linux installers are x86_64 and may not run on it.'));
+      }
+      if (os === 'macos') {
+        choice.appendChild(el('p', 'meta', 'Apple menu → About This Mac shows whether your Mac uses Apple Silicon or Intel.'));
+      }
+      var buttons = el('div', 'download-options');
+      mine.forEach(function (file, index) {
+        var item = el('div', 'download-option');
+        var title = os === 'windows' && index === 0 ? 'Download for Windows' : 'Download ' + file.type.label;
+        item.appendChild(link(file.asset.browser_download_url, title, 'btn' + (index ? ' alt' : '')));
+        item.appendChild(el('span', 'option-meta', file.type.note + ' · ' + size(file.asset.size)));
+        buttons.appendChild(item);
+      });
+      choice.appendChild(buttons);
+      if (os === 'windows' || os === 'macos') {
+        choice.appendChild(el('p', 'warn', os === 'windows'
+          ? 'First launch: Windows may show a warning because the installer is unsigned. Choose More info, then Run anyway.'
+          : 'First launch: the app is not notarized. Right-click it and choose Open.'));
+      }
+      var instructions = $('n-' + os);
+      if (instructions) instructions.open = true;
     }
 
-    var body = $('files'); var total = 0;
-    ['windows', 'macos', 'linux'].forEach(function (name) {
-      files.filter(function (f) { return f.c.os === name; }).sort(function (x, y) { return x.c.rank - y.c.rank; }).forEach(function (f) {
-        total = Math.max(total, f.a.size || 0);
-        var tr = el('tr');
-        var sys = el('td'); if (f.c.os === os) sys.appendChild(el('span', 'you', 'Your system')); sys.appendChild(el('strong', null, OS_NAME[name])); sys.appendChild(el('div', 'muted small', f.c.note));
-        var file = el('td'); file.appendChild(link(f.a.browser_download_url, f.a.name));
-        var sum = el('td', 'sum'); var h = String(f.a.digest || '').replace(/^sha256:/, '');
-        if (/^[0-9a-f]{64}$/i.test(h)) {
-          sum.appendChild(document.createTextNode(h));
-          var cp = el('button', 'copy', 'Copy'); cp.type = 'button';
-          cp.setAttribute('aria-label', 'Copy SHA-256 of ' + f.a.name);
-          cp.addEventListener('click', function () {
-            if (navigator.clipboard) navigator.clipboard.writeText(h).then(function () { cp.textContent = 'Copied'; setTimeout(function () { cp.textContent = 'Copy'; }, 1500); });
-          });
-          sum.appendChild(cp);
-        } else sum.textContent = 'not listed';
-        tr.appendChild(sys); tr.appendChild(file); tr.appendChild(el('td', 'nowrap', size(f.a.size))); tr.appendChild(sum);
-        body.appendChild(tr);
-      });
+    ['windows', 'macos', 'linux'].forEach(function (os) {
+      var button = el('button', 'os-button', OS_NAME[os]);
+      button.type = 'button';
+      button.dataset.os = os;
+      button.setAttribute('aria-pressed', 'false');
+      button.addEventListener('click', function () { show(os); });
+      picker.appendChild(button);
+    });
+    if (selected) show(selected);
+    else choice.appendChild(el('p', 'meta', detected.os === 'mobile'
+      ? 'DBFlow is a desktop app. Choose the system on the computer where you will install it.'
+      : 'Choose a system above to see its installers.'));
+
+    var body = $('files');
+    body.textContent = '';
+    ['windows', 'macos', 'linux'].forEach(function (os) {
+      files.filter(function (file) { return file.type.os === os; })
+        .sort(function (a, b) { return a.type.rank - b.type.rank; })
+        .forEach(function (file) {
+          var row = el('tr');
+          var system = el('td');
+          if (os === detected.os) system.appendChild(el('span', 'you', 'Your system'));
+          system.appendChild(el('strong', null, OS_NAME[os]));
+          system.appendChild(el('div', 'muted small', file.type.note));
+          var name = el('td');
+          name.appendChild(link(file.asset.browser_download_url, file.asset.name));
+          var digest = el('td', 'sum');
+          var hash = String(file.asset.digest || '').replace(/^sha256:/, '');
+          if (/^[0-9a-f]{64}$/i.test(hash)) {
+            digest.appendChild(document.createTextNode(hash));
+            var copy = el('button', 'copy', 'Copy');
+            copy.type = 'button';
+            copy.setAttribute('aria-label', 'Copy SHA-256 of ' + file.asset.name);
+            copy.addEventListener('click', function () {
+              if (navigator.clipboard) navigator.clipboard.writeText(hash).then(function () {
+                copy.textContent = 'Copied';
+                setTimeout(function () { copy.textContent = 'Copy'; }, 1500);
+              });
+            });
+            digest.appendChild(copy);
+          } else digest.textContent = 'not listed';
+          row.appendChild(system);
+          row.appendChild(name);
+          row.appendChild(el('td', 'nowrap', size(file.asset.size)));
+          row.appendChild(digest);
+          body.appendChild(row);
+        });
     });
     $('more').hidden = false;
-    $('size-note').textContent = total > 3e8
-      ? 'Each installer is large because it includes the two models the app runs on your computer.'
-      : '';
+    $('size-note').textContent = 'Installers include the models that run on your computer.';
   }
 
-  /** The specimen: switch between the two real results shown for enrollment.csv. */
-  ['3nf', 'bcnf'].forEach(function (k) {
-    var btn = $('b-' + k); if (!btn) return;
-    btn.addEventListener('click', function () {
-      ['3nf', 'bcnf'].forEach(function (j) { $('p-' + j).hidden = j !== k; $('b-' + j).setAttribute('aria-pressed', String(j === k)); });
+  ['3nf', 'bcnf'].forEach(function (key) {
+    var button = $('b-' + key);
+    if (!button) return;
+    button.addEventListener('click', function () {
+      ['3nf', 'bcnf'].forEach(function (other) {
+        $('p-' + other).hidden = other !== key;
+        $('b-' + other).setAttribute('aria-pressed', String(other === key));
+      });
     });
   });
 
-  fetch('https://api.github.com/repos/' + REPO + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
-    .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-    .then(render)
-    .catch(function (e) { fail(String(e && e.message) === '403' ? 'GitHub is limiting requests from your network right now.' : 'Could not reach GitHub to look up the latest version.'); });
+  fetch('https://api.github.com/repos/' + REPO + '/releases/latest', {
+    headers: { Accept: 'application/vnd.github+json' }
+  }).then(function (response) {
+    if (!response.ok) throw new Error(String(response.status));
+    return response.json();
+  }).then(render).catch(function (error) {
+    fail(String(error && error.message) === '403'
+      ? 'GitHub is limiting requests from your network right now.'
+      : 'Could not look up the latest version.');
+  });
 })();
