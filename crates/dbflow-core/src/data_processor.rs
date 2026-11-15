@@ -64,7 +64,7 @@ pub fn clean(data: &Table) -> Table {
         let mut cells = vec![Cell::Absent; out.columns_raw().len()];
         for (t, v) in targets.iter().zip(values) {
             if let Some(i) = t {
-                cells[*i] = Cell::Str(v);
+                cells[*i] = Cell::str(v);
             }
         }
         out.push_row(cells);

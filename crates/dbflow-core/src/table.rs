@@ -12,6 +12,104 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
+
+/// Cell text. Values up to 22 bytes (most numbers, codes, dates and names) are stored inline, with no
+/// allocation; longer ones are shared, so copying a cell into another relation never copies its text.
+#[derive(Clone)]
+pub struct Text(TextRepr);
+
+#[derive(Clone)]
+enum TextRepr {
+    Inline { len: u8, buf: [u8; INLINE_TEXT] },
+    Shared(Arc<str>),
+}
+
+const INLINE_TEXT: usize = 22;
+
+impl Text {
+    pub fn new(s: &str) -> Text {
+        if s.len() <= INLINE_TEXT {
+            let mut buf = [0u8; INLINE_TEXT];
+            buf[..s.len()].copy_from_slice(s.as_bytes());
+            Text(TextRepr::Inline {
+                len: s.len() as u8,
+                buf,
+            })
+        } else {
+            Text(TextRepr::Shared(Arc::from(s)))
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        match &self.0 {
+            // The bytes were copied from a `&str` of exactly `len` bytes.
+            TextRepr::Inline { len, buf } => std::str::from_utf8(&buf[..*len as usize]).unwrap_or_default(),
+            TextRepr::Shared(s) => s,
+        }
+    }
+}
+
+impl From<String> for Text {
+    fn from(s: String) -> Text {
+        if s.len() <= INLINE_TEXT {
+            Text::new(&s)
+        } else {
+            Text(TextRepr::Shared(Arc::from(s)))
+        }
+    }
+}
+
+impl From<&str> for Text {
+    fn from(s: &str) -> Text {
+        Text::new(s)
+    }
+}
+
+impl std::ops::Deref for Text {
+    type Target = str;
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl AsRef<str> for Text {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::borrow::Borrow<str> for Text {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl PartialEq for Text {
+    fn eq(&self, other: &Text) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+
+impl Eq for Text {}
+
+impl std::hash::Hash for Text {
+    fn hash<H: std::hash::Hasher>(&self, h: &mut H) {
+        self.as_str().hash(h)
+    }
+}
+
+impl fmt::Debug for Text {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.as_str(), f)
+    }
+}
+
+impl fmt::Display for Text {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub enum Cell {
@@ -20,13 +118,15 @@ pub enum Cell {
     Null,
     Bool(bool),
     Num(f64),
-    Str(String),
-    Json(Value),
+    /// Text: inline when short, shared otherwise, so projecting rows into new relations is cheap.
+    Str(Text),
+    /// Nested JSON (rare; boxed to keep cells small).
+    Json(Box<Value>),
 }
 
 impl Cell {
     pub fn str(s: impl Into<String>) -> Cell {
-        Cell::Str(s.into())
+        Cell::Str(Text::from(s.into()))
     }
 
     pub fn from_json(v: Value) -> Cell {
@@ -34,8 +134,8 @@ impl Cell {
             Value::Null => Cell::Null,
             Value::Bool(b) => Cell::Bool(b),
             Value::Number(n) => Cell::Num(n.as_f64().unwrap_or(f64::NAN)),
-            Value::String(s) => Cell::Str(s),
-            other => Cell::Json(other),
+            Value::String(s) => Cell::Str(Text::from(s)),
+            other => Cell::Json(Box::new(other)),
         }
     }
 
@@ -44,8 +144,8 @@ impl Cell {
             Cell::Absent | Cell::Null => Value::Null,
             Cell::Bool(b) => Value::Bool(*b),
             Cell::Num(n) => num_json(*n),
-            Cell::Str(s) => Value::String(s.clone()),
-            Cell::Json(v) => v.clone(),
+            Cell::Str(s) => Value::String(s.to_string()),
+            Cell::Json(v) => (**v).clone(),
         }
     }
 
@@ -90,7 +190,7 @@ impl Cell {
             Cell::Null => "null".into(),
             Cell::Bool(b) => b.to_string(),
             Cell::Num(n) => js::num_to_string(*n),
-            Cell::Str(s) => s.clone(),
+            Cell::Str(s) => s.to_string(),
             Cell::Json(v) => json_to_js_string(v),
         }
     }
@@ -98,7 +198,7 @@ impl Cell {
     /// `String(v)` without copying string cells.
     pub fn text(&self) -> std::borrow::Cow<'_, str> {
         match self {
-            Cell::Str(s) => std::borrow::Cow::Borrowed(s.as_str()),
+            Cell::Str(s) => std::borrow::Cow::Borrowed(&**s),
             other => std::borrow::Cow::Owned(other.js_string()),
         }
     }
@@ -455,5 +555,48 @@ impl<'de> Deserialize<'de> for Table {
             }
         }
         d.deserialize_any(V)
+    }
+}
+
+#[cfg(test)]
+mod text_tests {
+    use super::*;
+
+    #[test]
+    fn cells_stay_small() {
+        assert_eq!(std::mem::size_of::<Cell>(), 24);
+    }
+
+    #[test]
+    fn short_and_long_text_round_trip() {
+        for s in [
+            "",
+            "a",
+            "12345.67",
+            "exactly-22-bytes-here!",
+            "a string that is longer than twenty-two bytes",
+            "café ☕ ünïcode",
+        ] {
+            let t = Text::from(s.to_string());
+            assert_eq!(t.as_str(), s);
+            assert_eq!(Text::new(s), t);
+            assert_eq!(Cell::str(s).text(), s);
+        }
+    }
+
+    #[test]
+    fn equal_text_hashes_equal() {
+        use std::collections::HashSet;
+        let set: HashSet<Text> = [
+            "x",
+            "x",
+            "a longer value that is shared on the heap",
+            "a longer value that is shared on the heap",
+        ]
+        .into_iter()
+        .map(Text::from)
+        .collect();
+        assert_eq!(set.len(), 2);
+        assert!(set.contains("x"));
     }
 }

@@ -293,7 +293,7 @@ pub fn rows_to_csv(rows: &Table) -> String {
             match rows.get_idx(r, c) {
                 Cell::Absent | Cell::Null => {}
                 Cell::Str(s) => push_csv(&mut out, s),
-                Cell::Json(v @ (Value::Array(_) | Value::Object(_))) => {
+                Cell::Json(v) if matches!(**v, Value::Array(_) | Value::Object(_)) => {
                     push_csv(&mut out, &serde_json::to_string(v).unwrap_or_default())
                 }
                 other => push_csv(&mut out, &other.js_string()),

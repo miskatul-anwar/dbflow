@@ -158,11 +158,47 @@ pub struct Relation {
     /// Rows are not serialized (output files strip them to keep JSON small).
     #[serde(skip)]
     pub omit_rows: bool,
+    /// Set when the rows were released to save memory (large multi-file runs): how many there were.
+    #[serde(skip)]
+    pub released_rows: Option<usize>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
 
 impl Relation {
+    /// Number of rows, also after they were released.
+    pub fn row_count(&self) -> usize {
+        self.released_rows.unwrap_or(self.rows.len())
+    }
+
+    /// A copy without the rows (which can be large), remembering how many there were.
+    pub fn shadow(&self) -> Relation {
+        Relation {
+            name: self.name.clone(),
+            attributes: self.attributes.clone(),
+            primary_key: self.primary_key.clone(),
+            foreign_keys: self.foreign_keys.clone(),
+            rows: Default::default(),
+            source_type: self.source_type.clone(),
+            metadata: self.metadata.clone(),
+            original_fd: self.original_fd.clone(),
+            display_name: self.display_name.clone(),
+            name_source: self.name_source.clone(),
+            source_table: self.source_table.clone(),
+            omit_rows: self.omit_rows,
+            released_rows: Some(self.row_count()),
+            extra: self.extra.clone(),
+        }
+    }
+
+    /// Drop the rows but remember how many there were.
+    pub fn release_rows(&mut self) {
+        if self.released_rows.is_none() {
+            self.released_rows = Some(self.rows.len());
+        }
+        self.rows = Default::default();
+    }
+
     pub fn source(&self) -> &str {
         self.source_type.as_deref().unwrap_or("undefined")
     }

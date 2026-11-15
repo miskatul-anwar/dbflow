@@ -32,6 +32,15 @@ pub struct Options {
     pub user_names: Option<std::collections::HashMap<String, String>>,
     /// Notes from converting inputs before the run (e.g. skipped spreadsheet sheets).
     pub input_notes: Option<Vec<String>>,
+    /// Keep the rows of every normal-form set in large multi-file runs (default: only the final set's).
+    pub keep_intermediate_rows: Option<bool>,
+    /// Files analysed at once in a multi-file run (native build; default: one per CPU core).
+    pub max_parallel_files: Option<f64>,
+    /// Memory the parallel multi-file analysis may plan for, in MB (default: half of what is available).
+    pub memory_budget_mb: Option<f64>,
+    /// `"model"` (default): the on-device model suggests relation names; `"rules"`: names are built
+    /// from the key columns (fast, no model).
+    pub naming_mode: Option<String>,
     /// Minutes east of UTC, for log time stamps.
     pub tz_offset_minutes: Option<f64>,
 }
@@ -103,6 +112,9 @@ pub struct TableAnalysis {
     pub lossless_check: Value,
     pub dependency_preservation: Value,
     pub notes: Vec<String>,
+    /// Large input: some relation sets hold no rows (see `Relation::released_rows`) and the result
+    /// reports row counts instead of rows.
+    pub compact: bool,
     pub cache_hits: u64,
     pub cache_misses: u64,
     pub log: Vec<(&'static str, String)>,
@@ -137,7 +149,7 @@ pub fn suggest_primary_key(data: &Table, attributes: &[String]) -> Vec<String> {
                 let v = data.get_idx(r, c);
                 format!(
                     "{}{}",
-                    std::mem::discriminant(v) == std::mem::discriminant(&Cell::Str(String::new())),
+                    std::mem::discriminant(v) == std::mem::discriminant(&Cell::str("")),
                     v.json_key()
                 )
             })
@@ -459,7 +471,8 @@ pub fn analyze_rows(
             70.0,
             format!("{table_name}: applying Second Normal Form…"),
         );
-        a.relations_2nf = nf::apply_2nf(&data, &a.used_fds);
+        let preferred = a.key_choice.as_ref().map(|k| k.primary_key.clone());
+        a.relations_2nf = nf::apply_2nf_preferring(&data, &a.used_fds, preferred.as_deref());
     }
     if has(ops, "3NF") {
         ctx.check()?;
@@ -469,21 +482,23 @@ pub fn analyze_rows(
             75.0,
             format!("{table_name}: synthesizing Third Normal Form…"),
         );
-        a.relations_3nf = nf::synthesize_3nf(&a.used_fds, &a.key_result.candidate_keys, &data, None);
+        // The key chosen for the table goes first, so the main relation keeps it as its primary key.
+        let keys = nf::keys_preferring(
+            &a.key_result.candidate_keys,
+            a.key_choice.as_ref().map(|k| k.primary_key.as_slice()),
+        );
+        a.relations_3nf = nf::synthesize_3nf(&a.used_fds, &keys, &data, None);
     }
     if has(ops, "BCNF") {
         ctx.check()?;
         report("NORMAL", "bcnf", 78.0, format!("{table_name}: decomposing to BCNF…"));
-        let mut source = if !a.relations_3nf.is_empty() {
-            a.relations_3nf.clone()
-        } else {
-            a.relations_2nf.clone()
-        };
-        if source.is_empty() {
+        // The input set is borrowed, not copied (it holds every row of the table).
+        let mut fallback: Vec<Relation> = Vec::new();
+        if a.relations_3nf.is_empty() && a.relations_2nf.is_empty() {
             if a.key_choice.is_none() {
                 run_keys(&mut a, &mut attributes, &mut data);
             }
-            source = vec![Relation {
+            fallback = vec![Relation {
                 name: new_relation_id(),
                 attributes: attributes.clone(),
                 primary_key: a.key_choice.as_ref().map(|k| k.primary_key.clone()).unwrap_or_default(),
@@ -495,17 +510,34 @@ pub fn analyze_rows(
                 ..Default::default()
             }];
         }
-        a.relations_bcnf = nf::apply_bcnf(&source, &a.used_fds);
-        a.relations_3nf = a.relations_bcnf.clone();
+        let source: &[Relation] = if !a.relations_3nf.is_empty() {
+            &a.relations_3nf
+        } else if !a.relations_2nf.is_empty() {
+            &a.relations_2nf
+        } else {
+            &fallback
+        };
+        let bcnf = nf::apply_bcnf(source, &a.used_fds);
+        drop(fallback);
+        // Large tables keep the rows once: in the final (3NF slot) set; the BCNF set is a row-less copy.
+        a.compact = data.len() * data.keys().len().max(1) > crate::pipeline::COMPACT_RESULT_CELLS;
+        if a.compact {
+            a.relations_bcnf = bcnf.iter().map(Relation::shadow).collect();
+            a.relations_3nf = bcnf;
+        } else {
+            a.relations_3nf = bcnf.clone();
+            a.relations_bcnf = bcnf;
+        }
         a.bcnf_is_final = true;
     }
 
+    // The checks below read attributes and dependencies only, so the copy leaves the rows out.
     let final_rel: Vec<Relation> = if !a.relations_3nf.is_empty() {
-        a.relations_3nf.clone()
+        a.relations_3nf.iter().map(Relation::shadow).collect()
     } else if !a.relations_2nf.is_empty() {
-        a.relations_2nf.clone()
+        a.relations_2nf.iter().map(Relation::shadow).collect()
     } else {
-        a.relations_1nf.clone()
+        a.relations_1nf.iter().map(Relation::shadow).collect()
     };
 
     if has(ops, "Lossless Check") {
@@ -588,7 +620,9 @@ pub fn analyze_rows(
         };
         a.relations_2nf = with_children(&a.relations_2nf);
         a.relations_3nf = with_children(&a.relations_3nf);
-        a.relations_bcnf = if a.bcnf_is_final {
+        a.relations_bcnf = if a.bcnf_is_final && a.compact {
+            a.relations_3nf.iter().map(Relation::shadow).collect()
+        } else if a.bcnf_is_final {
             a.relations_3nf.clone()
         } else {
             with_children(&a.relations_bcnf)
