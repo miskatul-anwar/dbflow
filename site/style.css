@@ -21,7 +21,8 @@ a { color: var(--teal); text-underline-offset: 3px; }
 button { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, a:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
-img { max-width: 100%; }
+/* height: auto keeps an image's proportions when max-width shrinks it (the width/height attributes only reserve space). */
+img { max-width: 100%; height: auto; }
 h1, h2, h3, p, figure { margin-top: 0; }
 h1, h2, h3 { line-height: 1.2; letter-spacing: -0.035em; }
 .container { width: min(1080px, calc(100% - 40px)); margin-inline: auto; }
@@ -78,7 +79,7 @@ h1 { font-size: clamp(2.5rem, 5vw, 4.2rem); margin-bottom: 20px; }
 .feature { display: flex; align-items: center; gap: 13px; font-size: .93rem; font-weight: 600; }
 .feature svg { width: 21px; height: 21px; color: var(--teal); flex: none; }
 .product-preview { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--paper); }
-.product-preview img { width: 100%; display: block; }
+.product-preview img { width: 100%; height: auto; aspect-ratio: 1600 / 1091; display: block; }
 .product-preview figcaption { padding: 9px 14px; color: var(--muted); font-size: .78rem; }
 .install-section { padding-block: 65px; background: var(--soft); }
 .install-layout { display: grid; grid-template-columns: .75fr 1.25fr; gap: 70px; }
@@ -126,4 +127,19 @@ td a { overflow-wrap: anywhere; }
   .installer-card { align-items: stretch; flex-direction: column; }
   .download-button { width: 100%; }
   .install-help { padding: 22px; }
+}
+/* Release files: one card per installer where a five-column table cannot fit without wrapping file names. */
+@media (max-width: 900px) {
+  .table-scroll { overflow-x: visible; }
+  .table-scroll table, .table-scroll tbody, .table-scroll tr, .table-scroll td { display: block; width: 100%; }
+  .table-scroll thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .table-scroll tr { padding: 12px 15px; border-bottom: 1px solid var(--line); }
+  .table-scroll tr:last-child { border-bottom: 0; }
+  .table-scroll td { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; padding: 4px 0; border: 0; }
+  .table-scroll td::before { content: attr(data-label); color: var(--muted); font-size: .72rem; font-weight: 700; }
+  .table-scroll td[colspan]::before { content: none; }
+  .table-scroll td[colspan] { display: block; }
+  .hash-cell { min-width: 0; }
+  .hash-cell code { display: block; }
+  .hash-cell .copy-button { grid-column: 2; margin: 0; justify-self: start; }
 }

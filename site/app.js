@@ -137,6 +137,8 @@ function renderChoices() {
   target.append(list);
 }
 
+const FILE_COLUMNS = ["System", "Format", "File", "Size", "SHA-256"];
+
 function renderAllFiles() {
   const target = $("all-files");
   target.replaceChildren();
@@ -179,6 +181,10 @@ function renderAllFiles() {
       hashCell.append(copy);
     } else hashCell.textContent = "Not provided";
     row.append(hashCell);
+    // Column names for the stacked (phone) layout, where the table header is hidden.
+    [...row.children].forEach((cell, i) => {
+      cell.dataset.label = FILE_COLUMNS[i];
+    });
     target.append(row);
   }
 }
