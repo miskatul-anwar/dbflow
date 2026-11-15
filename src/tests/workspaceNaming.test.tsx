@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import App from '../App';
 
 beforeAll(() => {
@@ -93,5 +93,63 @@ describe('naming a workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start' }));
     // renamed tabs have autoTitle off, so suggestTitle leaves them alone (covered in useWorkspaceTabs tests)
     expect(tabTitles()).toEqual(['My name']);
+  });
+});
+
+describe('closing workspaces', () => {
+  it('closing the only workspace asks for the name of the one that replaces it (Cancel keeps it)', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close Workspace 1' }));
+    expect(screen.getByRole('heading', { name: 'Close “Workspace 1”' })).toBeTruthy();
+    expect(screen.getByText(/only workspace, so a new one opens/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(tabTitles()).toEqual(['Workspace 1']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close Workspace 1' }));
+    fireEvent.change(field(), { target: { value: 'Enrollment' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Close and create' }));
+    expect(dialog()).toBeNull();
+    expect(tabTitles()).toEqual(['Enrollment']);
+  });
+
+  it('asks in an in-app dialog (never the browser confirm box) before closing a workspace with steps', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New workspace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create workspace' }));
+    // Give the new workspace a step.
+    const pane = document.querySelector('.nf-tab-pane:not([hidden])') as HTMLElement;
+    fireEvent.click(within(pane).getAllByText('CSV Data Loader')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Close Workspace 2' }));
+
+    const alert = screen.getByRole('alertdialog');
+    expect(within(alert).getByText(/has 1 pipeline step/)).toBeTruthy();
+    // Destructive question: focus starts on Cancel, and the page behind is inert.
+    expect(document.activeElement).toBe(within(alert).getByRole('button', { name: 'Cancel' }));
+    const app = document.querySelector('.nf-app')!.parentElement!;
+    expect(app.hasAttribute('inert')).toBe(true);
+
+    fireEvent.keyDown(alert, { key: 'Escape' });
+    expect(tabTitles()).toEqual(['Workspace 1', 'Workspace 2']);
+    expect(app.hasAttribute('inert')).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close Workspace 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close workspace' }));
+    expect(tabTitles()).toEqual(['Workspace 1']);
+    expect(confirmSpy).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('closes an empty workspace without asking when others remain', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New workspace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create workspace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close Workspace 2' }));
+    expect(dialog()).toBeNull();
+    expect(tabTitles()).toEqual(['Workspace 1']);
   });
 });

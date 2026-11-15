@@ -5,7 +5,7 @@
 import { engine } from '../../engine';
 import type { IdentifierRegistry } from '../utils/identifiers';
 
-export type NameSource = 'source' | 'user' | 'model' | 'placeholder';
+export type NameSource = 'source' | 'user' | 'model' | 'rule' | 'placeholder';
 
 export interface NameableRelation {
   name: string;

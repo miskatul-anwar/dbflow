@@ -37,7 +37,7 @@ export interface RelationSchema {
   /** Text people read; absent for an unnamed relation (`name` is then an engine id). */
   displayName?: string;
   /** Where the name came from: the file, the user, the on-device model, or nothing yet. */
-  nameSource?: 'source' | 'user' | 'model' | 'placeholder';
+  nameSource?: 'source' | 'user' | 'model' | 'rule' | 'placeholder';
   metadata: {
     rowCount: number;
     attributeTypes: { [key: string]: string };
