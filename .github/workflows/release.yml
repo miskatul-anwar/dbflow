@@ -90,8 +90,10 @@ jobs:
               echo "::error::Release $TAG is already published. Bump the version to release again."
               exit 1
             fi
-            gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
-            echo "Reusing draft release $id"
+            # Point the draft at this run's commit: the tag is created there when the release is published.
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" -f target_commitish="$GITHUB_SHA" \
+              -F body=@"$RUNNER_TEMP/notes.md" > /dev/null
+            echo "Reusing draft release $id (now at $GITHUB_SHA)"
           else
             # The create call returns the new release's id. (Listing releases right after creating one can miss
             # it: the list is updated a moment later.)
@@ -109,6 +111,8 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
+    # A called workflow receives no secrets unless they are passed; CI checks the Android signing key with them.
+    secrets: inherit
     with:
       android: false
 
