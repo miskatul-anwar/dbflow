@@ -16,6 +16,7 @@ import { GeneratedFilesSection } from './output/GeneratedFilesSection';
 import { ReportView, NormalizationJourney } from './output/ReportView';
 import { ErdSection } from './output/ErdSection';
 import { InputChecksSection } from './output/InputChecksSection';
+import { saveFileInBackground } from '../utils/saveFile';
 import { StatCard } from './output/StatCard';
 import { CodeViewer } from './output/CodeViewer';
 import { Button } from '@/components/ui/button';
@@ -287,9 +288,9 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
         <div className="flex w-full items-center justify-between gap-3 px-3 py-1.5">
           <div className="flex min-w-0 items-center gap-3">
             <img src="/icon.png" alt="DBFlow" title="DBFlow" className="h-9 w-9 shrink-0 object-contain drop-shadow-xs" />
-            <Button onClick={() => navigate('/')} title="Return to the workflow canvas" aria-label="Back to the workflow canvas">
+            <Button onClick={() => navigate('/')} title="Return to the workflow canvas" aria-label="Back to the workflow canvas" className="shrink-0">
               <ArrowLeft />
-              <span>Back to workflow</span>
+              <span className="hidden sm:inline">Back to workflow</span>
             </Button>
           </div>
           <div className="min-w-0 text-right leading-tight">
@@ -426,15 +427,7 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => {
-                      const blob = new Blob([sqlFile.content], { type: 'application/sql' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = 'schema.sql';
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
+                    onClick={() => saveFileInBackground('schema.sql', sqlFile.content, 'application/sql')}
                   >
                     <Download /> Download .sql
                   </Button>

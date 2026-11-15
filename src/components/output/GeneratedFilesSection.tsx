@@ -4,6 +4,7 @@ import { Files, FolderOpen, Code, Table, FileText, Database, GitBranch, Image, D
 import { OutputFile } from '../../types';
 import { Button, IconButton } from '@/components/ui/button';
 import { useCopy } from '../../hooks/useCopy';
+import { saveFileInBackground } from '../../utils/saveFile';
 
 interface GeneratedFilesSectionProps {
   outputFiles: OutputFile[];
@@ -72,14 +73,7 @@ export function GeneratedFilesSection({ outputFiles }: GeneratedFilesSectionProp
   };
 
   const downloadFile = (file: OutputFile) => {
-    const content = getFileContentString(file);
-    const blob = new Blob([content], { type: getMimeType(file.type) });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    a.click();
-    URL.revokeObjectURL(url);
+    saveFileInBackground(file.name, getFileContentString(file), getMimeType(file.type));
   };
 
   const getFileIcon = (type: string) => {

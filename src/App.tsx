@@ -28,6 +28,7 @@ import { validateSequence } from './utils/workflowValidation';
 import { clearCachedResult, loadCachedResult, saveCachedResult } from './utils/resultCache';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { isSupportedInputName } from './services/processors/spreadsheetProcessor';
+import { saveFileInBackground } from './utils/saveFile';
 import './styles/App.css';
 
 const logger = new Logger();
@@ -37,15 +38,8 @@ type LogLevel = 'info' | 'success' | 'error' | 'warning';
 const ALL_OPERATIONS = Object.keys(OPERATIONS);
 
 function downloadJson(snapshot: WorkflowSnapshot): void {
-  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `dbflow-workflow-${snapshot.timestamp.slice(0, 19).replace(/[:T]/g, '-')}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const name = `dbflow-workflow-${snapshot.timestamp.slice(0, 19).replace(/[:T]/g, '-')}.json`;
+  saveFileInBackground(name, JSON.stringify(snapshot, null, 2), 'application/json');
 }
 
 interface WorkspaceProps {
