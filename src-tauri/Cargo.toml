@@ -22,3 +22,6 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 dbflow-core = { path = "../crates/dbflow-core" }
 tauri-plugin-notification = "2"
+# Saving files on Android (its WebView cannot follow download links): a "Save as" picker and the write.
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"

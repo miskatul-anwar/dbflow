@@ -59,9 +59,13 @@ Use the [**download page**](https://miskatul-anwar.github.io/dbflow/), which pic
 | Windows | `.msi` / `.exe` |
 | macOS | `.dmg` / `.app` |
 | Linux | `.deb` / `.rpm` / `.AppImage` |
+| Android 7 or newer (64-bit ARM) | `.apk` |
 
 > [!NOTE]
 > macOS builds are unsigned. On first launch right-click → **Open**, or allow the app under *System Settings → Privacy & Security*. The Windows installer is not code-signed either, so SmartScreen may ask you to choose *More info → Run anyway*.
+
+> [!NOTE]
+> **Android.** The app is not in the Play Store. Open the `.apk` on the phone and allow your browser or file manager to install apps when Android asks. It runs the same engine as the desktop app, entirely on the phone. Files are chosen with the system file picker, and downloads open a *Save as* screen. Large inputs need a phone with plenty of memory; switch *AI names* off for faster runs.
 
 ### Build from source
 

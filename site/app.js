@@ -28,6 +28,7 @@ const iconPaths = {
   windows: ["M3 4h8v7H3z", "M13 4h8v7h-8z", "M3 13h8v7H3z", "M13 13h8v7h-8z"],
   macos: ["M4 5h16v11H4z", "M2 19h20"],
   linux: ["M4 5h16v14H4z", "m8 9 3 3-3 3", "M13 16h4"],
+  android: ["M7 3h10v18H7z", "M11 18h2"],
 };
 
 function systemIcon(systemId) {

@@ -95,3 +95,111 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+  # The Android app (arm64 APK), attached to the release the desktop jobs created.
+  #
+  # Signing: set the repository secrets ANDROID_KEYSTORE_BASE64 (the .jks file, base64-encoded),
+  # ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD. Every release must be
+  # signed with the same key, or Android refuses to install it over the previous version. Without the
+  # secrets a one-off key is generated, so the APK installs, but updating it needs an uninstall first.
+  android:
+    name: Build & Release (Android)
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Determine release tag
+        id: tag
+        shell: bash
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag_name }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+          elif [[ "$REF" == refs/tags/* ]]; then
+            echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "No release tag: run this from a tag or give tag_name." >&2
+            exit 1
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # The runner image includes the Android SDK; the NDK version is pinned for reproducible builds.
+      - name: Install the Android NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.2.12479018" > /dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      # The web build embeds the WebAssembly build of the engine (scripts/build-engine.mjs).
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.130
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Signing key
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          store="$RUNNER_TEMP/dbflow-release.jks"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$store"
+          else
+            echo "::warning::No Android signing secrets: signing with a one-off key. Installing a later version will need an uninstall first."
+            KEYSTORE_PASSWORD="$(openssl rand -hex 16)"
+            KEY_PASSWORD="$KEYSTORE_PASSWORD"
+            KEY_ALIAS=dbflow
+            keytool -genkeypair -noprompt -keystore "$store" -storetype JKS -alias "$KEY_ALIAS" \
+              -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=DBFlow" \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD"
+          fi
+          {
+            echo "storeFile=$store"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > src-tauri/gen/android/keystore.properties
+
+      - name: Build the APK
+        run: bun run tauri android build --apk --target aarch64
+
+      - name: Attach the APK to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          apk="$(find src-tauri/gen/android/app/build/outputs/apk -name '*-release.apk' | head -n 1)"
+          if [ -z "$apk" ]; then
+            echo "No signed release APK was built." >&2
+            find src-tauri/gen/android/app/build/outputs -name '*.apk' >&2
+            exit 1
+          fi
+          out="DBFlow_${version}_android_arm64.apk"
+          cp "$apk" "$out"
+          gh release upload "$TAG" "$out" --clobber
