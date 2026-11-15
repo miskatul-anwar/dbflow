@@ -1,17 +1,40 @@
 /** Small building blocks of the phone interface (see mobile.css). */
 import { useEffect, type ReactNode } from 'react';
-import { Database, ListChecks, Settings2, Table2 } from 'lucide-react';
+import { ChevronDown, Database, ListChecks, Settings2, Table2 } from 'lucide-react';
 
 export type Screen = 'data' | 'pipeline' | 'results';
 
-/** The screen's name and its current state, e.g. "Data · 3 files, 19 KB". */
-export function TopBar({ title, detail, onSettings }: { title: string; detail: string; onSettings: () => void }) {
+/** The workspace's name (tap to switch or manage workspaces) and the screen's state, e.g. "Data · 3 files". */
+export function TopBar({
+  title,
+  detail,
+  color,
+  running,
+  onTitle,
+  onSettings,
+}: {
+  title: string;
+  detail: string;
+  color: string | null;
+  running: boolean;
+  onTitle: () => void;
+  onSettings: () => void;
+}) {
   return (
     <header className="m-top">
-      <div>
-        <h1>{title}</h1>
-        <p>{detail}</p>
-      </div>
+      <button className="m-title" onClick={onTitle} aria-label={`Workspace ${title}. Switch or manage workspaces`}>
+        <span className="m-ws-dot" style={{ background: color ?? 'var(--m-ink-3)' }} aria-hidden />
+        <span className="m-title-text">
+          <span className="m-title-name">
+            {title}
+            <ChevronDown size={16} aria-hidden />
+          </span>
+          <small>
+            {running ? 'Running · ' : ''}
+            {detail}
+          </small>
+        </span>
+      </button>
       <button className="m-icon-btn" onClick={onSettings} aria-label="Settings">
         <Settings2 size={22} />
       </button>

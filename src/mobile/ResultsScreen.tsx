@@ -13,7 +13,7 @@ import { CardinalitySection } from '../components/output/CardinalitySection';
 import { QualityAssuranceSection } from '../components/output/QualityAssuranceSection';
 import { ErdSection } from '../components/output/ErdSection';
 import { CodeViewer } from '../components/output/CodeViewer';
-import { ReportView } from '../components/output/ReportView';
+import { NormalizationJourney, ReportView } from '../components/output/ReportView';
 import { GeneratedFilesSection } from '../components/output/GeneratedFilesSection';
 
 type Tab = 'overview' | 'tables' | 'diagram' | 'sql' | 'keys' | 'links' | 'deps' | 'checks' | 'report' | 'files';
@@ -65,6 +65,12 @@ export function ResultsScreen({
     { id: 'files', label: 'Files', show: Boolean(results.outputFiles?.length) },
   ];
 
+  const levels = [
+    { id: '1NF', relations: v.relations1NF },
+    { id: '2NF', relations: v.relations2NF },
+    { id: '3NF', relations: v.relationData },
+    { id: 'BCNF', relations: v.relationsBCNF },
+  ].filter(l => l.relations.length > 0);
   const rowsRead: number = v.isMultiTable ? v.multiTables.reduce((n: number, t: any) => n + (t.rowCount || 0), 0) : Number(results.stats?.originalRows ?? 0);
   return (
     <>
@@ -104,6 +110,11 @@ export function ResultsScreen({
         {tab === 'overview' && (
           <>
             <InputChecksSection checks={results.inputChecks} onMerge={onMerge} />
+            {!v.isMultiTable && (
+              <div className="m-group m-section" style={{ marginTop: 12 }}>
+                <NormalizationJourney levels={levels} />
+              </div>
+            )}
             <div className="m-label">New schema</div>
             <div className="m-group">
               {finalRelations.map((r: any, i: number) => {
@@ -128,6 +139,34 @@ export function ResultsScreen({
                 );
               })}
             </div>
+            {v.isMultiTable && v.multiTables.some((t: any) => t.nerTags?.length) && (
+              <>
+                <div className="m-label">Column meaning</div>
+                <div className="m-group">
+                  {v.multiTables.map((t: any) => (
+                    <article key={t.tableName} className="m-table">
+                      <header>
+                        <h3 className="m-mono">{t.tableName}</h3>
+                        <span>
+                          {t.fileName} · {Number(t.rowCount ?? 0).toLocaleString()} rows
+                        </span>
+                      </header>
+                      <div className="m-cols">
+                        {(t.nerTags ?? []).map((tag: any) => (
+                          <span
+                            key={tag.columnName}
+                            className={`m-col${tag.entityType === 'PRIMARY_KEY_ID' ? ' m-pk' : tag.entityType === 'FOREIGN_KEY_REF' ? ' m-fk' : ''}`}
+                            title={tag.description}
+                          >
+                            {tag.columnName}: {String(tag.entityType).replace(/_/g, ' ').toLowerCase()}
+                          </span>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
         {tab === 'tables' && (
@@ -189,12 +228,7 @@ export function ResultsScreen({
               results={results}
               markdown={v.reportFile.content}
               fdData={v.fdData}
-              levels={[
-                { id: '1NF', relations: v.relations1NF },
-                { id: '2NF', relations: v.relations2NF },
-                { id: '3NF', relations: v.relationData },
-                { id: 'BCNF', relations: v.relationsBCNF },
-              ].filter(l => l.relations.length > 0)}
+              levels={levels}
             />
           </Card>
         )}

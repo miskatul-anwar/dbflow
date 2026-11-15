@@ -10,14 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [6.6.0] - 2026-11-15
 
 ### Added
-- **A phone interface for the Android app.** The desktop interface (a canvas, side panels and many small controls) is hard to use on a touch screen, so the Android app has its own interface; the desktop app is unchanged. It is plain and function-first: flat lists, one accent colour, 48 px touch targets, and colour only where it means something (the four phases, primary and foreign keys, errors).
-  - **Screens:** *Data*, *Pipeline* and *Results* behind a bottom bar. The app bar names the screen and its state (files and size, steps selected, last run time).
-  - **Data:** the files to analyse, each with its type and size, and a remove button.
-  - **Pipeline:** a goal list (3NF schema, BCNF schema, keys and foreign keys, clean and profile, all steps), the plain-language request box, and a checklist of the 19 steps by phase. Checking a step adds its prerequisites; unchecking it removes the steps that need it.
-  - **Running:** a sheet with a progress bar, the engine's current step, the four phases, and Cancel.
-  - **Results:** four numbers (tables, links, dependencies, rows), then tabs: Overview (the new schema, keys marked PK and FK), Tables, Diagram, SQL, Keys, Links, Dependencies, Checks, Report and Files. The results pages of both interfaces share one data layer (`useResultViews`).
-  - **Settings:** AI table names (off by default on a phone, where the model is slow) and the dark theme.
-  - **Navigation:** Android's back button moves back through the screens. In a browser, `?ui=mobile` shows the phone interface.
+- **A touch interface for the Android app (phones and tablets), with every feature of the desktop app.** The desktop interface (a canvas, side panels and many small controls) is hard to use on a touch screen, so the Android app has its own interface; the desktop app is unchanged. It is function-first: flat lists, one accent colour, 48 px touch targets, and colour only where it means something (the four phases, primary and foreign keys, errors). It runs on the desktop app's own state hooks, so features behave the same.
+  - **Workspaces:** switch, create, rename, colour and close (with a confirmation when there is work in it) from the app bar. Runs continue in the background while another workspace is open. Each workspace keeps its results, and its title follows the first file added.
+  - **Data:** the files to analyse, each with its type and size.
+  - **Pipeline:** Undo, Redo, Open and Save of workflow files (the same `.json` as the desktop app). A goal list builds a whole pipeline in one tap (3NF schema, BCNF schema, keys and foreign keys, clean and profile, all steps). The request box shows the desktop's plan preview (requested and added steps, dialect), then Replace, Extend, Apply & run, Dismiss, "did you mean" choices and Undo of the last build. The 19 steps are a filterable checklist by phase: checking a step adds its prerequisites, and unchecking it removes the steps that need it.
+  - **Running:** a panel above the bottom bar with progress, the engine's current step, the four phases and Cancel. It does not block the screen, so you can switch workspaces during a run. Run completion and failure go to the system notifications.
+  - **Results:** four numbers (tables, links, dependencies, rows), then tabs:
+    - Overview: input checks with the merge, the normalization journey or column meaning, and the new schema with PK and FK tags
+    - Tables, with renaming
+    - Diagram, in four notations, with downloads
+    - SQL: copy and save
+    - Keys, Links, Dependencies and Checks
+    - Report: Markdown and PDF
+    - Files
+  - **Settings:** AI table names (off by default on a phone, where the model is slow), dark theme, and Reset everything.
+  - **Tablets:** content keeps a readable width, and sheets open as centred dialogs.
+  - **Navigation:** Android's back button moves back through the screens. In a browser, `?ui=mobile` shows this interface.
 - **Android app.** Each release now includes `DBFlow_<version>_android_arm64.apk` (Android 7 or newer, 64-bit ARM). It runs the same Rust engine as the desktop app, entirely on the phone. The download page has an Android tab and picks it on Android phones. The release workflow builds and signs the APK and attaches it to the release; signing uses the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`.
 
 ### Fixed

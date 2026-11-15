@@ -65,7 +65,7 @@ Use the [**download page**](https://miskatul-anwar.github.io/dbflow/), which pic
 > macOS builds are unsigned. On first launch right-click → **Open**, or allow the app under *System Settings → Privacy & Security*. The Windows installer is not code-signed either, so SmartScreen may ask you to choose *More info → Run anyway*.
 
 > [!NOTE]
-> **Android.** The app is not in the Play Store. Open the `.apk` on the phone and allow your browser or file manager to install apps when Android asks. It runs the same engine as the desktop app, entirely on the phone, with an interface made for touch: *Data*, *Pipeline* and *Results* screens behind a bottom bar, a goal list and a step checklist instead of the canvas, and a progress sheet while it runs. Files are chosen with the system file picker, and downloads open a *Save as* screen. Large inputs need a phone with plenty of memory. AI table names are off by default on a phone (Settings turns them on).
+> **Android.** The app is not in the Play Store. Open the `.apk` on the phone and allow your browser or file manager to install apps when Android asks. It runs the same engine as the desktop app, entirely on the phone, with an interface made for touch on phones and tablets and the same features: workspaces, *Data*, *Pipeline* and *Results* screens behind a bottom bar, goals, the request box with its plan preview, and a step checklist with undo, redo, open and save instead of the canvas. Files are chosen with the system file picker, and downloads open a *Save as* screen. Large inputs need a phone with plenty of memory. AI table names are off by default on a phone (Settings turns them on).
 
 ### Build from source
 
