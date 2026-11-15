@@ -1,5 +1,6 @@
 //! Excel / OpenDocument workbooks: every visible, non-empty sheet becomes one CSV table.
 
+use crate::input_check;
 use calamine::{open_workbook_auto_from_rs, Data, Reader, SheetVisible};
 use std::io::Cursor;
 
@@ -145,7 +146,7 @@ fn iso_text(s: &str) -> String {
     }
 }
 
-fn csv_field(s: &str) -> String {
+pub(crate) fn csv_field(s: &str) -> String {
     if s.contains('"') || s.contains(',') || s.contains('\r') || s.contains('\n') || s != crate::js::trim(s) {
         format!("\"{}\"", s.replace('"', "\"\""))
     } else {
@@ -186,11 +187,38 @@ pub struct Converted {
     pub notes: Vec<String>,
 }
 
-/// Convert a workbook into one CSV per visible, non-empty sheet.
-pub fn spreadsheet_to_csv(name: &str, bytes: &[u8]) -> Result<Converted, String> {
+/// Checks that run before any reader opens a workbook (this one, or the interface's fallback reader):
+/// the size limit, files that are clearly something else (a PDF, an image, a program), and how far a
+/// ZIP-based workbook expands when unzipped.
+pub fn check_workbook(name: &str, bytes: &[u8]) -> Result<(), String> {
     if bytes.len() > MAX_BYTES {
         return Err(format!("{name}: file exceeds the 100MB limit."));
     }
+    input_check::reject_known_non_table(name, bytes)?;
+    if bytes.starts_with(b"PK") {
+        let summary = input_check::check_zip_expansion(name, bytes)?;
+        if !summary.entries.is_empty() {
+            if let Some(kind) = input_check::describe_non_spreadsheet_zip(&summary.entries, bytes) {
+                return Err(format!("{name} is {kind}, not a spreadsheet."));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// XML the interface's fallback reader can turn into a table: Excel 2003 SpreadsheetML, flat
+/// OpenDocument spreadsheets and HTML tables (Excel's "web page" export, often saved as .xls).
+fn is_convertible_xml(bytes: &[u8]) -> bool {
+    let head = String::from_utf8_lossy(&bytes[..bytes.len().min(4096)]).to_lowercase();
+    head.contains("urn:schemas-microsoft-com:office:spreadsheet")
+        || head.contains("opendocument.spreadsheet")
+        || head.contains("<html")
+        || head.contains("<table")
+}
+
+/// Convert a workbook into one CSV per visible, non-empty sheet.
+pub fn spreadsheet_to_csv(name: &str, bytes: &[u8]) -> Result<Converted, String> {
+    check_workbook(name, bytes)?;
     match sniff(bytes) {
         Kind::Unknown => {
             return Err(format!(
@@ -198,10 +226,16 @@ pub fn spreadsheet_to_csv(name: &str, bytes: &[u8]) -> Result<Converted, String>
             ))
         }
         Kind::Text => {
+            input_check::check_text_table(name, bytes)?;
             return Ok(Converted {
                 files: vec![(format!("{}.csv", strip_ext(name)), bytes.to_vec())],
                 notes: vec![format!("{name}: contains delimited text, read as CSV.")],
-            })
+            });
+        }
+        Kind::Xml if !is_convertible_xml(bytes) => {
+            return Err(format!(
+                "{name} contains XML that is not a spreadsheet. Save it as CSV or as a spreadsheet first."
+            ));
         }
         Kind::Xml => {
             return Err(format!(

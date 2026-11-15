@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx';
 import { DatabaseService } from '../services/api/databaseService';
+import type { InputChecks } from '../types';
+
+/** The parts of a multi-file result the input-check tests read. */
+type Checked = { inputChecks: InputChecks; logs: string[]; crossTableRelationships: Array<{ targetTable: string }> };
+const checked = (r: unknown) => r as Checked;
 import {
   expandSpreadsheets,
   isSpreadsheetFile,
@@ -196,5 +201,60 @@ describe('through the pipeline', () => {
     const orders = new File(['order_id,customer_id\n1,1\n2,1\n3,2'], 'orders.csv', { type: 'text/csv' });
     const res = await new DatabaseService().processFiles([xlsx, orders], OPS);
     expect(res.success).toBe(true);
+  });
+});
+
+describe('input checks', () => {
+  const OPS = ['Data Loader', 'Data Cleaner', 'FD Miner', 'Key Discovery', '3NF', 'Relation Detector', 'SQL Generator'];
+  const orders = () => new File(['order_id,customer_id\n1,1\n2,1\n3,2\n4,2\n'], 'orders.csv', { type: 'text/csv' });
+
+  it('refuses a renamed PDF before the fallback reader opens it', async () => {
+    const pdf = new File(['%PDF-1.4\n1 0 obj<<>>endobj\n%%EOF\n'], 'report.xlsx');
+    await expect(spreadsheetToCsvFiles(pdf)).rejects.toThrow(/report\.xlsx is a PDF document/);
+    const xlsb = new File(['%PDF-1.4\n'], 'report.xlsb');
+    await expect(spreadsheetToCsvFiles(xlsb)).rejects.toThrow(/report\.xlsb is a PDF document/);
+  });
+
+  it('expandSpreadsheets with onSkip leaves an unreadable workbook out and keeps the rest', async () => {
+    const skipped: Array<{ file: string; reason: string }> = [];
+    const bad = new File(['%PDF-1.4\n'], 'bad.xlsx');
+    const out = await expandSpreadsheets([bad, orders()], undefined, s => skipped.push(s));
+    expect(out.map(f => f.name)).toEqual(['orders.csv']);
+    expect(skipped).toEqual([{ file: 'bad.xlsx', reason: expect.stringMatching(/bad\.xlsx is a PDF document/) }]);
+  });
+
+  it('one bad workbook does not stop a run and is reported with the result', async () => {
+    const bad = new File(['%PDF-1.4\n'], 'bad.xlsx');
+    const customers = new File(['customer_id,name\n1,A\n2,B\n'], 'customers.csv', { type: 'text/csv' });
+    const res = await new DatabaseService().processFiles([bad, customers, orders()], OPS);
+    expect(res.success, res.error).toBe(true);
+    expect(checked(res).inputChecks.skipped?.[0].file).toBe('bad.xlsx');
+  });
+
+  it('reads a real workbook that was renamed to .csv', async () => {
+    const wb = fileOf(book({ s: [['customer_id', 'name'], [1, 'A'], [2, 'B']] }), 'xlsx', 'customers.csv');
+    const res = await new DatabaseService().processFiles([wb, orders()], OPS);
+    expect(res.success, res.error).toBe(true);
+    expect(checked(res).logs.join('\n')).toMatch(/customers\.csv is really a workbook/);
+    expect(checked(res).crossTableRelationships.some(l => l.targetTable === 'customers')).toBe(true);
+  });
+
+  it('never resolves XML external entities or expands entity definitions', async () => {
+    const ns = 'urn:schemas-microsoft-com:office:spreadsheet';
+    const xxe = `<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]><Workbook xmlns="${ns}"><Worksheet><Table><Row><Cell><Data>h</Data></Cell></Row><Row><Cell><Data>&x;</Data></Cell></Row></Table></Worksheet></Workbook>`;
+    const defs = Array.from({ length: 9 }, (_, i) => `<!ENTITY a${i + 1} "${`&a${i};`.repeat(10)}">`).join('');
+    const lol = `<?xml version="1.0"?><!DOCTYPE l [<!ENTITY a0 "lol">${defs}]><Workbook xmlns="${ns}"><Worksheet><Table><Row><Cell><Data>h</Data></Cell></Row><Row><Cell><Data>&a9;</Data></Cell></Row></Table></Worksheet></Workbook>`;
+    for (const [text, name] of [[xxe, 'xxe.xml'], [lol, 'lol.xml']]) {
+      const { files } = await spreadsheetToCsvFiles(new File([text], name));
+      const csv = await textOf(files[0]);
+      expect(csv).not.toMatch(/root:/);
+      expect(csv.length).toBeLessThan(100);
+    }
+  });
+
+  it('fails with the reason when the only file is not a table', async () => {
+    const res = await new DatabaseService().processFiles([new File(['{"id":1}\n{"id":2}\n'], 'data.csv')], OPS);
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/data\.csv contains JSON/);
   });
 });

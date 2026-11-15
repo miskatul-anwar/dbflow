@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.2] - 2026-11-15
+
+### Added
+- **Input checks.** Every file is checked before analysis, whatever its extension, and the Output page lists what the checks found under *Input checks* (engine result field `inputChecks`).
+  - Files that are not tables are left out with the reason: PDF documents, images, audio and video, archives, programs, SQLite databases, Word and PowerPoint documents, OpenDocument text, JSON (a document or one object per line), XML or HTML markup, binary data and program source code. Empty files are reported as empty.
+  - An Excel or OpenDocument workbook saved with a `.csv` name is read as a workbook.
+  - A file with exactly the same contents as an earlier file (ignoring line endings and a byte-order mark) is analysed once. Before, the copy became a second table with invented foreign keys to the first.
+  - Files with the same columns and mostly the same rows are reported, with shared rows, matching records and conflicting records. **Merge overlapping files and run again** combines them into one table (engine option `mergeOverlappingFiles`): repeated rows are kept once and, for conflicting records, the first file's version is kept.
+  - Files that share a name are called "data.csv (file 1)" and "data.csv (file 2)" in messages.
+
+### Fixed
+- **Compression bombs.** A 1.4 MB `.xlsx` that expands to 1.5 GB made the engine use 11.4 GB of memory. Workbooks are now measured by decompressing them before they are read: an entry that expands more than 200 times beyond 16 MB, or a workbook that needs more memory than is available (or more than 2 GB unzipped; 512 MB in the browser), is refused in a fraction of a second. The interface's fallback reader runs the same check first.
+- One unreadable file no longer stops a multi-file run. A bad workbook stopped the whole run, while a bad CSV was skipped; now any bad file is left out with its reason and the run continues. A run fails only when no file can be analysed, and the error gives each file's reason.
+- A PDF or another non-spreadsheet saved with a spreadsheet extension was read as a one-column table. A generic XML file read as a spreadsheet failed with "Cannot read properties of undefined"; it now says the file is not a valid spreadsheet.
+- Notes from converting workbooks (skipped hidden or empty sheets) were missing from the log of multi-file runs.
+
 ## [6.5.1] - 2026-11-15
 
 ### Changed

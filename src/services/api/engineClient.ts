@@ -59,7 +59,7 @@ function runNative(
         runId,
         uploads,
         operations,
-        options: engineOptions(options, prepared.notes),
+        options: engineOptions(options, prepared),
         onProgress: channel,
       });
       if (cancelled) throw new Error('Processing was cancelled.');

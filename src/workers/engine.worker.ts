@@ -57,7 +57,7 @@ ctx.onmessage = async (event: MessageEvent<EngineRequest | NameReply>) => {
   try {
     await initEngine();
     const prepared = await prepareEngineFiles(files);
-    const run = enginePrepare(prepared.files, operations, engineOptions(options, prepared.notes), progress);
+    const run = enginePrepare(prepared.files, operations, engineOptions(options, prepared), progress);
     let answers: Record<string, string> | null = null;
     let namerError: string | null = null;
     if (canName && run.naming.length > 0) {

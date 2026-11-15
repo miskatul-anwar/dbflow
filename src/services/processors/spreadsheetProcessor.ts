@@ -24,7 +24,7 @@
  *   - Entirely empty columns are dropped.
  */
 
-import { spreadsheetToCsvRust } from '../../engine';
+import { checkWorkbookRust, spreadsheetToCsvRust } from '../../engine';
 
 export const SPREADSHEET_EXTENSIONS = [
   'xlsx', 'xlsm', 'xlsb', 'xltx', 'xltm', 'xlam',
@@ -147,10 +147,13 @@ async function legacySpreadsheetToCsvFiles(file: File): Promise<SpreadsheetConve
   if (file.size > MAX_BYTES) {
     throw new Error(`${file.name}: file exceeds the 100MB limit.`);
   }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  // The same checks as the Rust reader (file kind, and how far a zipped workbook expands), so a
+  // compression bomb or a renamed PDF never reaches this reader either.
+  checkWorkbookRust(file.name, bytes);
   // Loaded on demand so the parser stays out of the startup bundle.
   const XLSX = await import('xlsx');
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
   const kind = sniff(bytes);
   if (kind === 'unknown') {
     throw new Error(`${file.name}: not a valid spreadsheet (the file is damaged or in an unsupported format).`);
@@ -176,6 +179,10 @@ async function legacySpreadsheetToCsvFiles(file: File): Promise<SpreadsheetConve
     const msg = (e as Error).message ?? String(e);
     if (/password|encrypt/i.test(msg)) {
       throw new Error(`${file.name}: the workbook is password-protected or encrypted. Remove the password and try again.`, { cause: e });
+    }
+    // An internal error of the reader (for example on XML that is not a workbook) says nothing useful.
+    if (e instanceof TypeError || e instanceof RangeError) {
+      throw new Error(`${file.name}: not a valid spreadsheet (the file is damaged or in an unsupported format).`, { cause: e });
     }
     throw new Error(`${file.name}: could not read the spreadsheet (${msg}).`, { cause: e });
   }
@@ -231,20 +238,33 @@ async function legacySpreadsheetToCsvFiles(file: File): Promise<SpreadsheetConve
   return { files, notes };
 }
 
+/** A file left out of the run, and why. */
+export interface SkippedInput {
+  file: string;
+  reason: string;
+}
+
 /**
  * Replaces every spreadsheet in `files` with one CSV per sheet and leaves
- * other files untouched. Order is preserved.
+ * other files untouched. Order is preserved. With `onSkip`, a workbook that
+ * cannot be read is reported and left out; without it, the error is thrown.
  */
 export async function expandSpreadsheets(
   files: File[],
   onNote?: (note: string) => void,
+  onSkip?: (skipped: SkippedInput) => void,
 ): Promise<File[]> {
   const out: File[] = [];
   for (const f of files) {
     if (await isSpreadsheetFile(f)) {
-      const { files: sheets, notes } = await spreadsheetToCsvFiles(f);
-      notes.forEach(n => onNote?.(n));
-      out.push(...sheets);
+      try {
+        const { files: sheets, notes } = await spreadsheetToCsvFiles(f);
+        notes.forEach(n => onNote?.(n));
+        out.push(...sheets);
+      } catch (e) {
+        if (!onSkip) throw e;
+        onSkip({ file: f.name, reason: (e as Error).message ?? String(e) });
+      }
     } else {
       out.push(f);
     }

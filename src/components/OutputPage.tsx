@@ -15,6 +15,7 @@ import { RelationshipsSection, KeysByTable, QualityByTable } from './output/Mult
 import { GeneratedFilesSection } from './output/GeneratedFilesSection';
 import { ReportView, NormalizationJourney } from './output/ReportView';
 import { ErdSection } from './output/ErdSection';
+import { InputChecksSection } from './output/InputChecksSection';
 import { StatCard } from './output/StatCard';
 import { CodeViewer } from './output/CodeViewer';
 import { Button } from '@/components/ui/button';
@@ -308,6 +309,10 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
         <div key={activeTab} className="nf-fade-in min-h-0 flex-1 overflow-y-auto p-6" role="region" aria-label="Result details" tabIndex={0}>
           {activeTab === 'overview' && (
             <div className="space-y-6">
+              <InputChecksSection
+                checks={safeResults.inputChecks}
+                onMerge={sourceTab ? () => navigate('/', { state: { rerun: { tabId, mergeOverlappingFiles: true } } }) : undefined}
+              />
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 {(isMultiTable
                   ? [

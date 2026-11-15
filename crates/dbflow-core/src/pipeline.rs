@@ -10,6 +10,7 @@ use crate::csv;
 use crate::ddl::{generate_ddl, rows_to_csv, Dialect};
 use crate::encoding::{decode_bytes, Encoding};
 use crate::identifiers::IdentifierRegistry;
+use crate::input_check::{self, InputChecks};
 use crate::js;
 use crate::legacy;
 use crate::naming::{
@@ -424,6 +425,7 @@ pub struct Prepared {
     chosen: HashMap<String, ChosenName>,
     to_ask: IndexMap<String, Vec<String>>,
     pre_notes: Vec<String>,
+    input_checks: InputChecks,
 }
 
 impl Prepared {
@@ -443,19 +445,159 @@ fn multi_failure(msg: &str, start: f64) -> Value {
     json!({"success": false, "error": msg, "outputFiles": [], "logs": [format!("[ERROR] {msg}")], "duration": d, "stats": {"processDuration": d}})
 }
 
-/// Expand workbooks into one CSV per sheet.
-fn expand(files: Vec<InputFile>, notes: &mut Vec<String>) -> Result<Vec<InputFile>, String> {
-    let mut out = Vec::new();
-    for f in files {
-        if spreadsheet::is_spreadsheet(&f.name, &f.bytes) {
-            let conv = spreadsheet::spreadsheet_to_csv(&f.name, &f.bytes)?;
-            notes.extend(conv.notes);
-            out.extend(conv.files.into_iter().map(|(name, bytes)| InputFile { name, bytes }));
-        } else {
-            out.push(f);
+/// What remains of the uploaded files after the input checks, ready for analysis.
+struct Admitted {
+    files: Vec<InputFile>,
+    /// How each file is named in messages (repeated names get "(file k)").
+    labels: Vec<String>,
+    notes: Vec<String>,
+    checks: InputChecks,
+}
+
+/// Run the input checks: reject files that are not tables (whatever their extension), expand
+/// workbooks into one CSV per sheet, set aside exact duplicates, and find (or merge) files that
+/// overlap. A bad file is skipped with its reason; the run continues with the others.
+fn admit_inputs(files: Vec<InputFile>, options: &Options) -> Admitted {
+    let mut notes = Vec::new();
+    let mut checks = InputChecks {
+        skipped: options.skipped_inputs.clone().unwrap_or_default(),
+        ..Default::default()
+    };
+    let names: Vec<String> = files.iter().map(|f| f.name.clone()).collect();
+    let upload_labels = input_check::labels(&names);
+    let mut kept = Vec::new();
+    for (f, label) in files.into_iter().zip(upload_labels) {
+        let admitted = (|| -> Result<Vec<InputFile>, String> {
+            input_check::reject_known_non_table(&label, &f.bytes)?;
+            let is_book = spreadsheet::is_spreadsheet(&f.name, &f.bytes);
+            if is_book || input_check::is_container(&f.bytes) {
+                let conv = spreadsheet::spreadsheet_to_csv(&f.name, &f.bytes).map_err(|e| {
+                    if is_book {
+                        e
+                    } else {
+                        format!("{label} is not a table: {e}")
+                    }
+                })?;
+                if !is_book {
+                    notes.push(format!("{label} is really a workbook; it was read as one."));
+                }
+                notes.extend(conv.notes);
+                return Ok(conv
+                    .files
+                    .into_iter()
+                    .map(|(name, bytes)| InputFile { name, bytes })
+                    .collect());
+            }
+            input_check::check_text_table(&label, &f.bytes)?;
+            Ok(vec![f])
+        })();
+        match admitted {
+            Ok(fs) => kept.extend(fs),
+            Err(reason) => checks.skipped.push(input_check::Skipped { file: label, reason }),
         }
     }
-    Ok(out)
+    // Exact duplicates: the first copy is analysed, later copies are set aside.
+    let names: Vec<String> = kept.iter().map(|f| f.name.clone()).collect();
+    let mut labels = input_check::labels(&names);
+    let mut first_of: HashMap<(usize, u64), String> = HashMap::new();
+    let mut files = Vec::with_capacity(kept.len());
+    let mut unique_labels = Vec::with_capacity(kept.len());
+    for (f, label) in kept.into_iter().zip(labels.drain(..)) {
+        let fp = input_check::fingerprint(&f.bytes);
+        if let Some(original) = first_of.get(&fp) {
+            checks.duplicates.push(input_check::Duplicate {
+                file: label,
+                same_as: original.clone(),
+            });
+            continue;
+        }
+        first_of.insert(fp, label.clone());
+        files.push(f);
+        unique_labels.push(label);
+    }
+    let mut labels = unique_labels;
+    if files.len() > 1 {
+        checks.overlaps = input_check::find_overlaps(&files, &labels);
+        if options.merge_overlapping_files.unwrap_or(false) && !checks.overlaps.is_empty() {
+            let (f, l, merged) = input_check::merge_overlapping(files, labels, &checks.overlaps);
+            files = f;
+            labels = l;
+            checks.merged = merged;
+        }
+    }
+    for s in &checks.skipped {
+        notes.push(format!("Skipped: {}", s.reason));
+    }
+    for d in &checks.duplicates {
+        notes.push(format!(
+            "{} has the same contents as {}; it was analysed once.",
+            d.file, d.same_as
+        ));
+    }
+    for o in &checks.overlaps {
+        let mut msg = format!(
+            "{} and {} have the same columns and share {} of their rows",
+            o.files[0], o.files[1], o.shared_rows
+        );
+        if let Some(k) = &o.key {
+            msg.push_str(&format!(
+                "; {} records match on {k}, {} of them with different values",
+                o.shared_keys, o.conflicts
+            ));
+        }
+        msg.push_str(if checks.merged.is_empty() {
+            ". They are analysed as separate tables; merge them to analyse one."
+        } else {
+            "."
+        });
+        notes.push(msg);
+    }
+    for m in &checks.merged {
+        let mut msg = format!("{} merged into {}: {} distinct rows", m.from.join(", "), m.into, m.rows);
+        if m.conflicts_resolved > 0 {
+            msg.push_str(&format!(
+                "; for {} conflicting records the version in {} was kept",
+                m.conflicts_resolved, m.into
+            ));
+        }
+        msg.push('.');
+        notes.push(msg);
+    }
+    Admitted {
+        files,
+        labels,
+        notes,
+        checks,
+    }
+}
+
+/// Why nothing could be analysed: the single file's reason, or every file's.
+fn nothing_left(checks: &InputChecks) -> String {
+    match checks.skipped.as_slice() {
+        [] => "None of the uploaded files contained data rows.".into(),
+        [one] => one.reason.clone(),
+        many => format!(
+            "None of the uploaded files could be analysed. {}",
+            many.iter().map(|s| s.reason.as_str()).collect::<Vec<_>>().join(" ")
+        ),
+    }
+}
+
+/// Add the input-check report to a result (JSON object text).
+fn with_input_checks(result: String, checks: &InputChecks) -> String {
+    if checks.is_empty() {
+        return result;
+    }
+    let Some(end) = result.rfind('}') else {
+        return result;
+    };
+    let report = serde_json::to_string(checks).unwrap_or_else(|_| "null".into());
+    let sep = if result[..end].trim_end().ends_with('{') {
+        ""
+    } else {
+        ","
+    };
+    format!("{}{sep}\"inputChecks\":{report}}}", &result[..end])
 }
 
 pub fn prepare(
@@ -478,22 +620,28 @@ pub fn prepare(
         chosen: HashMap::new(),
         to_ask: IndexMap::new(),
         pre_notes: vec![],
+        input_checks: InputChecks::default(),
     };
-    if files.is_empty() {
+    let skipped_by_interface = prepared.options.skipped_inputs.as_ref().is_some_and(|s| !s.is_empty());
+    if files.is_empty() && !skipped_by_interface {
         prepared.mode = Mode::Failed(multi_failure("No files uploaded for processing.", start));
         return prepared;
     }
-    let mut notes = Vec::new();
-    let files = match expand(files, &mut notes) {
-        Ok(f) => f,
-        Err(e) => {
-            prepared.mode = Mode::Failed(multi_failure(&e, start));
-            return prepared;
-        }
-    };
+    let Admitted {
+        files,
+        labels,
+        notes,
+        checks,
+    } = admit_inputs(files, &prepared.options);
+    prepared.input_checks = checks;
     let mut all_notes = prepared.options.input_notes.clone().unwrap_or_default();
     all_notes.extend(notes);
     prepared.pre_notes = all_notes;
+    if files.is_empty() {
+        let msg = nothing_left(&prepared.input_checks);
+        prepared.mode = Mode::Failed(multi_failure(&msg, start));
+        return prepared;
+    }
     let user = prepared.options.user_names.clone().unwrap_or_default();
     if files.len() == 1 {
         let file = files.into_iter().next().unwrap();
@@ -508,8 +656,9 @@ pub fn prepare(
         }
         return prepared;
     }
-    match prepare_multi(files, &prepared, progress, cancelled) {
-        Ok((logs, tables)) => {
+    match prepare_multi(files, labels, &prepared, progress, cancelled) {
+        Ok((logs, tables, skipped)) => {
+            prepared.input_checks.skipped.extend(skipped);
             let refs: Vec<&NamedTable> = tables.iter().map(|(_, t)| t).collect();
             let namable: Vec<NamableTable> = refs
                 .iter()
@@ -528,7 +677,9 @@ pub fn prepare(
             prepared.to_ask = a;
             prepared.mode = Mode::Multi(logs, tables);
         }
-        Err(e) => prepared.mode = Mode::Failed(multi_failure(&e, start)),
+        Err(e) => {
+            prepared.mode = Mode::Failed(multi_failure(&e, start));
+        }
     }
     prepared
 }
@@ -656,7 +807,8 @@ fn prepare_single(
     ))
 }
 
-type MultiTables = (Vec<String>, Vec<(String, NamedTable)>);
+/// Log lines, the analysed tables (with their file labels), and files skipped during analysis.
+type MultiTables = (Vec<String>, Vec<(String, NamedTable)>, Vec<input_check::Skipped>);
 
 /// In a multi-file run only the final relation set's rows are used after analysis (for the data
 /// export); the result reports the other sets by row count. Large tables release those rows right
@@ -679,6 +831,7 @@ fn release_intermediate_rows(a: &mut TableAnalysis, options: &Options) {
 
 fn prepare_multi(
     files: Vec<InputFile>,
+    labels: Vec<String>,
     p: &Prepared,
     progress: &dyn Fn(Progress),
     cancelled: &dyn Fn() -> bool,
@@ -687,6 +840,9 @@ fn prepare_multi(
         "[INFO] Multi-CSV Pipeline initiated for {} dataset files.",
         files.len()
     )];
+    for n in &p.pre_notes {
+        logs.push(format!("[WARN] {n}"));
+    }
     // Table names are assigned up front, in file order, so they do not depend on scheduling.
     let mut names = IdentifierRegistry::new();
     let jobs: Vec<(usize, &InputFile, String)> = files
@@ -703,10 +859,19 @@ fn prepare_multi(
     }
     let results = analyze_files(&jobs, p, workers, progress, cancelled);
     let mut out = Vec::new();
-    for ((_, file, table_name), result) in jobs.iter().zip(results) {
-        let Some(analysis) = result? else {
-            logs.push(format!("[WARN] {} has no data rows and was skipped.", file.name));
-            continue;
+    let mut skipped = Vec::new();
+    for ((i, _, table_name), result) in jobs.iter().zip(results) {
+        let label = &labels[*i];
+        let analysis = match result? {
+            FileOutcome::Analysed(a) => *a,
+            FileOutcome::Skipped(reason) => {
+                logs.push(format!("[WARN] Skipped: {label} {reason}"));
+                skipped.push(input_check::Skipped {
+                    file: label.clone(),
+                    reason: format!("{label} {reason}"),
+                });
+                continue;
+            }
         };
         for note in &analysis.notes {
             logs.push(format!("[WARN] {note}"));
@@ -714,7 +879,7 @@ fn prepare_multi(
         logs.push(format!(
             "[SUCCESS] Table '{}' ({}): {} rows, {} columns, {} exact FDs.",
             table_name,
-            file.name,
+            label,
             analysis.rows.len(),
             analysis.attributes.len(),
             analysis.fd_search.as_ref().map(|s| s.exact).unwrap_or(0)
@@ -726,7 +891,7 @@ fn prepare_multi(
             .or_else(|| analysis.key_result.primary_key.clone())
             .unwrap_or_else(|| suggest_primary_key(&analysis.rows, &analysis.attributes));
         out.push((
-            file.name.clone(),
+            label.clone(),
             NamedTable {
                 name: table_name.clone(),
                 pk,
@@ -735,9 +900,11 @@ fn prepare_multi(
         ));
     }
     if out.is_empty() {
-        return Err("None of the uploaded files contained data rows.".into());
+        let mut all = p.input_checks.clone();
+        all.skipped.extend(skipped);
+        return Err(nothing_left(&all));
     }
-    Ok((logs, out))
+    Ok((logs, out, skipped))
 }
 
 /// Relation ids of file `i` start at `i × RELATION_ID_BLOCK`, so files analysed concurrently never
@@ -769,30 +936,35 @@ fn memory_budget_bytes(options: &Options) -> u64 {
     if let Some(mb) = options.memory_budget_mb {
         return (mb.max(64.0) as u64) << 20;
     }
-    let available_kb = std::fs::read_to_string("/proc/meminfo").ok().and_then(|s| {
-        s.lines()
-            .find(|l| l.starts_with("MemAvailable:"))
-            .and_then(|l| l.split_whitespace().nth(1)?.parse::<u64>().ok())
-    });
-    match available_kb {
-        Some(kb) => (kb * 1024) / 2,
+    match crate::available_memory_bytes() {
+        Some(bytes) => bytes / 2,
         None => 4 << 30,
     }
 }
 
-/// Load and analyse one file. `Ok(None)` when it has no data rows.
+/// One file's analysis, or why the file was skipped (it could not be read, or has no data rows).
+enum FileOutcome {
+    Analysed(Box<TableAnalysis>),
+    Skipped(String),
+}
+
+/// Load and analyse one file. An unreadable file is skipped, not fatal; `Err` stops the run
+/// (cancellation, or a failure inside the analysis).
 fn analyze_file(
     file: &InputFile,
     table_name: &str,
     p: &Prepared,
     ctx: &Ctx,
     pct: &dyn Fn(f64) -> f64,
-) -> Result<Option<TableAnalysis>, String> {
+) -> Result<FileOutcome, String> {
     ctx.check()?;
     let mut scratch = Logger::new();
-    let rows = load_csv(file, &mut scratch)?.rows;
+    let rows = match load_csv(file, &mut scratch) {
+        Ok(l) => l.rows,
+        Err(e) => return Ok(FileOutcome::Skipped(format!("could not be read ({e})."))),
+    };
     if rows.is_empty() {
-        return Ok(None);
+        return Ok(FileOutcome::Skipped("has no data rows.".into()));
     }
     let ctx = Ctx {
         memory_mb: footprint_mb(&rows),
@@ -800,10 +972,10 @@ fn analyze_file(
     };
     let mut analysis = analyze_rows(rows, &p.ops, &p.options, table_name, &ctx, pct)?;
     release_intermediate_rows(&mut analysis, &p.options);
-    Ok(Some(analysis))
+    Ok(FileOutcome::Analysed(Box::new(analysis)))
 }
 
-type FileResult = Result<Option<TableAnalysis>, String>;
+type FileResult = Result<FileOutcome, String>;
 
 /// Analyse every file, one after another or on `workers` threads. Results are in file order.
 fn analyze_files(
@@ -993,6 +1165,7 @@ pub fn finish(
         start,
         mut chosen,
         to_ask,
+        input_checks,
         ..
     } = p;
     if let Some(a) = &answers {
@@ -1002,7 +1175,7 @@ pub fn finish(
     if by_rule {
         accept_rule_names(&mut chosen, &to_ask);
     }
-    match mode {
+    let result = match mode {
         Mode::Failed(v) => v.to_string(),
         Mode::Single(mut run, mut tables) => {
             if let Some(e) = &namer_error {
@@ -1019,7 +1192,8 @@ pub fn finish(
             apply(&mut nts, true, &chosen);
             finish_multi(logs, nts, files, &ops, &options, start, progress)
         }
-    }
+    };
+    with_input_checks(result, &input_checks)
 }
 
 fn finish_single(

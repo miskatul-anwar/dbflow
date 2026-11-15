@@ -26,7 +26,7 @@ DBFlow is a **free, open-source desktop app** for Windows, macOS and Linux that 
 - **Database engineering.** Turn flat exports into a normalized, populated database, with the schema checked against your data.
 - **Database education.** See every stage of database design, from the first functional dependency to the final SQL, change one step and compare the results.
 
-Drop in one or many files: CSV, Excel workbooks and templates (`.xlsx`, `.xlsm`, `.xlsb`, `.xls`, `.xltx`, `.xltm`, `.xlam`, `.xlt`, `.xla`, `.xlw`), OpenDocument spreadsheets (`.ods`, `.ots`, `.fods`) and Excel 2003 SpreadsheetML (`.xml`). Each visible, non-empty sheet becomes a table. DBFlow then:
+Drop in one or many files: CSV, Excel workbooks and templates (`.xlsx`, `.xlsm`, `.xlsb`, `.xls`, `.xltx`, `.xltm`, `.xlam`, `.xlt`, `.xla`, `.xlw`), OpenDocument spreadsheets (`.ods`, `.ots`, `.fods`) and Excel 2003 SpreadsheetML (`.xml`). Each visible, non-empty sheet becomes a table. Files are checked first (see [Input checks](#input-checks)). DBFlow then:
 
 - **cleans and profiles** the data (missing values, atomicity, types, column meaning);
 - **mines the functional dependencies** that hold on every row (partition refinement, sampled and validated on the full data);
@@ -117,6 +117,19 @@ Pipelines save to and load from versioned JSON (**Save** / **Open**). Older oper
 - **Report**: what each step found and every check's verdict, shown in the app and exported as Markdown or PDF.
 
 For large inputs (more than about a million cells) the result stays compact: tables report row counts, and each table's data is exported once as CSV (the INSERT script is left out; the CSV files load faster).
+
+## Input checks
+
+Before any analysis, DBFlow checks what each file really contains, whatever its extension:
+
+- **Not a table.** A PDF, an image, an archive, a program, a Word document, JSON, HTML or program source code is left out, with the reason. The other files are still analysed. A run fails only when no file is left, and then it says why.
+- **Disguised workbooks.** An Excel or OpenDocument workbook saved with a `.csv` name is read as a workbook. Delimited text saved with a spreadsheet name is read as CSV.
+- **Compression bombs.** A workbook is a ZIP file. DBFlow measures how far it expands before reading it, and refuses a file that expands implausibly far or needs more memory than the computer can spare.
+- **Identical files.** A file with the same contents as another file is analysed once.
+- **Files with the same name.** They become separate tables (`data`, `data_2`), and messages call them "data.csv (file 1)" and "data.csv (file 2)".
+- **Overlapping files.** Files with the same columns and mostly the same rows are reported, with the number of shared rows and of records that conflict. **Merge overlapping files and run again** on the Output page combines them into one table. Repeated rows are kept once, and for conflicting records the first file's version is kept.
+
+The Output page lists everything the checks found under *Input checks*.
 
 ## Workspaces
 
