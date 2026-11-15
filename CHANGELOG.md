@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.0] - 2026-11-15
+
 ### Added
 - **AI naming switch.** The toolbar's *AI names / Key names* button (shared by every workspace, remembered on this machine) turns the on-device naming model off. New relations are then named from their key columns by rule (`region_code` → "Region", `order_id, line_no` → "Order Line"), marked *from key* on the Output page and renamable as before. Runs skip the model entirely, which makes them much faster. Engine option `namingMode: "rules"`.
 - **Parallel multi-file analysis.** In the desktop app the files of a run are analysed at the same time, one thread per file (largest first), within a memory budget (half of the available memory by default; `memoryBudgetMb`, `maxParallelFiles`). Progress is merged into one bar and cancelling stops every file. Results are identical to a one-thread run (tested). The desktop app keeps one CPU core free for its window.
