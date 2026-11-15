@@ -93,8 +93,12 @@ jobs:
             gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
             echo "Reusing draft release $id"
           else
-            gh release create "$TAG" --draft --title "DBFlow $TAG" --notes-file "$RUNNER_TEMP/notes.md" --target "$GITHUB_SHA"
-            id="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .id" | head -n 1)"
+            # The create call returns the new release's id. (Listing releases right after creating one can miss
+            # it: the list is updated a moment later.)
+            id="$(gh api -X POST "repos/$GITHUB_REPOSITORY/releases" \
+              -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" -f name="DBFlow $TAG" \
+              -F draft=true -F body=@"$RUNNER_TEMP/notes.md" --jq .id)"
+            echo "Created draft release $id"
           fi
           test -n "$id"
           echo "release_id=$id" >> "$GITHUB_OUTPUT"
