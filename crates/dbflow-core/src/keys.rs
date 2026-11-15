@@ -45,7 +45,7 @@ pub fn is_unique_and_complete(rows: &Table, cols: &[String]) -> bool {
     true
 }
 
-fn looks_like_identifier(name: &str) -> u8 {
+pub(crate) fn looks_like_identifier(name: &str) -> u8 {
     let n = name.to_lowercase();
     if n == "id" || n == "uuid" || n == "guid" {
         return 3;

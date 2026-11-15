@@ -67,7 +67,8 @@ describe('engine naming', () => {
     const names = (r.relations as any[]).map(x => x.name);
     expect(names).toContain('orders');
     for (const n of names.filter(n => n !== 'orders')) expect(n).toMatch(/^relation_\d+$/);
-    expect(r.outputFiles.map(f => f.content).join('\n')).not.toMatch(/customer_id_customer_city|orders_customer/);
+    // Index names (IDX_<table>_<column>) are built from columns by design; relation names must not be.
+    expect(r.outputFiles.map(f => f.content).join('\n')).not.toMatch(/customer_id_customer_city|(?<!IDX_)orders_customer/);
   });
 
   it('uses the model answer, never sends sample values, and the user name wins', async () => {

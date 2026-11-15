@@ -32,6 +32,8 @@ export interface RelationSchema {
   primaryKey: string[];
   foreignKeys: ForeignKey[];
   rows: any[];
+  /** Row count when the rows are left out of the result (large inputs). */
+  rowCount?: number;
   sourceType?: string;
   sourceTable?: string;
   /** Text people read; absent for an unnamed relation (`name` is then an engine id). */

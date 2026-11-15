@@ -439,3 +439,24 @@ fn a_determinant_that_only_looks_unique_in_the_sample_is_still_used() {
         rels.iter().map(|r| r["primaryKey"].clone()).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn split_out_relations_prefer_an_identifier_column_as_key() {
+    // city_code, city_name and city_population determine each other; the city relation should be keyed by the code.
+    let mut text = String::from("order_id,city_population,city_name,city_code,amount\n");
+    for i in 0..400u64 {
+        let c = i % 9;
+        text += &format!("{i},{},City {c},C{c},{}\n", 10_000 + c * 7_919, (i * 104_729) % 99_991);
+    }
+    let r = process(vec![file("orders.csv", &text)], ops(), json!({}));
+    let city = r["relations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|rel| {
+            rel["attributes"].as_array().unwrap().contains(&json!("city_name"))
+                && rel["primaryKey"] != json!(["order_id"])
+        })
+        .expect("city relation");
+    assert_eq!(city["primaryKey"], json!(["city_code"]), "{city}");
+}
