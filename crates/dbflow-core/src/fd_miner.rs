@@ -387,17 +387,22 @@ pub fn mine(data: &Table, options: &MineOptions) -> MineResult {
                     .full_key_check
                     .map(|f| f(&combo.iter().map(|&i| attributes[i].clone()).collect::<Vec<_>>()))
                     .unwrap_or(true);
-            if prune_near && !is_superkey && base_count as f64 / rows as f64 > near_key_ratio {
-                // A nearly unique single column is not used, and neither are its supersets: on large tables
-                // they are keys by accident (two unrelated measures together). Its uniqueness is judged on
-                // the full data when this is a sample.
-                let near_on_full = options
+            // A single column's uniqueness is judged on the full data when this is a sample: an id with
+            // ten rows per value looks nearly unique in a sample of a million-row table, but is not.
+            let full_ratio = if level == 1 {
+                options
                     .full_distinct_ratio
                     .as_ref()
                     .and_then(|m| m.get(&attributes[combo[0]]))
-                    .map(|&r| r > near_key_ratio)
-                    .unwrap_or(true);
-                if level == 1 && near_on_full {
+                    .copied()
+            } else {
+                None
+            };
+            let near_key = full_ratio.unwrap_or(base_count as f64 / rows as f64) > near_key_ratio;
+            if prune_near && !is_superkey && near_key {
+                // A nearly unique single column is not used, and neither are its supersets: on large tables
+                // they are keys by accident (two unrelated measures together).
+                if level == 1 {
                     superkeys.push(combo.clone());
                 }
                 continue;

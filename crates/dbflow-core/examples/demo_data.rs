@@ -10,6 +10,10 @@
 //! quick checks. The output is deterministic (seeded hashing, no randomness from the OS), so every
 //! run produces the same bytes.
 //!
+//! `--single ROWS COLS` instead writes one order table, `orders_ROWSxCOLS.csv`, for scaling series:
+//! an order key, a customer (name, segment), the customer's city and its region (the dependencies 3NF
+//! splits out), then measures up to COLS columns (at least 9).
+//!
 //! Every table mixes three kinds of columns, so normalisation has real work to do:
 //!  - a key and, where relevant, foreign keys into the other files (cross-file inclusion
 //!    dependencies that DBFlow should find);
@@ -357,14 +361,85 @@ fn write_table(dir: &Path, name: &str, header: &[String], rows: u64, mut row: im
     path
 }
 
+/// One order table of `rows` × `cols` (cols ≥ 9) for scaling measurements.
+fn write_single(dir: &Path, rows: u64, cols: usize) {
+    let cols = cols.max(9);
+    let mut header: Vec<String> = [
+        "order_id",
+        "order_date",
+        "customer_id",
+        "customer_name",
+        "customer_segment",
+        "city_code",
+        "city_name",
+        "region_code",
+        "region_name",
+    ]
+    .map(String::from)
+    .to_vec();
+    for c in header.len()..cols {
+        header.push(format!("measure_{:03}", c - 8));
+    }
+    let customers = (rows / 10).max(9);
+    let path = dir.join(format!("orders_{rows}x{cols}.csv"));
+    let mut w = BufWriter::new(File::create(&path).expect("create csv"));
+    writeln!(w, "{}", header.join(",")).unwrap();
+    let mut line = String::new();
+    for i in 0..rows {
+        line.clear();
+        let mut r = Row {
+            out: &mut line,
+            first: true,
+        };
+        let id = i + 1;
+        let cust = 1 + h(6, id, 1) % customers;
+        let city = customer_city(cust);
+        let region = city % REGION.len() as u64;
+        r.push(id);
+        r.push(date(h(6, id, 2)));
+        r.push(cust);
+        r.push(customer_name(cust));
+        r.push(customer_segment(cust));
+        r.push(format!("C{:03}", city + 1));
+        r.push(CITY[city as usize % CITY.len()]);
+        r.push(format!("R{}", region + 1));
+        r.push(REGION[region as usize]);
+        for c in 9..cols {
+            let x = h(77, id, c as u64);
+            if c % 2 == 0 {
+                r.push(money(x, 9_999_999));
+            } else {
+                r.push(x % 9_999_999);
+            }
+        }
+        line.push('\n');
+        w.write_all(line.as_bytes()).unwrap();
+    }
+    w.flush().unwrap();
+    eprintln!("wrote {}", path.display());
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let dir = PathBuf::from(
         args.iter()
-            .find(|a| !a.starts_with("--"))
+            .find(|a| !a.starts_with("--") && a.parse::<u64>().is_err())
             .cloned()
             .unwrap_or("demo-data".into()),
     );
+    if let Some(i) = args.iter().position(|a| a == "--single") {
+        let rows: u64 = args
+            .get(i + 1)
+            .and_then(|v| v.parse().ok())
+            .expect("--single ROWS COLS");
+        let cols: usize = args
+            .get(i + 2)
+            .and_then(|v| v.parse().ok())
+            .expect("--single ROWS COLS");
+        create_dir_all(&dir).expect("create output dir");
+        write_single(&dir, rows, cols);
+        return;
+    }
     let small = args.windows(2).any(|w| w[0] == "--scale" && w[1] == "small");
     let s = if small {
         Sizes {
