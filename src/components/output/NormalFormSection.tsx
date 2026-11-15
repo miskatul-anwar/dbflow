@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Hash, Layers, Database, GitBranch, Key, ExternalLink, ArrowRight } from 'lucide-react';
+import { Table, Hash, Layers, Database, GitBranch, Key, ExternalLink, ArrowRight, Split } from 'lucide-react';
 import { RelationSchema } from '../../types';
 import { relationSignature } from '../../services/naming/relationNames';
 import { saveUserName } from '../../services/naming/userNames';
@@ -9,24 +9,29 @@ interface NormalFormSectionProps {
   relations2NF?: RelationSchema[];
   relations3NF?: RelationSchema[];
   relationsBCNF?: RelationSchema[];
+  relations4NF?: RelationSchema[];
+  /** The multivalued dependencies the 4NF step split on. */
+  mvds?: Array<{ lhs: string[]; rhs: string[]; rest: string[]; relation: string; witnessGroups: number; witnessRows: number }>;
 }
 
-export function NormalFormSection({ relations1NF, relations2NF, relations3NF, relationsBCNF }: NormalFormSectionProps) {
-  const [activeNF, setActiveNF] = useState<'1nf' | '2nf' | '3nf' | 'bcnf'>('1nf');
+export function NormalFormSection({ relations1NF, relations2NF, relations3NF, relationsBCNF, relations4NF, mvds }: NormalFormSectionProps) {
+  const [activeNF, setActiveNF] = useState<'1nf' | '2nf' | '3nf' | 'bcnf' | '4nf'>('1nf');
 
   const has1NF = Boolean(relations1NF && relations1NF.length > 0);
   const has2NF = Boolean(relations2NF && relations2NF.length > 0);
   const has3NF = Boolean(relations3NF && relations3NF.length > 0);
   const hasBCNF = Boolean(relationsBCNF && relationsBCNF.length > 0);
+  const has4NF = Boolean(relations4NF && relations4NF.length > 0);
 
   useEffect(() => {
-    if (hasBCNF) setActiveNF('bcnf');
+    if (has4NF) setActiveNF('4nf');
+    else if (hasBCNF) setActiveNF('bcnf');
     else if (has3NF) setActiveNF('3nf');
     else if (has2NF) setActiveNF('2nf');
     else if (has1NF) setActiveNF('1nf');
-  }, [has1NF, has2NF, has3NF, hasBCNF]);
+  }, [has1NF, has2NF, has3NF, hasBCNF, has4NF]);
 
-  if (!has1NF && !has2NF && !has3NF && !hasBCNF) {
+  if (!has1NF && !has2NF && !has3NF && !hasBCNF && !has4NF) {
     return (
       <div className="text-center py-12 text-gray-500">
         <Table className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -42,6 +47,7 @@ export function NormalFormSection({ relations1NF, relations2NF, relations3NF, re
       case '2nf': return relations2NF || [];
       case '3nf': return relations3NF || [];
       case 'bcnf': return relationsBCNF || [];
+      case '4nf': return relations4NF || [];
       default: return [];
     }
   };
@@ -58,6 +64,7 @@ export function NormalFormSection({ relations1NF, relations2NF, relations3NF, re
               { id: '2nf', short: '2NF', full: 'Second normal form', has: has2NF, n: relations2NF?.length ?? 0, Icon: Layers },
               { id: '3nf', short: '3NF', full: 'Third normal form', has: has3NF, n: relations3NF?.length ?? 0, Icon: Database },
               { id: 'bcnf', short: 'BCNF', full: 'Boyce-Codd normal form', has: hasBCNF, n: relationsBCNF?.length ?? 0, Icon: GitBranch },
+              { id: '4nf', short: '4NF', full: 'Fourth normal form (multivalued dependencies)', has: has4NF, n: relations4NF?.length ?? 0, Icon: Split },
             ] as const).map(({ id, short, full, has, n, Icon }) => (
               <button
                 key={id}
@@ -85,6 +92,25 @@ export function NormalFormSection({ relations1NF, relations2NF, relations3NF, re
         </div>
 
         <div className="p-6">
+          {activeNF === '4nf' && (
+            <div className="mb-4 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-gray-800" role="note">
+              {mvds && mvds.length > 0 ? (
+                <>
+                  <p className="font-medium">Split on {mvds.length === 1 ? 'one multivalued dependency' : `${mvds.length} multivalued dependencies`}:</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {mvds.map((m, i) => (
+                      <li key={i} className="font-mono text-xs [overflow-wrap:anywhere]">
+                        {'{'}{m.lhs.join(', ')}{'}'} ↠ {'{'}{m.rhs.join(', ')}{'}'} | {'{'}{m.rest.join(', ')}{'}'}
+                        <span className="font-sans text-gray-500"> · in {m.relation}, {m.witnessGroups} groups, {m.witnessRows} rows</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p>No multivalued dependency violates 4NF: the BCNF relations are already in 4NF.</p>
+              )}
+            </div>
+          )}
           {activeRelations && activeRelations.length > 0 ? (
             <div className="space-y-4">
               {activeRelations.map((relation, index) => (

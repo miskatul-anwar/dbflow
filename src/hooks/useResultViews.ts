@@ -45,6 +45,20 @@ export function useResultViews(safeResults: any) {
     return [];
   }, [safeResults, multiTables]);
 
+  const relations4NF = useMemo(() => {
+    if (safeResults?.relations4NF && safeResults.relations4NF.length > 0) return safeResults.relations4NF;
+    if (multiTables.length > 0) {
+      return multiTables.flatMap((t: any) => t.fourthNormalForm || []);
+    }
+    return [];
+  }, [safeResults, multiTables]);
+
+  /** Multivalued dependencies the 4NF step split on (one file, or every table of a multi-file run). */
+  const mvds = useMemo(() => {
+    if (Array.isArray(safeResults?.multivaluedDependencies)) return safeResults.multivaluedDependencies;
+    return multiTables.flatMap((t: any) => t.multivaluedDependencies || []);
+  }, [safeResults, multiTables]);
+
   // The ERD follows the final schema (BCNF if it ran, otherwise 3NF).
   const erdRelations = useMemo(() => {
     const final = safeResults?.relations;
@@ -121,6 +135,8 @@ export function useResultViews(safeResults: any) {
     relations1NF,
     relations2NF,
     relationsBCNF,
+    relations4NF,
+    mvds,
     erdRelations,
     erdContent,
     cardinalityAnalysis,

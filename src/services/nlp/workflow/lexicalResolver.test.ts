@@ -80,10 +80,10 @@ describe('lexical resolver', () => {
       expect(noBcnf).not.toContain('BCNF');
       expect(noBcnf).toContain('3NF');
       const no3nf = t('run all steps without 3NF');
-      // BCNF, Relation Generator (and so SQL Generator) need 3NF; Lossless Check needs only 2NF.
-      for (const gone of ['3NF', 'BCNF', 'Relation Generator', 'SQL Generator']) expect(no3nf).not.toContain(gone);
+      // BCNF (and so 4NF), Relation Generator (and so SQL Generator) need 3NF; Lossless Check needs only 2NF.
+      for (const gone of ['3NF', 'BCNF', '4NF', 'Relation Generator', 'SQL Generator']) expect(no3nf).not.toContain(gone);
       expect(no3nf).toContain('Lossless Check');
-      expect(no3nf).toHaveLength(all.length - 4);
+      expect(no3nf).toHaveLength(all.length - 5);
     });
 
     it('keeps the run flag and the SQL dialect', () => {

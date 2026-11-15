@@ -10,6 +10,7 @@ import { Play } from 'lucide-react';
 import { useNormalization } from '../hooks/useNormalization';
 import { useWorkflowGraph } from '../hooks/useWorkflowGraph';
 import { useNLWorkflow } from '../hooks/useNLWorkflow';
+import { OPERATIONS } from '../config/operations';
 import { prerequisitesToAdd } from '../services/nlp/workflow/planner';
 import { isSupportedInputName } from '../services/processors/spreadsheetProcessor';
 import type { ProcessingOptions, SQLDialect } from '../services/api/databaseService';
@@ -186,7 +187,7 @@ export function MobileWorkspace({
         ? `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${fileSize(files.reduce((n, f) => n + f.size, 0))}`
         : 'No files'
       : screen === 'pipeline'
-        ? `${steps.length} of 19 steps${dialect ? ` · SQL: ${dialect}` : ''}`
+        ? `${steps.length} of ${Object.keys(OPERATIONS).length} steps${dialect ? ` · SQL: ${dialect}` : ''}`
         : results
           ? `Last run: ${results.duration ?? '—'}`
           : 'No run yet';

@@ -178,10 +178,10 @@ describe('Pipeline Edge Connection Rules (validateEdgeConnection)', () => {
       expect(validRes.isValid).toBe(true);
     });
 
-    it('enforces that SQL Generator requires input from Relation Generator, BCNF, or 3NF', () => {
+    it('enforces that SQL Generator requires input from Relation Generator, 4NF, BCNF, or 3NF', () => {
       const res = validateEdgeConnection({ source: '8', target: '18' }, defaultNodes, []);
       expect(res.isValid).toBe(false);
-      expect(res.error).toContain("'SQL Generator' must receive input from 'Relation Generator', 'BCNF', or '3NF'");
+      expect(res.error).toContain("'SQL Generator' must receive input from 'Relation Generator', '4NF', 'BCNF', or '3NF'");
 
       // Valid source connections
       expect(validateEdgeConnection({ source: '17', target: '18' }, defaultNodes, []).isValid).toBe(true);

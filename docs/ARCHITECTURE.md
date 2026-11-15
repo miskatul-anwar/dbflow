@@ -116,7 +116,7 @@ file or for every file.
    swapping in the left side of a dependency, so the work is polynomial per key); `chooseKey` picks one that
    is unique and has no missing cells, preferring identifier-like single
    columns, and adds a `row_id` surrogate when none exists.
-6. **Normalize** — 1NF (non-destructive), 2NF, Bernstein 3NF synthesis, BCNF
+6. **Normalize** — 1NF (non-destructive), 2NF, Bernstein 3NF synthesis, BCNF, 4NF (multivalued dependencies mined on the data, Fagin decomposition, chase with MVDs; `crates/dbflow-core/src/mvd.rs`)
    decomposition.
 7. **Verify** — chase (lossless with respect to the FDs), re-join of the
    projections on the data (lossless on this data), and dependency

@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [6.6.0] - 2026-11-15
 
 ### Added
+- **Fourth normal form (4NF).** A new *4NF* operation, which runs after BCNF, removes redundancy that BCNF cannot see: independent lists stored in one table, such as a course's teachers and its books.
+  - **Mining:** multivalued dependencies (`X ->> Y`) are found on the data. The test is exact: every `X` group must be the complete product of its `Y` values and its other values. A dependency is reported only with evidence, meaning at least one group where both sides vary (at least four rows). Functional dependencies are left to BCNF.
+  - **Decomposition:** Fagin's. A table `R` is split into `X ∪ Y` and `X ∪ (R − X − Y)` until no non-key left side remains.
+  - **Lossless check:** the chase uses multivalued dependencies too, so the splits are proven lossless, and re-joining the rows confirms it on the data.
+  - **Where it shows:**
+    - result fields `relations4NF` and `multivaluedDependencies`, or `fourthNormalForm` per table in a multi-file run
+    - a 4NF tab on the *Normal Forms* view, listing each dependency with its evidence
+    - a 4NF section in the report
+    - the files `relations_4nf.json`, `multivalued_dependencies.json` and one CSV per relation
+  - **Request box:** "4NF", "fourth normal form" and "multivalued dependencies" now plan it.
+  - **Android app:** a *4NF schema* goal.
+  - **Limits:** relations of up to 16 columns, up to two columns on each side, 15 seconds per table.
 - **A touch interface for the Android app (phones and tablets), with every feature of the desktop app.** The desktop interface (a canvas, side panels and many small controls) is hard to use on a touch screen, so the Android app has its own interface; the desktop app is unchanged. It is function-first: flat lists, one accent colour, 48 px touch targets, and colour only where it means something (the four phases, primary and foreign keys, errors). It runs on the desktop app's own state hooks, so features behave the same.
   - **Workspaces:** switch, create, rename, colour and close (with a confirmation when there is work in it) from the app bar. Runs continue in the background while another workspace is open. Each workspace keeps its results, and its title follows the first file added.
   - **Data:** the files to analyse, each with its type and size.

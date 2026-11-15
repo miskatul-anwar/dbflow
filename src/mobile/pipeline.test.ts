@@ -15,7 +15,7 @@ describe('phone pipeline', () => {
       expect(inOrder(plan), g.id).toBe(true);
       expect(goalOf(plan)?.id).toBe(g.id);
     }
-    expect(planForGoal(GOALS.find(g => g.id === 'all')!)).toHaveLength(19);
+    expect(planForGoal(GOALS.find(g => g.id === 'all')!)).toHaveLength(Object.keys(OPERATIONS).length);
   });
 
   it('adds a step with its prerequisites', () => {

@@ -54,7 +54,7 @@ export function ResultsScreen({
   const fdCount = results.stats?.functionalDependencies || v.fdData.length;
   const tabs: { id: Tab; label: string; show: boolean }[] = [
     { id: 'overview', label: 'Overview', show: true },
-    { id: 'tables', label: 'Tables', show: v.relations1NF.length + v.relations2NF.length + v.relationData.length + v.relationsBCNF.length > 0 },
+    { id: 'tables', label: 'Tables', show: v.relations1NF.length + v.relations2NF.length + v.relationData.length + v.relationsBCNF.length + v.relations4NF.length > 0 },
     { id: 'diagram', label: 'Diagram', show: Boolean(v.erdContent) },
     { id: 'sql', label: 'SQL', show: Boolean(v.sqlFile.content) },
     { id: 'keys', label: 'Keys', show: Boolean(v.keyData) || v.isMultiTable },
@@ -70,6 +70,7 @@ export function ResultsScreen({
     { id: '2NF', relations: v.relations2NF },
     { id: '3NF', relations: v.relationData },
     { id: 'BCNF', relations: v.relationsBCNF },
+    { id: '4NF', relations: v.relations4NF },
   ].filter(l => l.relations.length > 0);
   const rowsRead: number = v.isMultiTable ? v.multiTables.reduce((n: number, t: any) => n + (t.rowCount || 0), 0) : Number(results.stats?.originalRows ?? 0);
   return (
@@ -171,7 +172,7 @@ export function ResultsScreen({
         )}
         {tab === 'tables' && (
           <Card>
-            <NormalFormSection relations1NF={v.relations1NF} relations2NF={v.relations2NF} relations3NF={v.relationData} relationsBCNF={v.relationsBCNF} />
+            <NormalFormSection relations1NF={v.relations1NF} relations2NF={v.relations2NF} relations3NF={v.relationData} relationsBCNF={v.relationsBCNF} relations4NF={v.relations4NF} mvds={v.mvds} />
           </Card>
         )}
         {tab === 'diagram' && (

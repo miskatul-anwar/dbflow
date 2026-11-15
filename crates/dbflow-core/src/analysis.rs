@@ -113,6 +113,11 @@ pub struct TableAnalysis {
     pub relations_bcnf: Vec<Relation>,
     /// BCNF ran and its result is the final relation set (`relations3NF === relationsBCNF`).
     pub bcnf_is_final: bool,
+    pub relations_4nf: Vec<Relation>,
+    /// 4NF ran and its result is the final relation set (`relations3NF === relations4NF`).
+    pub fourth_is_final: bool,
+    /// The multivalued dependencies the 4NF step decomposed on.
+    pub mvds: Vec<crate::mvd::Mvd>,
     pub cardinality: IndexMap<String, Value>,
     pub lossless_check: Value,
     pub dependency_preservation: Value,
@@ -535,6 +540,47 @@ pub fn analyze_rows(
         }
         a.bcnf_is_final = true;
     }
+    if has(ops, "4NF") && !a.relations_3nf.is_empty() {
+        ctx.check()?;
+        report(
+            "NORMAL",
+            "4nf",
+            79.0,
+            format!("{table_name}: looking for multivalued dependencies (4NF)…"),
+        );
+        // The BCNF set stays as it was; the 4NF set becomes the final one (held in the 3NF slot, like BCNF).
+        // The final set is moved, not copied: it holds every row of the table.
+        let source = std::mem::take(&mut a.relations_3nf);
+        if a.bcnf_is_final {
+            a.relations_bcnf = if a.compact {
+                source.iter().map(Relation::shadow).collect()
+            } else {
+                source.clone()
+            };
+            a.bcnf_is_final = false;
+        }
+        let four = crate::mvd::apply_4nf(source, &a.used_fds, table_name);
+        for m in &four.mvds {
+            a.log.push((
+                "INFO",
+                format!(
+                    "{table_name}: multivalued dependency {{{}}} ->> {{{}}} ({} groups); split for 4NF.",
+                    m.lhs.join(", "),
+                    m.rhs.join(", "),
+                    m.witness_groups
+                ),
+            ));
+        }
+        a.notes.extend(four.notes);
+        a.mvds = four.mvds;
+        if a.compact {
+            a.relations_4nf = four.relations.iter().map(Relation::shadow).collect();
+        } else {
+            a.relations_4nf = four.relations.clone();
+        }
+        a.relations_3nf = four.relations;
+        a.fourth_is_final = true;
+    }
 
     // The checks below read attributes and dependencies only, so the copy leaves the rows out.
     let final_rel: Vec<Relation> = if !a.relations_3nf.is_empty() {
@@ -553,7 +599,12 @@ pub fn analyze_rows(
             80.0,
             format!("{table_name}: checking lossless join…"),
         );
-        let chase = nf::chase(&final_rel, &a.used_fds).is_lossless;
+        // With multivalued dependencies (4NF), the chase uses them too: an MVD split is lossless by them alone.
+        let chase = if a.mvds.is_empty() {
+            nf::chase(&final_rel, &a.used_fds).is_lossless
+        } else {
+            crate::mvd::chase_lossless(&final_rel, &a.used_fds, &a.mvds)
+        };
         let attrs: Vec<Vec<String>> = final_rel.iter().map(|r| r.attributes.clone()).collect();
         let inst = verify_lossless_on_data(&data, &attrs, 250_000);
         a.lossless_check = json!({
@@ -561,7 +612,7 @@ pub fn analyze_rows(
             "chaseLossless": chase,
             "instanceLossless": inst.lossless,
             "details": {
-                "algorithm": "Chase (w.r.t. FDs) + re-join of projections (on data)",
+                "algorithm": if a.mvds.is_empty() { "Chase (w.r.t. FDs) + re-join of projections (on data)" } else { "Chase (w.r.t. FDs and MVDs) + re-join of projections (on data)" },
                 "relationCount": final_rel.len(),
                 "fdCount": a.used_fds.len(),
                 "instance": inst,
@@ -625,6 +676,13 @@ pub fn analyze_rows(
         };
         a.relations_2nf = with_children(&a.relations_2nf);
         a.relations_3nf = with_children(&a.relations_3nf);
+        a.relations_4nf = if a.fourth_is_final && a.compact {
+            a.relations_3nf.iter().map(Relation::shadow).collect()
+        } else if a.fourth_is_final {
+            a.relations_3nf.clone()
+        } else {
+            with_children(&a.relations_4nf)
+        };
         a.relations_bcnf = if a.bcnf_is_final && a.compact {
             a.relations_3nf.iter().map(Relation::shadow).collect()
         } else if a.bcnf_is_final {

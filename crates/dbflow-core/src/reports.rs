@@ -637,6 +637,35 @@ pub struct ReportInput<'a> {
     pub atomicity: &'a AtomicityResult,
     pub profile: &'a IndexMap<String, String>,
     pub performance: &'a Value,
+    /// Multivalued dependencies the 4NF step decomposed on.
+    pub mvds: &'a [crate::mvd::Mvd],
+}
+
+/// The 4NF section: each multivalued dependency, with the evidence it rests on.
+pub fn mvd_markdown(mvds: &[crate::mvd::Mvd], final_relations: usize) -> String {
+    let mut c = String::from("### Fourth Normal Form (4NF)\n\n");
+    if mvds.is_empty() {
+        c += "**Status:** No multivalued dependency violates 4NF; the relations are already in 4NF.\n\n";
+        return c;
+    }
+    c += &format!(
+        "**Status:** {} multivalued {} split (Fagin decomposition); {final_relations} relations in 4NF\n**Multivalued Dependencies:**\n",
+        mvds.len(),
+        if mvds.len() == 1 { "dependency" } else { "dependencies" }
+    );
+    for m in mvds {
+        c += &format!(
+            "- In {}: {{{}}} ->> {{{}}} (and ->> {{{}}}); seen in {} groups, {} rows\n",
+            m.relation,
+            m.lhs.join(", "),
+            m.rhs.join(", "),
+            m.rest.join(", "),
+            m.witness_groups,
+            m.witness_rows
+        );
+    }
+    c += "\n";
+    c
 }
 
 pub fn process_report(i: &ReportInput) -> String {
@@ -885,6 +914,9 @@ pub fn process_report(i: &ReportInput) -> String {
             }
             c += "\n";
         }
+    }
+    if has(ops, "4NF") {
+        c += &mvd_markdown(i.mvds, i.r3.len());
     }
     if has(ops, "Lossless Check") {
         c += &format!(
@@ -1173,6 +1205,15 @@ pub fn multi_table_report(
         } else {
             &a.relations_2nf
         };
+        for m in &a.mvds {
+            out.push(format!(
+                "- **Multivalued dependency (4NF split)**: {} ->> {} in {} ({} groups)",
+                list(&m.lhs),
+                list(&m.rhs),
+                code(&m.relation),
+                m.witness_groups
+            ));
+        }
         if !fin.is_empty() {
             out.push("- **Normalized relations**:".into());
             for r in fin {

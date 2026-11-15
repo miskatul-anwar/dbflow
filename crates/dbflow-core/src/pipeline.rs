@@ -307,6 +307,7 @@ enum SetId {
     Two,
     Three,
     Bcnf,
+    Four,
 }
 
 fn set_ref(a: &TableAnalysis, id: SetId) -> &[Relation] {
@@ -315,6 +316,7 @@ fn set_ref(a: &TableAnalysis, id: SetId) -> &[Relation] {
         SetId::Two => &a.relations_2nf,
         SetId::Three => &a.relations_3nf,
         SetId::Bcnf => &a.relations_bcnf,
+        SetId::Four => &a.relations_4nf,
     }
 }
 
@@ -324,6 +326,7 @@ fn set_mut(a: &mut TableAnalysis, id: SetId) -> &mut Vec<Relation> {
         SetId::Two => &mut a.relations_2nf,
         SetId::Three => &mut a.relations_3nf,
         SetId::Bcnf => &mut a.relations_bcnf,
+        SetId::Four => &mut a.relations_4nf,
     }
 }
 
@@ -334,11 +337,16 @@ fn naming_sets(a: &TableAnalysis, multi: bool) -> (SetId, Vec<SetId>) {
         SetId::Two
     };
     let mut others = Vec::new();
-    for id in [SetId::One, SetId::Two, SetId::Three, SetId::Bcnf] {
+    for id in [SetId::One, SetId::Two, SetId::Three, SetId::Bcnf, SetId::Four] {
         if id == fin {
             continue;
         }
-        if id == SetId::Bcnf && a.bcnf_is_final && (fin == SetId::Three || others.contains(&SetId::Three)) {
+        // A set that is the final set itself (held in the 3NF slot) is named with it, not on its own.
+        let same_as_three = fin == SetId::Three || others.contains(&SetId::Three);
+        if id == SetId::Bcnf && a.bcnf_is_final && same_as_three {
+            continue;
+        }
+        if id == SetId::Four && a.fourth_is_final && same_as_three {
             continue;
         }
         others.push(id);
@@ -398,6 +406,41 @@ fn apply(tables: &mut [NamedTable], multi: bool, chosen: &HashMap<String, Chosen
         if t.analysis.bcnf_is_final {
             t.analysis.relations_bcnf = t.analysis.relations_3nf.clone();
         }
+        if t.analysis.fourth_is_final {
+            t.analysis.relations_4nf = t.analysis.relations_3nf.clone();
+        }
+        label_mvd_relations(&mut t.analysis);
+    }
+}
+
+/// MVDs record the relation they were found in by its id; once relations are named, report the name people see
+/// (the BCNF relation with the same attributes), or the attribute list for a relation split along the way.
+fn label_mvd_relations(a: &mut TableAnalysis) {
+    let names: Vec<(std::collections::BTreeSet<String>, String)> = a
+        .relations_bcnf
+        .iter()
+        .map(|r| {
+            (
+                r.attributes.iter().cloned().collect(),
+                r.display_name.clone().unwrap_or_else(|| r.name.clone()),
+            )
+        })
+        .collect();
+    for m in &mut a.mvds {
+        let attrs: std::collections::BTreeSet<String> = m.lhs.iter().chain(&m.rhs).chain(&m.rest).cloned().collect();
+        m.relation = match names.iter().find(|(set, _)| *set == attrs) {
+            Some((_, name)) => name.clone(),
+            None => format!(
+                "({})",
+                m.lhs
+                    .iter()
+                    .chain(&m.rhs)
+                    .chain(&m.rest)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        };
     }
 }
 
@@ -824,6 +867,7 @@ fn release_intermediate_rows(a: &mut TableAnalysis, options: &Options) {
         .iter_mut()
         .chain(a.relations_2nf.iter_mut())
         .chain(a.relations_bcnf.iter_mut())
+        .chain(a.relations_4nf.iter_mut())
     {
         r.release_rows();
     }
@@ -1265,6 +1309,9 @@ fn finish_single(
                 if a.bcnf_is_final {
                     a.relations_bcnf = a.relations_3nf.clone();
                 }
+                if a.fourth_is_final {
+                    a.relations_4nf = a.relations_3nf.clone();
+                }
             }
             "Relation Generator" => schemas = legacy::generate_relation_schemas(&a.relations_3nf),
             _ => sql = legacy::generate_sql_ddl(&a.relations_3nf),
@@ -1369,6 +1416,8 @@ fn finish_single(
         "relations2NF": a.relations_2nf.len(),
         "relations3NF": r3.len(),
         "relationsBCNF": a.relations_bcnf.len(),
+        "relations4NF": a.relations_4nf.len(),
+        "multivaluedDependencies": a.mvds.len(),
         "connectedEntities": r3.iter().filter(|r| !r.foreign_keys.is_empty()).count(),
         "relationships": r3.iter().map(|r| r.foreign_keys.len()).sum::<usize>(),
         "cardinalityMappings": a.cardinality.len(),
@@ -1384,6 +1433,11 @@ fn finish_single(
     } else {
         rels(&a.relations_bcnf, compact)
     };
+    let four_json = if a.fourth_is_final {
+        relations_json.clone()
+    } else {
+        rels(&a.relations_4nf, compact)
+    };
     object(vec![
         ("success", raw(&true)),
         ("stats", raw(&stats)),
@@ -1393,6 +1447,8 @@ fn finish_single(
         ("relations1NF", rels(&a.relations_1nf, compact)),
         ("relations2NF", rels(&a.relations_2nf, compact)),
         ("bcnf", bcnf_json),
+        ("relations4NF", four_json),
+        ("multivaluedDependencies", raw(&a.mvds)),
         ("relationships", raw(&relationships)),
         ("erdContent", raw(&erd)),
         ("cardinalityAnalysis", raw(&a.cardinality)),
@@ -1615,7 +1671,7 @@ fn output_files(
     }
     let r3 = &a.relations_3nf;
     // Each relation's CSV (and JSON rows) is used by several output files; build them once, in parallel.
-    let r3_csv: Vec<String> = if (has(ops, "3NF") || has(ops, "BCNF")) && !r3.is_empty() {
+    let r3_csv: Vec<String> = if (has(ops, "3NF") || has(ops, "BCNF") || has(ops, "4NF")) && !r3.is_empty() {
         crate::par_map(r3, |r| {
             if r.rows.is_empty() {
                 String::new()
@@ -1674,21 +1730,33 @@ fn output_files(
         }
     }
     if has(ops, "BCNF") && !r3.is_empty() {
+        // BCNF is the final set unless 4NF ran after it; then it has its own relations.
+        let bcnf: &[Relation] = if a.bcnf_is_final { r3 } else { &a.relations_bcnf };
         f.push(out_file(
             "relations_bcnf.json",
             "json",
             "Boyce-Codd Normal Form relations",
-            rels_without_rows(r3),
+            rels_without_rows(bcnf),
             0,
             "Boyce-Codd Normal Form",
         ));
         // The BCNF files repeat the 3NF ones (same relations); large inputs export them once.
-        let bcnf_csv = if compact && has(ops, "3NF") {
+        let own_csv: Vec<String>;
+        let bcnf_csv: &[String] = if !a.bcnf_is_final {
+            own_csv = crate::par_map(bcnf, |r| {
+                if r.rows.is_empty() {
+                    String::new()
+                } else {
+                    rows_to_csv(&r.rows)
+                }
+            });
+            &own_csv
+        } else if compact && has(ops, "3NF") {
             &r3_csv[..0]
         } else {
             &r3_csv[..]
         };
-        for (r, csv) in r3.iter().zip(bcnf_csv) {
+        for (r, csv) in bcnf.iter().zip(bcnf_csv) {
             if !r.rows.is_empty() {
                 let csv = csv.clone();
                 let n = js::len16(&csv);
@@ -1699,6 +1767,40 @@ fn output_files(
                     text(csv),
                     n,
                     "Boyce-Codd Normal Form",
+                ));
+            }
+        }
+    }
+    if has(ops, "4NF") && !r3.is_empty() {
+        f.push(out_file(
+            "relations_4nf.json",
+            "json",
+            "Fourth Normal Form relations",
+            rels_without_rows(r3),
+            0,
+            "Fourth Normal Form",
+        ));
+        f.push(out_file(
+            "multivalued_dependencies.json",
+            "json",
+            "Multivalued dependencies the 4NF step decomposed on",
+            raw(&a.mvds),
+            json_len(&a.mvds),
+            "Fourth Normal Form",
+        ));
+        // The 4NF relations are the final set, so their data is already in the 3NF files when 3NF ran.
+        let four_csv = if has(ops, "3NF") { &r3_csv[..0] } else { &r3_csv[..] };
+        for (r, csv) in r3.iter().zip(four_csv) {
+            if !r.rows.is_empty() && !csv.is_empty() {
+                let csv = csv.clone();
+                let n = js::len16(&csv);
+                f.push(out_file(
+                    &format!("relation_4nf_{}.csv", r.name),
+                    "csv",
+                    &format!("4NF data for relation: {}", r.name),
+                    text(csv),
+                    n,
+                    "Fourth Normal Form",
                 ));
             }
         }
@@ -1775,6 +1877,7 @@ fn output_files(
             atomicity: &a.atomicity_result.clone().unwrap_or_default(),
             profile: &a.data_profile,
             performance: perf,
+            mvds: &a.mvds,
         });
         let n = js::len16(&report);
         f.push(out_file(
@@ -1811,6 +1914,8 @@ fn table_json(name: &str, file: &str, t: &NamedTable, row_count: usize, compact:
         ("secondNormalForm", rels(&a.relations_2nf, compact)),
         ("thirdNormalForm", rels(&a.relations_3nf, compact)),
         ("bcnf", rels(&a.relations_bcnf, compact)),
+        ("fourthNormalForm", rels(&a.relations_4nf, compact)),
+        ("multivaluedDependencies", raw(&a.mvds)),
         ("keyReason", raw(&a.key_choice.as_ref().map(|k| k.reason.clone()))),
         ("fdSearch", raw(&a.fd_search)),
         ("losslessCheck", raw(&a.lossless_check)),

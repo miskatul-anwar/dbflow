@@ -66,6 +66,10 @@ export const ANCHORS: Record<string, Anchor> = {
     aliases: [/\bbcnf\b/i, /\bboyce[- ]?codd\b/i],
     phrases: ['normalize to BCNF', 'convert it to Boyce-Codd normal form', 'make every determinant a key', 'decompose into BCNF', 'strongest normal form'],
   },
+  '4NF': {
+    aliases: [/\b4 ?nf\b/i, /\bfourth normal form\b/i, /\bnormal form (4|four)\b/i, /\bmulti[- ]?valued dependenc\w*/i, /\bmvds?\b/i],
+    phrases: ['normalize to 4NF', 'convert it to fourth normal form', 'remove multivalued dependencies', 'split independent multivalued facts', 'decompose into 4NF'],
+  },
   'Lossless Check': {
     aliases: [/\bloss[- ]?less\b/i, /\blossy\b/i, /\bno (data )?loss\b/i, /\bjoin back\b/i],
     phrases: ['check the decomposition is lossless', 'verify nothing is lost when joining back', 'is the join lossless', 'make sure the split does not lose data', 'test lossless join property'],

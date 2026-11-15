@@ -47,7 +47,7 @@ describe('OperationPalette (list)', () => {
 
   it('shows progress per phase and overall', () => {
     setup({ activeOperations: ['Data Loader', 'Data Cleaner'] });
-    expect(screen.getByLabelText('2 of 19 on the canvas')).toBeTruthy();
+    expect(screen.getByLabelText(`2 of ${ALL_OPERATION_NAMES.length} on the canvas`)).toBeTruthy();
     expect(within(screen.getByRole('region', { name: 'Prepare' })).getByText('2/5')).toBeTruthy();
   });
 

@@ -65,7 +65,7 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
 
   const {
     isMultiTable, multiTables, crossTableRelationships, relationData, relations1NF, relations2NF, relationsBCNF,
-    erdRelations, erdContent, cardinalityAnalysis, losslessCheck, dependencyPreservation, fdData, keyData, sqlFile, reportFile,
+    relations4NF, mvds, erdRelations, erdContent, cardinalityAnalysis, losslessCheck, dependencyPreservation, fdData, keyData, sqlFile, reportFile,
   } = useResultViews(safeResults);
 
   const [activeTab, setActiveTab] = useState("overview");
@@ -83,12 +83,12 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
     {
       id: "normal-forms",
       group: "analysis",
-      description: "1NF to BCNF relations",
+      description: "1NF to 4NF relations",
       label: "Normal Forms",
       icon: <Layers className="w-4 h-4" />,
       // Relations in the final schema (the deepest normal form reached), not a sum over all levels.
-      count: relationsBCNF.length || relationData.length || relations2NF.length || relations1NF.length || 0,
-      hasData: relations1NF.length > 0 || relations2NF.length > 0 || relationData.length > 0 || relationsBCNF.length > 0
+      count: relations4NF.length || relationsBCNF.length || relationData.length || relations2NF.length || relations1NF.length || 0,
+      hasData: relations1NF.length > 0 || relations2NF.length > 0 || relationData.length > 0 || relationsBCNF.length > 0 || relations4NF.length > 0
     },
     {
       id: "functional-dependencies",
@@ -241,6 +241,7 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
                     { id: '2NF', relations: relations2NF },
                     { id: '3NF', relations: relationData },
                     { id: 'BCNF', relations: relationsBCNF },
+                    { id: '4NF', relations: relations4NF },
                   ].filter(l => l.relations.length > 0).map(({ id, relations }) => ({ id, relations }))}
                 />
               )}
@@ -290,6 +291,8 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
               relations2NF={relations2NF}
               relations3NF={relationData}
               relationsBCNF={relationsBCNF}
+              relations4NF={relations4NF}
+              mvds={mvds}
             />
           )}
 
@@ -352,6 +355,7 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
                 { id: '2NF', relations: relations2NF },
                 { id: '3NF', relations: relationData },
                 { id: 'BCNF', relations: relationsBCNF },
+                    { id: '4NF', relations: relations4NF },
               ].filter(l => l.relations.length > 0)}
             />
           )}

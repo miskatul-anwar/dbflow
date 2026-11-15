@@ -30,6 +30,12 @@ export const GOALS: Goal[] = [
     targets: ['BCNF', 'Relation Detector', 'Lossless Check', 'Dependency Preservation', 'ERD Generator', 'SQL Generator', 'Report Generator'],
   },
   {
+    id: '4nf',
+    title: '4NF schema',
+    blurb: 'BCNF, then splits multivalued dependencies',
+    targets: ['4NF', 'Relation Detector', 'Lossless Check', 'Dependency Preservation', 'ERD Generator', 'SQL Generator', 'Report Generator'],
+  },
+  {
     id: 'keys',
     title: 'Keys and foreign keys',
     blurb: 'Dependencies, keys, links between files, diagram',
