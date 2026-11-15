@@ -33,6 +33,35 @@ to measure it.
 `src/eval/harness.test.ts` keeps a regression floor (recall and precision of
 keys and foreign keys at or above 90%).
 
+## Scalability
+
+`examples/demo_data.rs` generates a deterministic retail database exported as nine denormalized CSV files of 99 columns
+each: customers (9,999 rows), suppliers (999), products (9,999), stores (999), employees (9,999), orders (99,999), order
+lines (99,999), shipments (99,999) and payments (99,999) — 431,991 rows, 891 columns, 335 MB. Each file copies facts
+about other entities (a city and its region, a category and its department, a carrier, a payment method), so 3NF has
+transitive dependencies to remove, and nine foreign keys connect the files.
+
+```
+cargo run --release -p dbflow-core --example demo_data -- demo
+cargo run --release -p dbflow-core --example bench -- demo/*.csv
+DBFLOW_BENCH_OPTIONS='{"maxParallelFiles":1}' cargo run --release -p dbflow-core --example bench -- demo/*.csv
+```
+
+All 19 operations, 4-core machine, native engine:
+
+| Run | Analysis | Outputs | Total | Peak memory |
+|---|---|---|---|---|
+| One file at a time | 107.8 s | 13.1 s | 120.9 s | 6.0 GB |
+| Files in parallel (default) | 45.9 s | 13.8 s | 59.7 s | 7.7 GB |
+| Before this revision | — | — | out of memory in key discovery on the first table | — |
+
+Result: 19,801 exact dependencies, 197 candidate keys, 38 relations, all nine foreign keys found (plus three
+links through unique name columns), every decomposition lossless by the chase (eight of nine also confirmed by
+re-joining the data; the orders join exceeds the 250,000-row limit of that check) and every dependency preserved. The
+composite key of order lines, `(order_id, line_no)`, is found although `order_id` looks nearly unique in the 10,000-row
+sample. Limits: some of the 38 relations come from coincidental dependencies of wide tables (on orders, customer,
+employee and date together identify an order); they are correct for the data but not meaningful.
+
 ## Natural-language workflow builder
 
 `bun run bench:nl` runs 77 labelled requests (`src/eval/nlWorkflowCases.ts`: direct keywords, acronyms, compound requests, negations, paraphrases, typos, and 10 junk sentences that must build nothing).
