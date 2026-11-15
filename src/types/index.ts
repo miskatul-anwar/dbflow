@@ -193,6 +193,28 @@ export interface OutputFile {
   category: string;
 }
 
+/** What the input checks found before analysis (see the engine's `input_check` module). */
+export interface InputChecks {
+  /** Files left out, with the reason (not a table, unreadable, a compression bomb, ...). */
+  skipped?: Array<{ file: string; reason: string }>;
+  /** Files with exactly the same contents as an earlier file; only the first was analysed. */
+  duplicates?: Array<{ file: string; sameAs: string }>;
+  /** Files with the same columns and mostly the same rows. */
+  overlaps?: Array<{
+    files: [string, string];
+    rows: [number, number];
+    sharedRows: number;
+    onlyInFirst: number;
+    onlyInSecond: number;
+    key: string | null;
+    sharedKeys: number;
+    conflicts: number;
+    conflictKeys: string[];
+  }>;
+  /** Files merged into one table at the user's request. */
+  merged?: Array<{ into: string; from: string[]; rows: number; conflictsResolved: number }>;
+}
+
 export interface ProcessingResults {
   success: boolean;
   error?: string;
@@ -219,6 +241,7 @@ export interface ProcessingResults {
   reportMarkdown?: string;
   outputFiles?: OutputFile[];
   logs?: string[];
+  inputChecks?: InputChecks;
   metrics?: {
     executionTimeMs: number;
     memoryUsedMB: number;

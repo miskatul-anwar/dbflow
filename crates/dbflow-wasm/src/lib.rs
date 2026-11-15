@@ -17,6 +17,13 @@ fn parse(s: &str) -> Value {
     serde_json::from_str(s).unwrap_or(Value::Null)
 }
 
+/// Checks a workbook before the interface's fallback reader opens it (size, file kind, how far it
+/// expands when unzipped). Returns `{"ok": null}` or `{"err": "..."}`.
+#[wasm_bindgen]
+pub fn check_workbook(name: &str, bytes: &[u8]) -> String {
+    wrap(dbflow_core::spreadsheet::check_workbook(name, bytes).map(|_| Value::Null))
+}
+
 /// Call any engine method with JSON arguments; returns `{"ok": ...}` or `{"err": "..."}`.
 #[wasm_bindgen]
 pub fn call(method: &str, args_json: &str) -> String {

@@ -53,6 +53,17 @@ pub fn reserve_cores(reserved: usize) {
     }
 }
 
+/// Memory currently available to new allocations (Linux `MemAvailable`); `None` where it is unknown.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn available_memory_bytes() -> Option<u64> {
+    std::fs::read_to_string("/proc/meminfo").ok().and_then(|s| {
+        s.lines()
+            .find(|l| l.starts_with("MemAvailable:"))
+            .and_then(|l| l.split_whitespace().nth(1)?.parse::<u64>().ok())
+            .map(|kb| kb * 1024)
+    })
+}
+
 pub mod analysis;
 pub mod api;
 pub mod csv;
@@ -63,6 +74,7 @@ pub mod encoding;
 pub mod erd_dot;
 pub mod fd_miner;
 pub mod identifiers;
+pub mod input_check;
 pub mod js;
 pub mod keys;
 pub mod legacy;

@@ -144,7 +144,11 @@ fn multi_file_run_detects_the_foreign_key() {
 fn failures_are_reported_not_thrown() {
     let r = process(vec![file("empty.csv", "   \n")], ops(), json!({}));
     assert_eq!(r["success"], json!(false));
-    assert!(r["error"].as_str().unwrap().contains("Empty CSV file"));
+    assert!(
+        r["error"].as_str().unwrap().contains("empty.csv is empty"),
+        "{}",
+        r["error"]
+    );
     let none = process(vec![], ops(), json!({}));
     assert_eq!(none["error"], json!("No files uploaded for processing."));
 }
@@ -477,4 +481,258 @@ fn the_former_csv_data_loader_name_still_runs() {
         json!({}),
     );
     assert_eq!(old["success"], json!(true), "{old}");
+}
+
+// ----- input checks ---------------------------------------------------------------------------
+
+fn customers_csv(edit: bool) -> String {
+    let cities = [("Dhaka", "BD"), ("Lisbon", "PT"), ("Paris", "FR"), ("Delhi", "IN")];
+    let mut out = String::from("customer_id,name,city,country\n");
+    for i in 1..=60 {
+        let (mut city, mut country) = cities[i % 4];
+        if edit && [5, 17, 33].contains(&i) {
+            (city, country) = ("Rome", "IT");
+        }
+        out.push_str(&format!("{i},Name {i},{city},{country}\n"));
+    }
+    if edit {
+        out.push_str("61,Name 61,Paris,FR\n");
+    }
+    out
+}
+
+fn orders_csv() -> String {
+    std::iter::once("order_id,customer_id,total\n".to_string())
+        .chain((0..200).map(|i| format!("{},{},{}.99\n", 1000 + i, (i % 60) + 1, 10 + i)))
+        .collect()
+}
+
+fn table_names(r: &Value) -> Vec<String> {
+    r["tables"]
+        .as_array()
+        .map(|t| {
+            t.iter()
+                .map(|t| t["tableName"].as_str().unwrap_or("").to_string())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[test]
+fn identical_files_are_analysed_once() {
+    let r = process(
+        vec![
+            file("customers.csv", &customers_csv(false)),
+            file("clients.csv", &customers_csv(false).replace('\n', "\r\n")),
+            file("orders.csv", &orders_csv()),
+        ],
+        ops(),
+        json!({ "namingMode": "rules" }),
+    );
+    assert_eq!(r["success"], json!(true), "{}", r["error"]);
+    assert_eq!(table_names(&r), vec!["customers", "orders"]);
+    let d = &r["inputChecks"]["duplicates"][0];
+    assert_eq!(
+        (d["file"].as_str(), d["sameAs"].as_str()),
+        (Some("clients.csv"), Some("customers.csv"))
+    );
+    // No foreign key between a file and its own copy.
+    let links = r["crossTableRelationships"].as_array().unwrap();
+    assert!(links.iter().all(|l| l["sourceTable"] != "clients"), "{links:?}");
+}
+
+#[test]
+fn files_with_the_same_name_are_told_apart() {
+    let products = "product_id,title,category\n1,P1,A\n2,P2,B\n3,P3,C\n4,P4,A\n";
+    let r = process(
+        vec![
+            file("data.csv", &customers_csv(false)),
+            file("data.csv", products),
+            file("orders.csv", &orders_csv()),
+        ],
+        ops(),
+        json!({ "namingMode": "rules" }),
+    );
+    assert_eq!(r["success"], json!(true), "{}", r["error"]);
+    assert_eq!(table_names(&r), vec!["data", "data_2", "orders"]);
+    let logs = r["logs"].to_string();
+    assert!(
+        logs.contains("data.csv (file 1)") && logs.contains("data.csv (file 2)"),
+        "{logs}"
+    );
+}
+
+#[test]
+fn overlapping_files_are_reported_and_merged_on_request() {
+    let inputs = || {
+        vec![
+            file("customers.csv", &customers_csv(false)),
+            file("customers_v2.csv", &customers_csv(true)),
+            file("orders.csv", &orders_csv()),
+        ]
+    };
+    let r = process(inputs(), ops(), json!({ "namingMode": "rules" }));
+    assert_eq!(r["success"], json!(true), "{}", r["error"]);
+    let o = &r["inputChecks"]["overlaps"][0];
+    assert_eq!(o["files"], json!(["customers.csv", "customers_v2.csv"]));
+    assert_eq!(o["sharedRows"], json!(57));
+    assert_eq!(o["key"], json!("customer_id"));
+    assert_eq!(o["sharedKeys"], json!(60));
+    assert_eq!(o["conflicts"], json!(3));
+    assert_eq!(o["conflictKeys"], json!(["5", "17", "33"]));
+    assert_eq!(table_names(&r), vec!["customers", "customers_v2", "orders"]);
+
+    let m = process(
+        inputs(),
+        ops(),
+        json!({ "namingMode": "rules", "mergeOverlappingFiles": true }),
+    );
+    assert_eq!(m["success"], json!(true), "{}", m["error"]);
+    let merged = &m["inputChecks"]["merged"][0];
+    assert_eq!(merged["into"], json!("customers.csv"));
+    assert_eq!(merged["from"], json!(["customers_v2.csv"]));
+    assert_eq!(merged["rows"], json!(61));
+    assert_eq!(merged["conflictsResolved"], json!(3));
+    assert_eq!(table_names(&m), vec!["customers", "orders"]);
+    let cust = &m["tables"][0];
+    assert_eq!(cust["primaryKey"], json!(["customer_id"]), "{}", cust["primaryKey"]);
+}
+
+#[test]
+fn files_that_are_not_tables_are_skipped_with_their_reason() {
+    let cpp = "#include <iostream>\nint main(){\n  std::cout << \"hi, there\" << std::endl;\n  return 0;\n}\n";
+    let binary: Vec<u8> = (0u8..=255).cycle().take(5000).collect();
+    let r = process(
+        vec![
+            file("report.csv", "%PDF-1.4\n1 0 obj<<>>endobj\n%%EOF\n"),
+            file("payload.csv", r#"[{"id":1,"name":"a"},{"id":2,"name":"b"}]"#),
+            file("lines.csv", "{\"id\":1}\n{\"id\":2}\n"),
+            file("main.csv", cpp),
+            InputFile {
+                name: "blob.csv".into(),
+                bytes: binary,
+            },
+            file("page.csv", "<html><body><p>hi</p></body></html>"),
+            file("empty.csv", "  \n"),
+            InputFile {
+                name: "photo.xlsx".into(),
+                bytes: b"\x89PNG\r\n\x1a\n0000".to_vec(),
+            },
+            file("orders.csv", &orders_csv()),
+        ],
+        ops(),
+        json!({ "namingMode": "rules" }),
+    );
+    assert_eq!(r["success"], json!(true), "{}", r["error"]);
+    assert_eq!(table_names(&r).len(), 0, "single table left: single-table result");
+    let reasons: Vec<String> = r["inputChecks"]["skipped"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["reason"].as_str().unwrap().to_string())
+        .collect();
+    let expect = [
+        "report.csv is a PDF document",
+        "payload.csv contains JSON",
+        "lines.csv contains JSON",
+        "main.csv looks like program source code",
+        "blob.csv contains binary data",
+        "page.csv contains XML or HTML markup",
+        "empty.csv is empty",
+        "photo.xlsx is a PNG image",
+    ];
+    assert_eq!(reasons.len(), expect.len(), "{reasons:?}");
+    for (got, want) in reasons.iter().zip(expect) {
+        assert!(got.starts_with(want), "{got} / {want}");
+    }
+}
+
+#[test]
+fn a_single_bad_file_fails_with_its_reason() {
+    let r = process(vec![file("payload.csv", r#"[{"id":1}]"#)], ops(), json!({}));
+    assert_eq!(r["success"], json!(false));
+    assert!(
+        r["error"].as_str().unwrap().starts_with("payload.csv contains JSON"),
+        "{}",
+        r["error"]
+    );
+    let two = process(
+        vec![file("a.csv", "%PDF-1.4"), file("b.csv", r#"{"x":1}"#)],
+        ops(),
+        json!({}),
+    );
+    assert_eq!(two["success"], json!(false));
+    let e = two["error"].as_str().unwrap();
+    assert!(e.contains("a.csv is a PDF") && e.contains("b.csv contains JSON"), "{e}");
+    assert_eq!(two["inputChecks"]["skipped"].as_array().unwrap().len(), 2);
+}
+
+fn zip_of(entries: &[(&str, Vec<u8>)]) -> Vec<u8> {
+    use std::io::Write;
+    let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    let opts = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    for (name, data) in entries {
+        w.start_file(*name, opts).unwrap();
+        w.write_all(data).unwrap();
+    }
+    w.finish().unwrap().into_inner()
+}
+
+#[test]
+fn a_compression_bomb_is_refused_before_it_is_read() {
+    let mut sheet = b"<worksheet><sheetData><row><c t=\"inlineStr\"><is><t>".to_vec();
+    sheet.extend(std::iter::repeat_n(b'A', 64 << 20));
+    sheet.extend(b"</t></is></c></row></sheetData></worksheet>");
+    let bomb = zip_of(&[
+        ("[Content_Types].xml", b"<Types/>".to_vec()),
+        ("xl/workbook.xml", b"<workbook/>".to_vec()),
+        ("xl/worksheets/sheet1.xml", sheet),
+    ]);
+    assert!(bomb.len() < 1 << 20, "{}", bomb.len());
+    let t = std::time::Instant::now();
+    let r = process(
+        vec![
+            InputFile {
+                name: "bomb.xlsx".into(),
+                bytes: bomb,
+            },
+            file("orders.csv", &orders_csv()),
+        ],
+        ops(),
+        json!({}),
+    );
+    assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
+    assert_eq!(r["success"], json!(true), "{}", r["error"]);
+    let reason = r["inputChecks"]["skipped"][0]["reason"].as_str().unwrap();
+    assert!(reason.contains("compression bomb"), "{reason}");
+}
+
+#[test]
+fn office_files_that_are_not_spreadsheets_are_named() {
+    let docx = zip_of(&[
+        ("[Content_Types].xml", b"<Types/>".to_vec()),
+        ("word/document.xml", b"<w:document/>".to_vec()),
+    ]);
+    let plain = zip_of(&[("readme.txt", b"hello".to_vec())]);
+    let r = process(
+        vec![
+            InputFile {
+                name: "letter.xlsx".into(),
+                bytes: docx,
+            },
+            InputFile {
+                name: "bundle.csv".into(),
+                bytes: plain,
+            },
+            file("orders.csv", &orders_csv()),
+        ],
+        ops(),
+        json!({}),
+    );
+    let reasons = r["inputChecks"]["skipped"].to_string();
+    assert!(reasons.contains("letter.xlsx is a Word document"), "{reasons}");
+    assert!(
+        reasons.contains("bundle.csv is not a table") && reasons.contains("ZIP archive"),
+        "{reasons}"
+    );
 }

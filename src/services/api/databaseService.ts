@@ -7,7 +7,7 @@
  * naming model for relation names between the two phases of a run.
  */
 import { engine, enginePrepare, engineFinish, engineDiscard, type EngineFile } from '../../engine';
-import { expandSpreadsheets, isSpreadsheetFile, isSupportedInputName } from '../processors/spreadsheetProcessor';
+import { expandSpreadsheets, isSpreadsheetFile, isSupportedInputName, type SkippedInput } from '../processors/spreadsheetProcessor';
 import { FileUtils } from '../utils/fileUtils';
 import type { NamerFn } from '../naming/applyNames';
 import { TableData } from '../../types';
@@ -39,6 +39,8 @@ export interface ProcessingOptions {
   maxParallelFiles?: number;
   /** Names the user typed, by relation signature (see `relationSignature`). They always win over the model. */
   userNames?: Record<string, string>;
+  /** Merge files with the same columns and mostly the same rows into one table (default: analyse them separately). */
+  mergeOverlappingFiles?: boolean;
 }
 
 export interface TableAnalysis {
@@ -185,19 +187,30 @@ export function mapDataTypeToDialect(inferredType: string, dialect: SQLDialect =
   return engine('ddl.mapDataTypeToDialect', inferredType ?? '', dialect);
 }
 
-/** Read files into bytes for the engine, converting workbooks the Rust reader cannot open itself. */
-export async function prepareEngineFiles(files: File[]): Promise<{ files: EngineFile[]; notes: string[] }> {
+/** Files ready for the engine, with notes and the workbooks that could not be converted. */
+export interface PreparedEngineFiles {
+  files: EngineFile[];
+  notes: string[];
+  skipped: SkippedInput[];
+}
+
+/**
+ * Read files into bytes for the engine, converting workbooks the Rust reader cannot open itself. A workbook that
+ * cannot be read is left out and reported; the engine decides whether anything is left to analyse.
+ */
+export async function prepareEngineFiles(files: File[]): Promise<PreparedEngineFiles> {
   const notes: string[] = [];
-  const expanded = await expandSpreadsheets(files, n => notes.push(n));
+  const skipped: SkippedInput[] = [];
+  const expanded = await expandSpreadsheets(files, n => notes.push(n), s => skipped.push(s));
   const out: EngineFile[] = [];
   for (const f of expanded) out.push({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) });
-  return { files: out, notes };
+  return { files: out, notes, skipped };
 }
 
 /** Options as the engine reads them (functions removed, local time zone added for log stamps). */
-export function engineOptions(options: ProcessingOptions, notes: string[] = []): Record<string, unknown> {
+export function engineOptions(options: ProcessingOptions, prepared: Pick<PreparedEngineFiles, 'notes' | 'skipped'> = { notes: [], skipped: [] }): Record<string, unknown> {
   const { namer: _namer, ...rest } = options;
-  return { ...rest, inputNotes: notes, tzOffsetMinutes: -new Date().getTimezoneOffset() };
+  return { ...rest, inputNotes: prepared.notes, skippedInputs: prepared.skipped, tzOffsetMinutes: -new Date().getTimezoneOffset() };
 }
 
 function failure(message: string, operations: string[]): ProcessingResult {
@@ -286,7 +299,7 @@ export class DatabaseService {
     try {
       const prepared = await prepareEngineFiles(files ?? []);
       const progress = (p: unknown) => onProgress?.(p as ProcessingState);
-      const run = enginePrepare(prepared.files, selectedOperations, engineOptions(options, prepared.notes), progress);
+      const run = enginePrepare(prepared.files, selectedOperations, engineOptions(options, prepared), progress);
       session = run.session;
       const { answers, error } = await askNamer(options.namer, run.naming, onProgress);
       const result = engineFinish<ProcessingResult>(run.session, answers, error, progress);

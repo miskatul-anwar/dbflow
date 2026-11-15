@@ -9,7 +9,7 @@ const OutputPage = lazy(() => import('./components/OutputPage'));
 import { OperationPalette } from './components/workflow/OperationPalette';
 import { FlowCanvas } from './components/workflow/FlowCanvas';
 import { useNormalization } from './hooks/useNormalization';
-import type { SQLDialect } from './services/api/databaseService';
+import type { ProcessingOptions, SQLDialect } from './services/api/databaseService';
 import { useNLWorkflow } from './hooks/useNLWorkflow';
 import { NLCommandBar } from './components/nl/NLCommandBar';
 import { WorkspaceTabBar } from './components/workflow/WorkspaceTabBar';
@@ -122,9 +122,9 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
   // ----- execution -----------------------------------------------------------
 
   const executePipeline = useCallback(
-    async (files: File[], operations: string[]) => {
+    async (files: File[], operations: string[], extra: ProcessingOptions = {}) => {
       try {
-        const result = await processFiles(files, operations, { sqlDialect });
+        const result = await processFiles(files, operations, { sqlDialect, ...extra });
         if (result?.success) {
           setProcessedResults(result);
           saveCachedResult(result, tabId);
@@ -152,7 +152,7 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
   const operationCount = Math.max(0, graph.nodes.length - 1);
 
   /** Runs the pipeline on the canvas; resolves to the result, or null when nothing ran. */
-  const runCurrent = useCallback(async () => {
+  const runCurrent = useCallback(async (extra: ProcessingOptions = {}) => {
     if (isProcessing) {
       logMessage('info', 'This workspace is already running its pipeline.', 'EXECUTION');
       return null;
@@ -175,7 +175,7 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
       validation.warnings.forEach(w => logMessage('warning', w, 'EXECUTION'));
     }
 
-    return executePipeline(uploadedFiles, graph.operationLabels);
+    return executePipeline(uploadedFiles, graph.operationLabels, extra);
   }, [executePipeline, graph.edges, graph.nodes, graph.operationLabels, hasFiles, isProcessing, logMessage, operationCount, uploadedFiles]);
 
   const handleRun = useCallback(() => {
@@ -244,6 +244,24 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
     }
     openOutputWhenDone.current = false;
   }, [handleRunAll, hasFiles, isProcessing, logMessage, navigateToOutput, operationCount, processedResults, runCurrent, tabId]);
+
+  // ----- rerun asked for by the results page ------------------------------------
+
+  // "Merge overlapping files and run again" on the results page comes back here with the request in the router
+  // state. The request is cleared first, so going back and forth never repeats it.
+  const location = useLocation();
+  const rerun = (location.state as { rerun?: { tabId: string; mergeOverlappingFiles?: boolean } } | null)?.rerun;
+  const handledRerun = useRef<object | null>(null);
+  useEffect(() => {
+    if (!rerun || rerun.tabId !== tabId || handledRerun.current === rerun) return;
+    handledRerun.current = rerun;
+    navigate('/', { replace: true, state: null });
+    openOutputWhenDone.current = true;
+    logMessage('info', 'Merging overlapping files and running the pipeline again…', 'EXECUTION');
+    void runCurrent({ mergeOverlappingFiles: rerun.mergeOverlappingFiles }).then(result => {
+      if (!result) openOutputWhenDone.current = false;
+    });
+  }, [logMessage, navigate, rerun, runCurrent, tabId]);
 
   // ----- snapshot save/load ----------------------------------------------------
 

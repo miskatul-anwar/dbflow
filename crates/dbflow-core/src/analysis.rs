@@ -41,6 +41,11 @@ pub struct Options {
     /// `"model"` (default): the on-device model suggests relation names; `"rules"`: names are built
     /// from the key columns (fast, no model).
     pub naming_mode: Option<String>,
+    /// Merge files that have the same columns and mostly the same rows into one table (default:
+    /// analyse them separately and report the overlap).
+    pub merge_overlapping_files: Option<bool>,
+    /// Files the interface could not convert (reported with the result, after the engine's own checks).
+    pub skipped_inputs: Option<Vec<crate::input_check::Skipped>>,
     /// Minutes east of UTC, for log time stamps.
     pub tz_offset_minutes: Option<f64>,
 }

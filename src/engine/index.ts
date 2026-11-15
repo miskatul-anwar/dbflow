@@ -113,6 +113,12 @@ export function detectEncodingRust(bytes: Uint8Array): string {
   return wasm.detect_encoding(bytes);
 }
 
+/** Size, file-kind and expansion checks the Rust reader applies; run before the fallback reader opens a workbook. */
+export function checkWorkbookRust(name: string, bytes: Uint8Array): void {
+  ensureReady();
+  unwrap(wasm.check_workbook(name, bytes));
+}
+
 export function spreadsheetToCsvRust(name: string, bytes: Uint8Array): { files: Array<{ name: string; text: string }>; notes: string[] } {
   ensureReady();
   return unwrap(wasm.spreadsheet_to_csv(name, bytes));
