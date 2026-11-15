@@ -16,6 +16,11 @@ pub fn reset_relation_ids() {
     COUNTER.with(|c| c.set(0));
 }
 
+/// Continue numbering on this thread from `base` (each file of a parallel run has its own block).
+pub fn set_relation_id_base(base: u64) {
+    COUNTER.with(|c| c.set(base));
+}
+
 /// An opaque id for a new relation.
 pub fn new_relation_id() -> String {
     COUNTER.with(|c| {
@@ -121,7 +126,8 @@ pub fn name_relation_set(
                 return (table_name.to_string(), "source".to_string());
             }
             let src = r.name_source.as_deref();
-            if (src == Some("model") || src == Some("user")) && r.display_name.as_deref().is_some_and(|d| !d.is_empty())
+            if (src == Some("model") || src == Some("user") || src == Some("rule"))
+                && r.display_name.as_deref().is_some_and(|d| !d.is_empty())
             {
                 return (
                     r.display_name.clone().unwrap_or_default(),
@@ -232,5 +238,137 @@ pub fn accept_model_names(
                 },
             );
         }
+    }
+}
+
+/// Words that only say "this is an identifier"; they are dropped from rule-based names.
+const ID_WORDS: &[&str] = &[
+    "id", "ids", "code", "no", "num", "nr", "number", "key", "ref", "pk", "fk",
+];
+
+fn words(column: &str) -> Vec<String> {
+    let spaced = re!(r"([a-z0-9])([A-Z])").replace_all(column, "$1 $2");
+    re!(r"[^A-Za-z0-9]+")
+        .split(&spaced)
+        .filter(|w| !w.is_empty())
+        .map(|w| w.to_lowercase())
+        .collect()
+}
+
+/// A name built from a relation's columns without a model: the words of its key columns, with
+/// identifier words (`id`, `code`, `no`, …) removed, title-cased and joined (`region_code` → "Region",
+/// `order_id, line_no` → "Order Line"). Falls back to the other columns when the key gives no words.
+pub fn rule_name(columns: &[String], key: &[String]) -> String {
+    let collect = |cols: &[String]| -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for c in cols {
+            let mut ws = words(c);
+            while ws.len() > 1 && ws.last().is_some_and(|w| ID_WORDS.contains(&w.as_str())) {
+                ws.pop();
+            }
+            if ws.len() == 1 && ID_WORDS.contains(&ws[0].as_str()) {
+                continue;
+            }
+            for w in ws {
+                if !out.contains(&w) {
+                    out.push(w);
+                }
+            }
+        }
+        out
+    };
+    let mut ws = collect(key);
+    if ws.is_empty() {
+        ws = collect(columns);
+    }
+    if ws.is_empty() {
+        return "Relation".into();
+    }
+    ws.truncate(4);
+    ws.iter()
+        .map(|w| {
+            let mut c = w.chars();
+            c.next()
+                .map(|f| f.to_uppercase().collect::<String>() + c.as_str())
+                .unwrap_or_default()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Name every relation that has no name yet by rule (`rule_name`), using the key recorded in its
+/// signature. Used when the naming model is switched off, which makes runs faster.
+pub fn accept_rule_names(chosen: &mut HashMap<String, ChosenName>, to_ask: &IndexMap<String, Vec<String>>) {
+    for (sig, cols) in to_ask {
+        if chosen.contains_key(sig) {
+            continue;
+        }
+        // The signature ends with the normalized key columns; map them back to the column spelling.
+        let key: Vec<String> = sig
+            .rsplit('|')
+            .next()
+            .unwrap_or("")
+            .split(',')
+            .filter(|k| !k.is_empty())
+            .map(|k| {
+                cols.iter()
+                    .find(|c| norm(c) == k)
+                    .cloned()
+                    .unwrap_or_else(|| k.to_string())
+            })
+            .collect();
+        chosen.insert(
+            sig.clone(),
+            ChosenName {
+                text: rule_name(cols, &key),
+                source: "rule".into(),
+            },
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn s(v: &[&str]) -> Vec<String> {
+        v.iter().map(|x| x.to_string()).collect()
+    }
+
+    #[test]
+    fn rule_names_come_from_the_key() {
+        assert_eq!(
+            rule_name(&s(&["region_code", "region_name"]), &s(&["region_code"])),
+            "Region"
+        );
+        assert_eq!(
+            rule_name(&s(&["order_id", "line_no", "qty"]), &s(&["order_id", "line_no"])),
+            "Order Line"
+        );
+        assert_eq!(rule_name(&s(&["CustomerID", "City"]), &s(&["CustomerID"])), "Customer");
+        assert_eq!(rule_name(&s(&["id", "city"]), &s(&["id"])), "City");
+        assert_eq!(rule_name(&s(&[]), &s(&[])), "Relation");
+    }
+
+    #[test]
+    fn rule_names_fill_only_missing_names() {
+        let mut chosen = HashMap::new();
+        chosen.insert(
+            "t|a,b|a".to_string(),
+            ChosenName {
+                text: "Typed".into(),
+                source: "user".into(),
+            },
+        );
+        let mut ask = IndexMap::new();
+        ask.insert("t|a,b|a".to_string(), s(&["a", "b"]));
+        ask.insert(
+            "t|carrier_code,carrier_name|carrier_code".to_string(),
+            s(&["carrier_code", "carrier_name"]),
+        );
+        accept_rule_names(&mut chosen, &ask);
+        assert_eq!(chosen["t|a,b|a"].text, "Typed");
+        let c = &chosen["t|carrier_code,carrier_name|carrier_code"];
+        assert_eq!((c.text.as_str(), c.source.as_str()), ("Carrier", "rule"));
     }
 }

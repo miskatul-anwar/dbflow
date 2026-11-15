@@ -108,6 +108,8 @@ impl MineOpts {
             sample_size: self.sample_size,
             max_rounds: self.max_rounds,
             seed: self.seed,
+            full_distinct_ratio: None,
+            full_key_check: None,
         }
     }
 }
@@ -152,6 +154,7 @@ fn schema_from(v: Value) -> BuiltSchema {
                 })
                 .collect()
         },
+        inferred_types: Default::default(),
         relations: s.relations,
         optional_fks: s.optional_fks.into_iter().collect(),
         referenced_unique: s.referenced_unique.into_iter().collect(),

@@ -1,7 +1,7 @@
 //! Cross-table foreign-key detection and rule-based column classification.
 
 use crate::js;
-use crate::table::Table;
+use crate::table::{Cell, Table};
 use crate::types::{CrossLink, EntityTag};
 use indexmap::{IndexMap, IndexSet};
 use std::collections::HashSet;
@@ -24,7 +24,8 @@ enum ValueClass {
 struct ColumnInfo {
     table: String,
     column: String,
-    distinct: IndexSet<String>,
+    /// Trimmed text of each distinct value; shares the cell's string when no trimming was needed.
+    distinct: IndexSet<crate::table::Text>,
     non_null: usize,
     total: usize,
     unique: bool,
@@ -60,7 +61,7 @@ pub fn singularize(word: &str) -> String {
     w
 }
 
-fn classify(values: &[&String]) -> ValueClass {
+fn classify(values: &[&str]) -> ValueClass {
     let n = values.len();
     if n == 0 {
         return ValueClass::Text;
@@ -95,9 +96,13 @@ fn profile(t: &DetectorTable, column: &str) -> ColumnInfo {
             continue;
         }
         non_null += 1;
-        distinct.insert(js::trim(&v.js_string()).to_string());
+        let text: crate::table::Text = match v {
+            Cell::Str(s) if js::trim(s).len() == s.len() => s.clone(),
+            other => crate::table::Text::new(js::trim(&other.js_string())),
+        };
+        distinct.insert(text);
     }
-    let sample: Vec<&String> = distinct.iter().take(500).collect();
+    let sample: Vec<&str> = distinct.iter().take(500).map(|v| &**v).collect();
     let class = classify(&sample);
     let (mut min, mut max, mut dense) = (f64::INFINITY, f64::NEG_INFINITY, false);
     if class == ValueClass::Integer && !distinct.is_empty() {
@@ -173,15 +178,21 @@ pub fn detect_foreign_keys(tables: &[DetectorTable], min_containment: f64, min_s
     if tables.len() < 2 {
         return vec![];
     }
+    // Columns are profiled, and source columns matched, in parallel (native build).
     let profiles: Vec<Vec<ColumnInfo>> = tables
         .iter()
-        .map(|t| t.headers.iter().map(|h| profile(t, h)).collect())
+        .map(|t| crate::par_map(&t.headers, |h| profile(t, h)))
         .collect();
-    let mut candidates: Vec<Candidate> = Vec::new();
-    for (si, scols) in profiles.iter().enumerate() {
-        for src in scols {
+    let sources: Vec<(usize, &ColumnInfo)> = profiles
+        .iter()
+        .enumerate()
+        .flat_map(|(si, cols)| cols.iter().map(move |c| (si, c)))
+        .collect();
+    let per_source: Vec<Vec<Candidate>> = crate::par_map(&sources, |&(si, src)| {
+        let mut candidates: Vec<Candidate> = Vec::new();
+        {
             if src.non_null == 0 || src.distinct.len() < 2 {
-                continue;
+                return candidates;
             }
             for (ti, tcols) in profiles.iter().enumerate() {
                 if tables[ti].table_name == tables[si].table_name {
@@ -197,7 +208,23 @@ pub fn detect_foreign_keys(tables: &[DetectorTable], min_containment: f64, min_s
                     {
                         continue;
                     }
-                    let hits = src.distinct.iter().filter(|v| tgt.distinct.contains(*v)).count();
+                    // Stop counting once too many values are missing for the containment threshold.
+                    let allowed_misses = ((1.0 - min_containment) * src.distinct.len() as f64).floor() as usize;
+                    let mut hits = 0usize;
+                    let mut misses = 0usize;
+                    for v in &src.distinct {
+                        if tgt.distinct.contains(v) {
+                            hits += 1;
+                        } else {
+                            misses += 1;
+                            if misses > allowed_misses {
+                                break;
+                            }
+                        }
+                    }
+                    if misses > allowed_misses {
+                        continue;
+                    }
                     let containment = hits as f64 / src.distinct.len() as f64;
                     if containment < min_containment {
                         continue;
@@ -222,7 +249,9 @@ pub fn detect_foreign_keys(tables: &[DetectorTable], min_containment: f64, min_s
                 }
             }
         }
-    }
+        candidates
+    });
+    let candidates: Vec<Candidate> = per_source.into_iter().flatten().collect();
     let mut best: IndexMap<String, usize> = IndexMap::new();
     for (i, c) in candidates.iter().enumerate() {
         let k = format!("{}.{}", c.src.table, c.src.column);

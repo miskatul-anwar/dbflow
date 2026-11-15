@@ -4,9 +4,10 @@ use crate::ddl::{quote_identifier, DecomposedFk, DecomposedRelation, Dialect};
 use crate::identifiers::{sanitize_identifier, IdentifierRegistry};
 use crate::js;
 use crate::naming::name_relation_set;
-use crate::sql_types::infer_column_types;
+use crate::sql_types::{infer_column_types, InferredColumn};
 use crate::table::{Cell, Table};
 use crate::types::{same_set, CrossLink, ForeignKey, Metadata, Relation};
+use indexmap::IndexMap;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
@@ -37,6 +38,18 @@ pub struct BuiltSchema {
     pub referenced_unique: HashSet<String>,
     pub unplaced: Vec<Unplaced>,
     pub junctions: Vec<Junction>,
+    /// Column types per relation (same order as `relations`), inferred once from the data and shared
+    /// by the ER diagram, the DDL and the data export.
+    pub inferred_types: std::sync::OnceLock<Vec<IndexMap<String, InferredColumn>>>,
+}
+
+impl BuiltSchema {
+    /// Column types of relation `i` (all relations are typed in parallel on first use).
+    pub fn types_of(&self, i: usize) -> &IndexMap<String, InferredColumn> {
+        &self
+            .inferred_types
+            .get_or_init(|| crate::par_map(&self.relations, |r| infer_column_types(&r.rows, &r.attributes)))[i]
+    }
 }
 
 pub fn build_schema(tables: Vec<TableSchemaInput>, cross: &[CrossLink]) -> BuiltSchema {
@@ -197,6 +210,7 @@ pub fn build_schema(tables: Vec<TableSchemaInput>, cross: &[CrossLink]) -> Built
         referenced_unique: ref_unique,
         unplaced,
         junctions,
+        inferred_types: Default::default(),
     }
 }
 
@@ -255,8 +269,8 @@ pub fn emit_mermaid_erd(schema: &BuiltSchema) -> String {
     let mut col_regs: HashMap<String, IdentifierRegistry> = HashMap::new();
     let mut col = |rel: &str, name: &str| col_regs.entry(rel.to_string()).or_default().assign(name);
     let mut lines = vec!["erDiagram".to_string()];
-    for r in &schema.relations {
-        let types = infer_column_types(&r.rows, &r.attributes);
+    for (ri, r) in schema.relations.iter().enumerate() {
+        let types = schema.types_of(ri);
         let fk_cols: HashSet<&String> = r.foreign_keys.iter().flat_map(|fk| fk.attributes.iter()).collect();
         lines.push(format!("    {} {{", entity[&r.name]));
         for a in &r.attributes {
@@ -367,7 +381,7 @@ pub fn to_decomposed_relations(schema: &BuiltSchema) -> Vec<DecomposedRelation> 
         .into_iter()
         .map(|i| {
             let r = &schema.relations[i];
-            let inferred = infer_column_types(&r.rows, &r.attributes);
+            let inferred = schema.types_of(i);
             let mut d = DecomposedRelation {
                 name: table_of[&r.name].clone(),
                 source_name: Some(r.name.clone()),
@@ -447,51 +461,56 @@ fn sql_literal(v: &Cell, sql_type: &str) -> String {
 }
 
 pub fn export_normalized_data(schema: &BuiltSchema, dialect: Dialect) -> Vec<ExportedFile> {
+    export_normalized_data_with(schema, dialect, true)
+}
+
+/// One CSV per relation, the orphan checks and, when `with_inserts`, an INSERT script. Large runs leave
+/// the script out: it is several times the size of the data, and the CSV files load faster anyway.
+pub fn export_normalized_data_with(schema: &BuiltSchema, dialect: Dialect, with_inserts: bool) -> Vec<ExportedFile> {
     let decomposed = to_decomposed_relations(schema);
     let by_source: HashMap<&str, &Relation> = schema.relations.iter().map(|r| (r.name.as_str(), r)).collect();
-    let mut files = Vec::new();
-    let mut inserts = vec![
-        "-- DBFlow normalized data".to_string(),
-        format!("-- Dialect: {}", dialect.name().to_uppercase()),
-        "-- Load after the CREATE TABLE statements; tables are ordered so parents come first.".into(),
-        String::new(),
-    ];
-    for rel in &decomposed {
-        let Some(source) = by_source.get(rel.source_name.as_deref().unwrap_or(&rel.name)) else {
-            continue;
-        };
+    // Each relation is exported independently (in parallel in the native build), then assembled in order.
+    let parts: Vec<Option<(ExportedFile, Vec<String>)>> = crate::par_map(&decomposed, |rel| {
+        let source = by_source.get(rel.source_name.as_deref().unwrap_or(&rel.name))?;
         let originals: Vec<String> = rel
             .attributes
             .iter()
             .map(|a| rel.column_sources.get(a).cloned().unwrap_or_else(|| a.clone()))
             .collect();
         let idx: Vec<Option<usize>> = originals.iter().map(|o| source.rows.col(o)).collect();
-        let mut seen = HashSet::new();
-        let mut rows: Vec<Vec<Cell>> = Vec::new();
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut rows: Vec<Vec<&Cell>> = Vec::new();
+        let mut key = String::new();
         for r in 0..source.rows.len() {
-            let vals: Vec<Cell> = idx.iter().map(|&c| source.rows.get_idx(r, c).clone()).collect();
-            let key = serde_json::to_string(&vals.iter().map(|c| c.to_json()).collect::<Vec<_>>()).unwrap_or_default();
-            if seen.insert(key) {
+            let vals: Vec<&Cell> = idx.iter().map(|&c| source.rows.get_idx(r, c)).collect();
+            key.clear();
+            for v in &vals {
+                dedup_key(v, &mut key);
+            }
+            if !seen.contains(key.as_str()) {
+                seen.insert(key.clone());
                 rows.push(vals);
             }
         }
         let header = rel
             .attributes
             .iter()
-            .map(|a| csv_cell(&Cell::Str(a.clone())))
+            .map(|a| csv_cell(&Cell::str(a.clone())))
             .collect::<Vec<_>>()
             .join(",");
-        let mut lines = vec![header];
-        lines.extend(
-            rows.iter()
-                .map(|r| r.iter().map(csv_cell).collect::<Vec<_>>().join(",")),
-        );
-        files.push(ExportedFile {
+        let mut content = header;
+        content.push('\n');
+        for r in &rows {
+            content.push_str(&r.iter().map(|c| csv_cell(c)).collect::<Vec<_>>().join(","));
+            content.push('\n');
+        }
+        let file = ExportedFile {
             name: format!("data_{}.csv", rel.name),
             kind: "csv".into(),
-            content: format!("{}\n", lines.join("\n")),
-        });
-        if !rows.is_empty() {
+            content,
+        };
+        let mut inserts = Vec::new();
+        if with_inserts && !rows.is_empty() {
             let table = quote_identifier(&rel.name, dialect);
             let cols = rel
                 .attributes
@@ -523,18 +542,58 @@ pub fn export_normalized_data(schema: &BuiltSchema, dialect: Dialect) -> Vec<Exp
             }
             inserts.push(String::new());
         }
-    }
-    files.push(ExportedFile {
-        name: "data_inserts.sql".into(),
-        kind: "sql".into(),
-        content: format!("{}\n", inserts.join("\n")),
+        Some((file, inserts))
     });
+    let mut files = Vec::new();
+    let mut inserts = vec![
+        "-- DBFlow normalized data".to_string(),
+        format!("-- Dialect: {}", dialect.name().to_uppercase()),
+        "-- Load after the CREATE TABLE statements; tables are ordered so parents come first.".into(),
+        String::new(),
+    ];
+    for (file, lines) in parts.into_iter().flatten() {
+        files.push(file);
+        inserts.extend(lines);
+    }
+    if with_inserts {
+        files.push(ExportedFile {
+            name: "data_inserts.sql".into(),
+            kind: "sql".into(),
+            content: format!("{}\n", inserts.join("\n")),
+        });
+    }
     files.push(ExportedFile {
         name: "verify_foreign_keys.sql".into(),
         kind: "sql".into(),
         content: orphan_checks(&decomposed, dialect),
     });
     files
+}
+
+/// Appends a key for one cell: equal keys exactly when the cells' JSON values are equal.
+fn dedup_key(c: &Cell, out: &mut String) {
+    match c {
+        Cell::Absent | Cell::Null => out.push('n'),
+        Cell::Bool(b) => out.push(if *b { 't' } else { 'f' }),
+        Cell::Num(n) => {
+            out.push('#');
+            out.push_str(&crate::table::num_json(*n).to_string());
+        }
+        Cell::Str(s) => {
+            out.push('s');
+            out.push_str(&s.len().to_string());
+            out.push(':');
+            out.push_str(s);
+        }
+        Cell::Json(v) => {
+            out.push('j');
+            let j = v.to_string();
+            out.push_str(&j.len().to_string());
+            out.push(':');
+            out.push_str(&j);
+        }
+    }
+    out.push('\u{1f}');
 }
 
 pub fn orphan_checks(relations: &[DecomposedRelation], dialect: Dialect) -> String {
