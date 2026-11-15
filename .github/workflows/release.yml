@@ -282,7 +282,10 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
         run: |
-          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -F draft=false -f make_latest=true \
+          # The tag is created on the run's commit as the release is published.
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -f tag_name="$TAG" \
+            -f target_commitish="$GITHUB_SHA" -F draft=false -f make_latest=true \
             --jq '"Published \(.tag_name) at \(.target_commitish): \(.html_url)"'
