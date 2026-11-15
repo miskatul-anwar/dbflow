@@ -421,3 +421,21 @@ fn a_composite_key_survives_sampling() {
         .unwrap();
     assert!(keys.contains(&json!(["line_no", "order_id"])), "{keys:?}");
 }
+
+#[test]
+fn a_determinant_that_only_looks_unique_in_the_sample_is_still_used() {
+    // 20,000 orders by 5,000 customers: in a 500-row sample customer_id is ~96 % unique, on the data 25 %.
+    // customer_id -> customer_name must still be found and split out.
+    let mut text = String::from("order_id,customer_id,customer_name,amount\n");
+    for i in 0..20_000u64 {
+        let c = (i * 7_919) % 5_000;
+        text += &format!("{i},{c},Customer {c},{}\n", (i * 104_729) % 9_999_991);
+    }
+    let r = process(vec![file("orders.csv", &text)], ops(), json!({ "fdSampleSize": 500 }));
+    let rels = r["relations"].as_array().unwrap();
+    assert!(
+        rels.iter().any(|rel| rel["primaryKey"] == json!(["customer_id"])),
+        "{:?}",
+        rels.iter().map(|r| r["primaryKey"].clone()).collect::<Vec<_>>()
+    );
+}
