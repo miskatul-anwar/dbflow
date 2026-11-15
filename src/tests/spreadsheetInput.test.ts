@@ -145,7 +145,7 @@ describe('errors', () => {
     const { files, notes } = await spreadsheetToCsvFiles(new File(['a\tb\n1\t2\n'], 'export.xls'));
     expect(files.map(f => f.name)).toEqual(['export.csv']);
     expect(notes[0]).toMatch(/read as CSV/);
-    const res = await new DatabaseService().processFile(new File(['a\tb\n1\t2\n3\t4\n'], 'export.xls'), ['CSV Data Loader']);
+    const res = await new DatabaseService().processFile(new File(['a\tb\n1\t2\n3\t4\n'], 'export.xls'), ['Data Loader']);
     expect(res.success).toBe(true);
   });
 
@@ -159,7 +159,7 @@ describe('errors', () => {
 });
 
 describe('through the pipeline', () => {
-  const OPS = ['CSV Data Loader', 'Data Cleaner', 'FD Miner', 'Key Discovery', '3NF', 'SQL Generator'];
+  const OPS = ['Data Loader', 'Data Cleaner', 'FD Miner', 'Key Discovery', '3NF', 'SQL Generator'];
 
   it('analyses a one-sheet .xlsx like the same CSV', async () => {
     const csvText = [

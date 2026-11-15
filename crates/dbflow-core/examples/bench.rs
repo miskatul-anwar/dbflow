@@ -13,7 +13,7 @@ fn main() {
         })
         .collect();
     let ops = [
-        "CSV Data Loader",
+        "Data Loader",
         "Data Cleaner",
         "Atomicity Checker",
         "Data Type Profiler",

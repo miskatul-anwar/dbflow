@@ -22,7 +22,7 @@ export const NL_CASES: NLCase[] = [
   c('keyword', 'Can you pls convert it to 1NF', ['1NF']),
   c('keyword', 'give me 3NF', ['3NF']),
   c('keyword', 'generate the SQL', ['SQL Generator']),
-  c('keyword', 'load and clean the file', ['CSV Data Loader', 'Data Cleaner']),
+  c('keyword', 'load and clean the file', ['Data Loader', 'Data Cleaner']),
   c('keyword', 'full report', ['Report Generator']),
   c('keyword', 'normalize to BCNF', ['BCNF']),
   c('keyword', 'find the functional dependencies', ['FD Miner']),
@@ -41,7 +41,7 @@ export const NL_CASES: NLCase[] = [
   c('keyword', 'second normal form please', ['2NF']),
   c('keyword', 'generate the relation schemas', ['Relation Generator']),
   c('keyword', 'clean the data', ['Data Cleaner']),
-  c('keyword', 'import my csv', ['CSV Data Loader']),
+  c('keyword', 'import my csv', ['Data Loader']),
 
   // acronyms and forms
   c('acronym', '1nf', ['1NF']),
@@ -88,7 +88,7 @@ export const NL_CASES: NLCase[] = [
   c('paraphrase', 'is it one to many or many to many', ['Cardinality Analyzer']),
   c('paraphrase', 'remove partial dependencies on the key', ['2NF']),
   c('paraphrase', 'remove transitive dependencies', ['3NF']),
-  c('paraphrase', 'open the spreadsheet export', ['CSV Data Loader']),
+  c('paraphrase', 'open the spreadsheet export', ['Data Loader']),
 
   // typos
   c('typo', 'convrt it to 1nf', ['1NF']),

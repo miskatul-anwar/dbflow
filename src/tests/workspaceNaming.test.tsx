@@ -122,7 +122,7 @@ describe('closing workspaces', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create workspace' }));
     // Give the new workspace a step.
     const pane = document.querySelector('.nf-tab-pane:not([hidden])') as HTMLElement;
-    fireEvent.click(within(pane).getAllByText('CSV Data Loader')[0]);
+    fireEvent.click(within(pane).getAllByText('Data Loader')[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Close Workspace 2' }));
 
     const alert = screen.getByRole('alertdialog');

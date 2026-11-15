@@ -20,7 +20,7 @@ describe('lexical resolver', () => {
     expect(t('Can you pls convert it to 1NF')).toEqual(['1NF']);
     expect(t('give me 3NF')).toEqual(['3NF']);
     expect(t('generate the SQL')).toEqual(['SQL Generator']);
-    expect(t('load and clean the file')).toEqual(['CSV Data Loader', 'Data Cleaner']);
+    expect(t('load and clean the file')).toEqual(['Data Loader', 'Data Cleaner']);
     expect(t('full report')).toEqual(['Report Generator']);
   });
 

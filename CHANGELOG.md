@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The **CSV Data Loader** operation is now called **Data Loader** ("Loads CSV, Excel and ODS files"), since it reads spreadsheets as well. Saved pipelines, CLI scripts and engine calls that use the old name keep working, and requests that mention Excel or spreadsheets now resolve to it.
+
 ## [6.5.0] - 2026-11-15
 
 ### Added

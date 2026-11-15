@@ -9,7 +9,7 @@ import { IdentifierRegistry, mdEscape } from '../services/utils/identifiers';
 const csv = (name: string, text: string) => new File([text], name, { type: 'text/csv' });
 
 const ALL_OPS = [
-  'CSV Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', 'Column Classifier', '1NF',
+  'Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', 'Column Classifier', '1NF',
   'FD Miner', 'Key Discovery', 'Relation Detector', 'Cardinality Analyzer', '2NF', '3NF', 'Lossless Check',
   'Dependency Preservation', 'ERD Generator', 'Relation Generator', 'SQL Generator', 'Report Generator',
 ];
@@ -189,7 +189,7 @@ describe('multi-file pipeline (TypeScript engine)', () => {
     const service = new DatabaseService();
     const result = await service.processFiles(
       [csv('orders.csv', orders), csv('products.csv', products)],
-      ['CSV Data Loader', 'Data Cleaner', 'FD Miner', 'Key Discovery'],
+      ['Data Loader', 'Data Cleaner', 'FD Miner', 'Key Discovery'],
     );
     expect(result.success).toBe(true);
     for (const t of result.tables!) expect(t.thirdNormalForm).toEqual([]);

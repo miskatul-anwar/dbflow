@@ -79,11 +79,12 @@ impl Logger {
     }
 }
 
+/// Current name of an operation; earlier names still work (saved pipelines, scripts).
 fn canonical(op: &str) -> String {
-    if op == "NER Classifier" {
-        "Column Classifier".into()
-    } else {
-        op.to_string()
+    match op {
+        "NER Classifier" => "Column Classifier".into(),
+        "CSV Data Loader" => "Data Loader".into(),
+        _ => op.to_string(),
     }
 }
 

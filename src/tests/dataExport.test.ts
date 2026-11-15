@@ -3,7 +3,7 @@ import { exportNormalizedData, csvCell } from '../services/processors/dataExport
 import { DatabaseService } from '../services/api/databaseService';
 
 const csv = (name: string, text: string) => new File([text], name, { type: 'text/csv' });
-const OPS = ['CSV Data Loader', 'Data Cleaner', 'FD Miner', 'Key Discovery', '2NF', '3NF', 'SQL Generator', 'ERD Generator', 'Report Generator'];
+const OPS = ['Data Loader', 'Data Cleaner', 'FD Miner', 'Key Discovery', '2NF', '3NF', 'SQL Generator', 'ERD Generator', 'Report Generator'];
 
 describe('normalized data export', () => {
   it('quotes CSV cells', () => {
