@@ -27,7 +27,7 @@ Drop in one or many supported files. DBFlow accepts CSV, Excel workbooks and tem
 
 - **Clean and validate** your data (atomicity checks, null handling, type profiling)
 - **Mine functional dependencies** with a partition-refinement algorithm (TANE-inspired lattice pruning)
-- **Discover candidate keys** using attribute-closure search over the FD lattice
+- **Discover candidate keys** completely (attribute closure and Lucchesi–Osborn enumeration)
 - **Decompose to 3NF / BCNF** with lossless-join verification (chase, plus a re-join on your data) and dependency-preservation analysis
 - **Detect cross-table foreign keys** from the data (inclusion dependencies scored by containment, coverage, name and type evidence)
 - **Classify columns semantically** (NLP profiler: names, e-mails, prices, dates, locations, organizations…)
@@ -40,6 +40,8 @@ Drop in one or many supported files. DBFlow accepts CSV, Excel workbooks and tem
 | **Private by design** | All processing happens locally; no network calls are made. The natural-language box runs a small model that ships inside the installer. |
 | **Rust engine** | Parsing, dependency mining, normalization and every output come from one Rust engine: native in the desktop app, WebAssembly in the browser, the same code for one file or many. |
 | **Sound algorithms** | Functional-dependency mining, closure-based key discovery, 3NF synthesis. Only dependencies that hold on every row shape the schema. |
+| **Scales to wide, multi-file data** | Files are analysed in parallel within a memory budget; nine related tables with 431,991 rows and 891 columns (335 MB) run in about a minute on a four-core laptop. See [docs/EVALUATION.md](docs/EVALUATION.md). |
+| **AI naming on or off** | New tables are named by a small on-device model, or, with the switch off, from their key columns — instantly. |
 | **Visual pipelines** | Build workflows on an interactive React Flow canvas — click or drag the operations you want. |
 | **Portable outputs** | Mermaid, `.sql`, `.md` and workflow `.json` files you can commit to your repo. |
 | **Lightweight** | Native binary, tiny footprint compared to Electron alternatives. |

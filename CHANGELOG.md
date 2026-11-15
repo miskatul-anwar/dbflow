@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **AI naming switch.** The toolbar's *AI names / Key names* button (shared by every workspace, remembered on this machine) turns the on-device naming model off. New relations are then named from their key columns by rule (`region_code` → "Region", `order_id, line_no` → "Order Line"), marked *from key* on the Output page and renamable as before. Runs skip the model entirely, which makes them much faster. Engine option `namingMode: "rules"`.
+- **Parallel multi-file analysis.** In the desktop app the files of a run are analysed at the same time, one thread per file (largest first), within a memory budget (half of the available memory by default; `memoryBudgetMb`, `maxParallelFiles`). Progress is merged into one bar and cancelling stops every file. Results are identical to a one-thread run (tested). The desktop app keeps one CPU core free for its window.
+- A deterministic demonstration dataset generator: `cargo run --release -p dbflow-core --example demo_data -- <dir>` writes nine related retail tables of 99 columns each (999 to 99,999 rows; 431,991 rows and 891 columns in all). `examples/bench` now reports peak memory and can save the result (`DBFLOW_BENCH_OUT`).
+- `bun run audit:design` (the script was documented but not registered).
+
+### Changed — scalability
+- Wide tables no longer exhaust memory. Candidate keys are enumerated with the Lucchesi–Osborn algorithm instead of a search over every subset of attributes (which ran out of memory on a 99-column table), with the same keys as result.
+- FD mining prunes the supersets of a column that is nearly unique on the full data (two unrelated measures were otherwise found as a key, with thousands of dependencies each). A key found in a sample is confirmed on the full data before it yields dependencies, so a composite key such as `(order_id, line_no)` is still found when one of its columns looks unique in the sample. The 30 s time budget now covers all sampling rounds together (each round used to get its own).
+- Cells are smaller and copied without copying text: short values (up to 22 bytes) are stored inline and longer ones are shared, so projecting rows into relations no longer duplicates strings. Normal-form steps borrow their input instead of copying it, and the dependency checks no longer copy rows.
+- Inputs above 999,999 cells get a compact result: relations report `rowCount` instead of carrying their rows, and each relation's data is exported once as CSV (the 2NF CSVs, the per-relation JSON rows, the BCNF CSVs that repeat the 3NF ones and the INSERT script are left out, with a note in the log). Multi-file runs release the rows of the intermediate normal forms as soon as a table is analysed.
+- Column types are inferred once per schema and shared by the ER diagram, the DDL and the data export (they were inferred three times). Cross-file foreign-key profiling and matching run in parallel and stop counting once a candidate can no longer reach the containment threshold; normalized-data export deduplicates rows with a typed key instead of a JSON string per row and exports relations in parallel.
+- On the nine-table demonstration set (335 MB of CSV) a full run takes about 60 s on four cores (121 s on one) with about 7.7 GB peak memory; before these changes key discovery ran out of memory on the first table.
+- The key chosen for a table is now the primary key of its main 2NF and 3NF relation (it used to be whichever candidate key sorted first by name, e.g. a unique measure column instead of `store_id`).
+
+### Fixed
+- Pressing **Output** during a run no longer rebuilds the canvas as one long row of steps and starts a second run; the results open when the running pipeline finishes. With no results yet, Output runs the pipeline on the canvas (only an empty canvas gets the full default pipeline, laid out in rows like any other).
+- Closing the last workspace asks for the name of the workspace that replaces it (it used to open "Workspace 2" without asking).
+- Closing a workspace with work in it asks in an in-app dialog that matches the workspace-name dialog, with focus on Cancel, instead of the browser's confirm box; a running pipeline is mentioned and stopped when the workspace closes.
+- Dialogs make the whole page behind them inert (the app shell around a dialog used to stay reachable by keyboard and screen readers).
+- The window stays responsive during long runs: progress updates are applied at most once per frame, the result cache is written after the run instead of during the click, very large generated files are kept in memory only (not serialised into session storage), and in the desktop app file uploads run off the main thread.
+- Files uploaded for a run that is cancelled before it starts are released in the desktop app.
+- Loading a file that is not a saved workflow shows a notice instead of a browser alert.
+
 ## [6.0.0] - 2026-11-14
 
 ### Changed — the engine is now Rust
