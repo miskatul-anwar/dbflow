@@ -51,16 +51,30 @@ All 19 operations, 4-core machine, native engine:
 
 | Run | Analysis | Outputs | Total | Peak memory |
 |---|---|---|---|---|
-| One file at a time | 107.8 s | 13.1 s | 120.9 s | 6.0 GB |
-| Files in parallel (default) | 45.9 s | 13.8 s | 59.7 s | 7.7 GB |
+| One file at a time | 104.1 s | 11.2 s | 115.3 s | 5.8 GB |
+| Files in parallel (default) | 41.8 s | 12.9 s | 54.7 s | 7.8 GB |
 | Before this revision | — | — | out of memory in key discovery on the first table | — |
 
-Result: 19,801 exact dependencies, 197 candidate keys, 38 relations, all nine foreign keys found (plus three
-links through unique name columns), every decomposition lossless by the chase (eight of nine also confirmed by
-re-joining the data; the orders join exceeds the 250,000-row limit of that check) and every dependency preserved. The
+Result: 19,806 dependencies, 197 candidate keys, 39 relations, all nine foreign keys found (plus three
+links through unique name columns), every decomposition lossless by the chase (seven of nine also confirmed by
+re-joining the data; the orders and payments joins exceed the 250,000-row limit of that check) and every dependency
+preserved. The
 composite key of order lines, `(order_id, line_no)`, is found although `order_id` looks nearly unique in the 10,000-row
 sample. Limits: some of the 38 relations come from coincidental dependencies of wide tables (on orders, customer,
 employee and date together identify an order); they are correct for the data but not meaningful.
+
+Single-table series (`demo_data -- <dir> --single ROWS COLS`: an order table whose customer, city and region facts
+3NF must split out, padded with measures):
+
+| Rows × columns | CSV | Total time | Peak memory | Relations (3NF) | Lossless / preserved |
+|---|---|---|---|---|---|
+| 9,999 × 9 | 0.6 MB | 0.17 s | 37 MB | 4 | yes / 22 of 22 |
+| 99,999 × 9 | 6.2 MB | 1.5 s | 0.3 GB | 4 | yes / 22 of 22 |
+| 999,999 × 9 | 64 MB | 15.6 s | 1.4 GB | 4 | yes (chase) / 22 of 22 |
+| 9,999 × 99 | 7.9 MB | 1.9 s | 0.5 GB | 4 | yes / 112 of 112 |
+| 9,999 × 999 | 80 MB | 23.3 s | 1.8 GB | 4 | yes / 5,004 of 5,004 |
+
+The same four relations (order, customer, city, region) are found at every size.
 
 ## Natural-language workflow builder
 
