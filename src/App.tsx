@@ -108,19 +108,15 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
   // Output was pressed while a run was in progress: open the results when it finishes.
   const openOutputWhenDone = useRef(false);
 
+  // The result goes into this tab's in-memory cache and only the tab id travels with the navigation. Router state is
+  // written with history.pushState, which WebKit (the desktop app's webview on Linux and macOS) limits in size; a large
+  // result made it throw, and the router then fell back to a full page load that reset every workspace.
   const navigateToOutput = useCallback(
     (results: any) => {
-      navigate('/output', {
-        state: {
-          results,
-          tabId,
-          outputFiles: results.outputFiles,
-          logs: results.logs ?? [],
-          selectedOperations: graph.operationLabels,
-        },
-      });
+      saveCachedResult(results, tabId);
+      navigate('/output', { state: { tabId } });
     },
-    [graph.operationLabels, navigate, tabId],
+    [navigate, tabId],
   );
 
   // ----- execution -----------------------------------------------------------

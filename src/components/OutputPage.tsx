@@ -25,7 +25,8 @@ import { loadCachedResult, saveCachedResult } from '../utils/resultCache';
 export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?: WorkspaceTab[] }) {
   const location = useLocation();
   const navigate = useNavigate();
-  // Fresh results are passed along when navigating from a run; they only apply to the tab that ran.
+  // Results normally come from the tab's cache (the workspace stores them before navigating); results passed in the
+  // navigation state are still accepted, for the tab that ran.
   // Results are untyped throughout this page (the engine's result shape differs for one file and many).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const state = location.state as { results?: any; tabId?: string } | null;
