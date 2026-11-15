@@ -12,7 +12,7 @@ fn file(name: &str, text: &str) -> InputFile {
 }
 
 const ALL_OPS: [&str; 19] = [
-    "CSV Data Loader",
+    "Data Loader",
     "Data Cleaner",
     "Atomicity Checker",
     "Data Type Profiler",
@@ -459,4 +459,22 @@ fn split_out_relations_prefer_an_identifier_column_as_key() {
         })
         .expect("city relation");
     assert_eq!(city["primaryKey"], json!(["city_code"]), "{city}");
+}
+
+#[test]
+fn the_former_csv_data_loader_name_still_runs() {
+    let old = process(
+        vec![file(
+            "t.csv",
+            "id,city,region\n1,A,X\n2,B,Y\n3,A,X\n4,C,Y\n5,B,Y\n6,A,X\n7,C,Y\n8,A,X\n9,B,Y\n10,C,Y\n11,A,X\n12,B,Y\n",
+        )],
+        vec![
+            "CSV Data Loader".into(),
+            "FD Miner".into(),
+            "Key Discovery".into(),
+            "3NF".into(),
+        ],
+        json!({}),
+    );
+    assert_eq!(old["success"], json!(true), "{old}");
 }

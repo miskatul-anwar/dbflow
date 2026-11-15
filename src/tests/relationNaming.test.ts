@@ -4,7 +4,7 @@ import { cleanModelName, mainOf, nameRelationSet, relationSignature } from '../s
 import { namingMessages } from '../services/naming/namingPrompt';
 
 const csv = (name: string, text: string) => new File([text], name, { type: 'text/csv' });
-const OPS = ['CSV Data Loader', 'Atomicity Checker', '1NF', 'FD Miner', 'Key Discovery', '2NF', '3NF', 'Lossless Check', 'ERD Generator', 'SQL Generator', 'Report Generator'];
+const OPS = ['Data Loader', 'Atomicity Checker', '1NF', 'FD Miner', 'Key Discovery', '2NF', '3NF', 'Lossless Check', 'ERD Generator', 'SQL Generator', 'Report Generator'];
 // order_id -> customer_id -> customer_city: a transitive dependency, so 3NF splits out the customer columns.
 const orders = (() => {
   const lines = ['order_id,customer_id,customer_city,total'];

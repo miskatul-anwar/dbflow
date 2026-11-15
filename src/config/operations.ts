@@ -1,18 +1,18 @@
 import { OperationDefinition } from '../types';
 
 export const OPERATIONS: Record<string, OperationDefinition> = {
-  'CSV Data Loader': {
+  'Data Loader': {
     phase: 'PREP',
     id: 'csv-loader',
     order: 1,
     dependencies: [],
-    description: 'Loads CSV files'
+    description: 'Loads CSV, Excel and ODS files'
   },
   'Data Cleaner': {
     phase: 'PREP',
     id: 'data-cleaner',
     order: 2,
-    dependencies: ['CSV Data Loader'],
+    dependencies: ['Data Loader'],
     description: 'Strips nulls and cleans formatting'
   },
   'Atomicity Checker': {
@@ -141,6 +141,7 @@ export const ALL_OPERATION_NAMES = Object.keys(OPERATIONS);
 /** Names that earlier versions used for operations. Saved pipelines and scripts that use them still work. */
 export const LEGACY_OPERATION_NAMES: Record<string, string> = {
   'NER Classifier': 'Column Classifier',
+  'CSV Data Loader': 'Data Loader',
 };
 
 export const canonicalOperationName = (name: string): string => LEGACY_OPERATION_NAMES[name] ?? name;

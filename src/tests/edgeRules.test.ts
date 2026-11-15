@@ -20,7 +20,7 @@ describe('Pipeline Edge Connection Rules (validateEdgeConnection)', () => {
     type: 'startNode',
   };
 
-  const csvLoader = createMockNode('1', 'CSV Data Loader', 'PREP', 1);
+  const csvLoader = createMockNode('1', 'Data Loader', 'PREP', 1);
   const dataCleaner = createMockNode('2', 'Data Cleaner', 'PREP', 2);
   const dataProfiler = createMockNode('4', 'Data Type Profiler', 'PREP', 4);
   const nf1 = createMockNode('6', '1NF', 'NORMAL', 6);
@@ -76,7 +76,7 @@ describe('Pipeline Edge Connection Rules (validateEdgeConnection)', () => {
       expect(res.error).toContain('Start node cannot have incoming connections');
     });
 
-    it('allows Start node to connect to CSV Data Loader (PREP)', () => {
+    it('allows Start node to connect to Data Loader (PREP)', () => {
       const res = validateEdgeConnection({ source: START_NODE_ID, target: '1' }, defaultNodes, []);
       expect(res.isValid).toBe(true);
     });
@@ -87,7 +87,7 @@ describe('Pipeline Edge Connection Rules (validateEdgeConnection)', () => {
       expect(res.error).toContain('Start node can only connect to Data Preparation operations');
     });
 
-    it('disallows non-Start nodes from feeding into CSV Data Loader', () => {
+    it('disallows non-Start nodes from feeding into Data Loader', () => {
       const res = validateEdgeConnection({ source: '2', target: '1' }, defaultNodes, []);
       expect(res.isValid).toBe(false);
       expect(res.error).toContain('can only receive incoming connections from the Start node');

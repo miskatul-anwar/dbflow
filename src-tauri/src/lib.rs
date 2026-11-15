@@ -192,7 +192,7 @@ mod tests {
                 bytes: csv.as_bytes().to_vec(),
             }],
             vec![
-                "CSV Data Loader".into(),
+                "Data Loader".into(),
                 "FD Miner".into(),
                 "Key Discovery".into(),
                 "3NF".into(),

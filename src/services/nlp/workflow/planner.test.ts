@@ -16,7 +16,7 @@ const build = (plan: string[]) => {
 
 describe('planner', () => {
   it('1NF needs loader, cleaner, atomicity, profiler (the spec example)', () => {
-    expect(planFor(['1NF']).plan).toEqual(['CSV Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF']);
+    expect(planFor(['1NF']).plan).toEqual(['Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF']);
   });
 
   it('3NF pulls in FD Miner and 2NF, not the column classifier', () => {
@@ -67,17 +67,17 @@ describe('planner', () => {
 
 describe('palette helpers', () => {
   it('dependenciesMet reflects what is on the canvas', () => {
-    expect(dependenciesMet('CSV Data Loader', [])).toBe(true);
+    expect(dependenciesMet('Data Loader', [])).toBe(true);
     expect(dependenciesMet('1NF', [])).toBe(false);
     expect(dependenciesMet('1NF', ['Data Type Profiler'])).toBe(true);
   });
 
   it('prerequisitesToAdd lists only what is missing, in add order, ending with the target', () => {
-    expect(prerequisitesToAdd('1NF', []).add).toEqual(['CSV Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF']);
-    const r = prerequisitesToAdd('1NF', ['CSV Data Loader', 'Data Cleaner']);
+    expect(prerequisitesToAdd('1NF', []).add).toEqual(['Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF']);
+    const r = prerequisitesToAdd('1NF', ['Data Loader', 'Data Cleaner']);
     expect(r.add).toEqual(['Atomicity Checker', 'Data Type Profiler', '1NF']);
     expect(r.prerequisites).toEqual(['Atomicity Checker', 'Data Type Profiler']);
-    expect(prerequisitesToAdd('Data Cleaner', ['CSV Data Loader'])).toEqual({ add: ['Data Cleaner'], prerequisites: [] });
+    expect(prerequisitesToAdd('Data Cleaner', ['Data Loader'])).toEqual({ add: ['Data Cleaner'], prerequisites: [] });
   });
 
   it('property: from ANY canvas the canvas itself can reach, clicking any operation works without errors', () => {

@@ -767,9 +767,9 @@ INSERT INTO "warehouse_slotting" VALUES (1, 2, 3, 4, 'SKU-DUPE', 20); -- Fails c
       });
 
       // Valid sequence fulfilling all operation dependency requirements:
-      // Start -> CSV Data Loader -> Data Cleaner -> Atomicity Checker -> Data Type Profiler -> 1NF -> FD Miner -> Key Discovery -> 2NF -> 3NF -> Relation Generator -> SQL Generator
+      // Start -> Data Loader -> Data Cleaner -> Atomicity Checker -> Data Type Profiler -> 1NF -> FD Miner -> Key Discovery -> 2NF -> 3NF -> Relation Generator -> SQL Generator
       const validLabels = [
-        'CSV Data Loader',
+        'Data Loader',
         'Data Cleaner',
         'Atomicity Checker',
         'Data Type Profiler',
