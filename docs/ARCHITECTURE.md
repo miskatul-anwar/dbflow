@@ -201,6 +201,8 @@ Windows and macOS. The Vitest suite exercises the Rust engine through its WebAss
 
 ## Release engineering
 
-Tag-driven: pushing `vX.Y.Z` triggers `.github/workflows/release.yml`, which
-builds installers (MSI, DMG x2 arches, deb/rpm/AppImage) via `tauri-action`
-and publishes a GitHub Release. See `docs/RELEASING.md`.
+Tag-driven: pushing `vX.Y.Z` triggers `.github/workflows/release.yml`. It checks that the tag matches the
+version everywhere and creates a draft release. It runs the full CI, then builds the desktop installers
+(MSI and EXE, DMG for two architectures, deb, rpm and AppImage, via `tauri-action`) and the signed Android APK
+in parallel. It publishes the release only when every file is attached, with a `SHA256SUMS.txt`. See
+`docs/RELEASING.md`.

@@ -33,6 +33,7 @@
   },
   "scripts": {
     "build:engine": "node scripts/build-engine.mjs",
+    "check:version": "node scripts/check-version.mjs",
     "predev": "node scripts/build-engine.mjs && node scripts/prepare-nl-assets.mjs",
     "dev": "vite",
     "prebuild": "node scripts/build-engine.mjs && node scripts/prepare-nl-assets.mjs",

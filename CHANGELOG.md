@@ -40,6 +40,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Navigation:** Android's back button moves back through the screens. In a browser, `?ui=mobile` shows this interface.
 - **Android app.** Each release now includes `DBFlow_<version>_android_arm64.apk` (Android 7 or newer, 64-bit ARM). It runs the same Rust engine as the desktop app, entirely on the phone. The download page has an Android tab and picks it on Android phones. The release workflow builds and signs the APK and attaches it to the release; signing uses the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`.
 
+### Changed — build and release
+- **Every release contains the desktop and Android apps, published together.**
+  - **Draft first:** the release workflow creates a draft and checks that the tag matches the version in every file and that the changelog has a section for it. That section becomes the release notes.
+  - **Tested before building:** it runs the full CI, then builds the desktop installers and the signed APK in parallel. Before, Android waited for the slowest desktop build.
+  - **Complete or not published:** it publishes only when all eight installers are attached, and adds `SHA256SUMS.txt`. Before, the release went public when the first installer finished.
+  - **Android checks:** the signing secrets are required, and the APK's signature and version are checked.
+  - **Re-runs:** they reuse the draft, and an already published release is never overwritten.
+  - **Fixes:** a manual run no longer falls back to the tag `v2.4.0`, and the tag input is no longer pasted into shell code.
+- **CI:**
+  - The checks shared by every job come from one setup action (`.github/actions/setup`).
+  - The version check runs on every pull request.
+  - The format check runs once instead of on three operating systems.
+  - Runs on `main` are no longer cancelled by later pushes.
+  - Every job has a timeout, and the Android build caches Gradle and checks the APK's version.
+- **Dependabot:** it now covers the Cargo workspace at the repository root (it pointed at `src-tauri` and missed the engine crates and the lockfile), the Android Gradle project, and the shared setup action.
+- **Docs:** `docs/RELEASING.md` is rewritten for the new process.
+
 ### Fixed
 - Downloads (SQL, CSV, diagrams, reports, PDF and saved workflows) all go through one helper. On Android, where the WebView ignores download links, it opens the system *Save as* screen and writes the file there.
 - On a phone-width screen the toolbar buttons overlapped and *Output* was cut off; the toolbar now wraps onto two rows. On the Output page *Back to workflow* ran into the title; below 640 px it shows the arrow only.

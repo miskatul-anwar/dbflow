@@ -1,0 +1,59 @@
+name: Set up the DBFlow toolchain
+description: >
+  Bun, Node, the Rust toolchain (with the given targets), the Rust build cache, wasm-bindgen (the web build
+  embeds the WebAssembly engine), the Linux system libraries Tauri needs (optional), and the frontend
+  dependencies. Shared by the CI and release workflows so every job builds with the same tools.
+
+inputs:
+  rust-targets:
+    description: Comma-separated Rust targets to install besides the host.
+    default: wasm32-unknown-unknown
+  rust-components:
+    description: Comma-separated Rust components (e.g. clippy, rustfmt).
+    default: ""
+  cache-key:
+    description: Extra key for the Rust build cache, so jobs with different targets do not share one.
+    default: ""
+  linux-deps:
+    description: "'true' to install the Linux libraries Tauri's desktop build needs."
+    default: "false"
+  frontend:
+    description: "'false' to skip Bun, Node, wasm-bindgen and the frontend dependencies (Rust-only jobs)."
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - if: inputs.frontend == 'true'
+      uses: oven-sh/setup-bun@v2
+
+    - if: inputs.frontend == 'true'
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ inputs.rust-targets }}
+        components: ${{ inputs.rust-components }}
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ inputs.cache-key }}
+
+    - if: inputs.frontend == 'true'
+      uses: taiki-e/install-action@v2
+      with:
+        tool: wasm-bindgen@0.2.130
+
+    - if: inputs.linux-deps == 'true' && runner.os == 'Linux'
+      name: Install Tauri system libraries
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+    - if: inputs.frontend == 'true'
+      name: Install frontend dependencies
+      shell: bash
+      run: bun install --frozen-lockfile
