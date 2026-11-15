@@ -4,16 +4,16 @@
 
 # DBFlow
 
-**Turn CSV and spreadsheet files into normalized database schemas, ERDs, SQL DDL and normalization reports.**
+**Turn raw CSV and spreadsheet files into a verified, normalized relational database: ER diagram, SQL schema, normalized data and a report.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-115e59.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/miskatul-anwar/dbflow?logo=github&color=0284c7)](https://github.com/miskatul-anwar/dbflow/releases)
 [![CI](https://github.com/miskatul-anwar/dbflow/actions/workflows/ci.yml/badge.svg)](https://github.com/miskatul-anwar/dbflow/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
-[![Frontend: React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Engine: Rust](https://img.shields.io/badge/Engine-Rust-b7410e?logo=rust&logoColor=white)](crates/dbflow-core)
 
-*One desktop app for tabular files → 1NF → 2NF → 3NF → ERD → SQL. Private by design — your data never leaves your machine.*
+*One desktop app from raw tables to 1NF, 2NF, 3NF or BCNF, an ER diagram and SQL. Private by design: your data never leaves your machine.*
 
 </div>
 
@@ -21,30 +21,32 @@
 
 ## What is DBFlow?
 
-DBFlow is a **free and open-source cross-platform desktop app** that reverse-engineers relational databases from tabular data.
+DBFlow is a **free, open-source desktop app** for Windows, macOS and Linux that designs a relational database from the data you already have. It serves two purposes:
 
-Drop in one or many supported files. DBFlow accepts CSV, Excel workbooks and templates (`.xlsx`, `.xlsm`, `.xlsb`, `.xls`, `.xltx`, `.xltm`, `.xlam`, `.xlt`, `.xla`, `.xlw`), OpenDocument spreadsheets (`.ods`, `.ots`, `.fods`), and Excel 2003 SpreadsheetML (`.xml`). Each visible, non-empty sheet becomes a table. DBFlow will:
+- **Database engineering.** Turn flat exports into a normalized, populated database, with the schema checked against your data.
+- **Database education.** See every stage of database design, from the first functional dependency to the final SQL, change one step and compare the results.
 
-- **Clean and validate** your data (atomicity checks, null handling, type profiling)
-- **Mine functional dependencies** with a partition-refinement algorithm (TANE-inspired lattice pruning)
-- **Discover candidate keys** completely (attribute closure and Lucchesi–Osborn enumeration)
-- **Decompose to 3NF / BCNF** with lossless-join verification (chase, plus a re-join on your data) and dependency-preservation analysis
-- **Detect cross-table foreign keys** from the data (inclusion dependencies scored by containment, coverage, name and type evidence)
-- **Classify columns semantically** (NLP profiler: names, e-mails, prices, dates, locations, organizations…)
-- **Generate Mermaid ERDs**, consolidated SQL DDL, and a Markdown normalization report
+Drop in one or many files: CSV, Excel workbooks and templates (`.xlsx`, `.xlsm`, `.xlsb`, `.xls`, `.xltx`, `.xltm`, `.xlam`, `.xlt`, `.xla`, `.xlw`), OpenDocument spreadsheets (`.ods`, `.ots`, `.fods`) and Excel 2003 SpreadsheetML (`.xml`). Each visible, non-empty sheet becomes a table. DBFlow then:
+
+- **cleans and profiles** the data (missing values, atomicity, types, column meaning);
+- **mines the functional dependencies** that hold on every row (partition refinement, sampled and validated on the full data);
+- **finds every candidate key** (attribute closure and Lucchesi–Osborn enumeration) and picks an identifier-like primary key;
+- **finds foreign keys across files** (inclusion dependencies scored by containment, coverage, name and type);
+- **normalizes** to 1NF, 2NF, 3NF (Bernstein synthesis) or BCNF;
+- **verifies every split**: a chase proves the join lossless, a re-join of your rows confirms it, and a projected-closure test reports which dependencies are preserved;
+- **generates** an ER diagram, SQL DDL, the normalized data and a report.
 
 ## Highlights
 
 | | |
 |---|---|
-| **Private by design** | All processing happens locally; no network calls are made. The natural-language box runs a small model that ships inside the installer. |
-| **Rust engine** | Parsing, dependency mining, normalization and every output come from one Rust engine: native in the desktop app, WebAssembly in the browser, the same code for one file or many. |
-| **Sound algorithms** | Functional-dependency mining, closure-based key discovery, 3NF synthesis. Only dependencies that hold on every row shape the schema. |
-| **Scales to wide, multi-file data** | Files are analysed in parallel within a memory budget; nine related tables with 431,991 rows and 891 columns (335 MB) run in about a minute on a four-core laptop. See [docs/EVALUATION.md](docs/EVALUATION.md). |
-| **AI naming on or off** | New tables are named by a small on-device model, or, with the switch off, from their key columns — instantly. |
-| **Visual pipelines** | Build workflows on an interactive React Flow canvas — click or drag the operations you want. |
-| **Portable outputs** | Mermaid, `.sql`, `.md` and workflow `.json` files you can commit to your repo. |
-| **Lightweight** | Native binary, tiny footprint compared to Electron alternatives. |
+| **Private by design** | Everything runs locally and the app makes no network requests. The two small models it uses ship inside the installer. |
+| **Verified results** | Only dependencies that hold on every row shape the schema, and every decomposition is checked on your data before the report shows it. |
+| **Scales to wide, multi-file data** | Files are analysed in parallel within a memory budget. Nine related tables with 431,991 rows and 891 columns (335 MB) take about a minute on a four-core laptop; a table of 999,999 rows or 999 columns takes under half a minute. See [Scalability](#scalability). |
+| **Visible, editable pipelines** | Type a goal in plain words or click operations on a React Flow canvas; preview the plan, change it and undo it. |
+| **AI naming on or off** | New tables are named by a small on-device model, or, with the switch off, from their key columns, instantly. |
+| **One Rust engine** | Parsing, mining, normalization and every output come from one Rust crate: native in the desktop app, WebAssembly in the browser and the command line. |
+| **Portable outputs** | Mermaid and Graphviz diagrams, `.sql`, `.csv`, `.md`, `.pdf` and workflow `.json` files. |
 
 ## Installation
 
@@ -79,29 +81,90 @@ bun run tauri build  # production bundle
 ```
 
 <details>
-<summary><b>Linux one-liner (Debian/Ubuntu)</b></summary>
+<summary><b>Linux system packages (Debian/Ubuntu)</b></summary>
 
 ```bash
-sudo apt update && sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+sudo apt update && sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 ```
 </details>
 
 ## Quick start
 
-1. Launch DBFlow and upload one or more supported tabular files with the **Upload** button.
-2. Build your pipeline by clicking operations in the sidebar (a locked step adds the steps it needs), by describing it in the text box, or by typing a request such as "normalize to 3NF and generate SQL".
-3. Press **Run**.
-4. Open the **Output** tab to browse the ERD, SQL DDL, FDs, keys, cardinalities and the full report — then download what you need.
+1. Launch DBFlow and give your first workspace a name.
+2. Load one or more files with **Upload**.
+3. Build a pipeline: type a goal such as *"normalize to 3NF, check lossless join, draw an ER diagram and generate SQL for PostgreSQL"* and press **Build**, or click operations in the sidebar (a locked step adds the steps it needs first).
+4. Press **Run**, or **Output** to run and open the results in one go.
+5. Browse the results: normal forms, dependencies, keys, cardinalities, the lossless-join and preservation checks, the ER diagram, the SQL schema, the generated files and the full report. Rename any new table, then download what you need.
 
-## Workspace tabs
+## The pipeline
 
-Work on several datasets at once: each tab is a separate workspace with its own pipeline, files and results, and long runs keep going in the background while you use another tab. `Ctrl/Cmd+T` opens a tab, `Ctrl/Cmd+W` closes it, `Ctrl+Tab` switches, rename a tab with its pencil button, double-click, `F2` or right-click. Tabs live as long as the app is open (they are not saved between launches; use the Save button to keep a pipeline).
+A pipeline is a chain of these 19 operations. Each one lists the steps it needs, and the planner, the canvas and the command line share this one definition ([`src/config/operations.ts`](src/config/operations.ts)).
 
-## Natural-language box
+| Phase | Operations |
+|---|---|
+| Prepare | **Data Loader** (CSV, Excel and ODS files), Data Cleaner, Atomicity Checker, Data Type Profiler, Column Classifier |
+| Analyze | FD Miner, Key Discovery, Relation Detector (cross-file foreign keys), Cardinality Analyzer |
+| Normalize | 1NF, 2NF, 3NF, BCNF, Lossless Check, Dependency Preservation |
+| Output | ERD Generator, Relation Generator, SQL Generator, Report Generator |
 
-Type a request such as *“Can you pls convert it to 1NF”* in the bar above the canvas (`Ctrl/Cmd+K` focuses it). DBFlow shows the pipeline it would build, including the steps added because others need them, and you press **Apply** or **Apply & Run**.
+Pipelines save to and load from versioned JSON (**Save** / **Open**). Older operation names, such as *CSV Data Loader* and *NER Classifier*, are still understood.
 
-Nothing extra to install: exact keywords are matched first, and a small sentence-embedding model (all-MiniLM-L6-v2, int8, 23 MB, Apache-2.0) bundled in the installer handles paraphrases the keywords miss. It runs inside the app on WebAssembly; your sentence never leaves the machine, and neither does your data. Accuracy: [docs/EVALUATION.md](docs/EVALUATION.md).
+## Outputs
+
+- **ER diagram** in Crow's foot, Chen, Barker or UML notation (Mermaid and Graphviz; copy or download as source or SVG).
+- **SQL DDL** for PostgreSQL, MySQL, SQLite or standard SQL, with sized types, `NOT NULL`, `UNIQUE`, primary and foreign keys, tables ordered parents first.
+- **Normalized data**: one CSV file per table, an INSERT script, and queries that check every foreign key after loading.
+- **Report**: what each step found and every check's verdict, shown in the app and exported as Markdown or PDF.
+
+For large inputs (more than about a million cells) the result stays compact: tables report row counts, and each table's data is exported once as CSV (the INSERT script is left out; the CSV files load faster).
+
+## Workspaces
+
+Work on several datasets at once. Each tab is a separate workspace with its own files, pipeline and results, and a run keeps going in the background while you use another tab or open a new one.
+
+- `Ctrl/Cmd+T` opens a workspace (you name it first), `Ctrl/Cmd+W` closes one, `Ctrl+Tab` switches.
+- Rename with the pencil button, a double-click, `F2` or the right-click menu; give a tab a colour with its dot.
+- Closing a workspace with work in it asks first, in the app, and stops its run. Closing the last one asks for the name of the workspace that replaces it.
+- Pressing **Output** while a run is in progress opens its results as soon as it finishes.
+
+Workspaces live as long as the app is open; use **Save** to keep a pipeline.
+
+## Request box
+
+Type a request such as *"Can you pls convert it to 1NF"* in the bar above the canvas (`Ctrl/Cmd+K` focuses it). DBFlow shows the pipeline it would build, highlights the steps you named, adds the ones they need, shows the SQL system you asked for, and you press **Apply**, **Apply & Run** or **Cancel**. **Undo last build** restores the previous canvas in one step.
+
+Exact keywords are matched first; a small sentence-embedding model (all-MiniLM-L6-v2, int8, 23 MB, Apache-2.0) bundled in the installer handles paraphrases. It runs inside the app on WebAssembly, so your sentence never leaves the machine. Accuracy: [docs/EVALUATION.md](docs/EVALUATION.md).
+
+## Naming new tables
+
+Normalization creates tables that your files did not have. The toolbar switch decides how they are named, for every workspace:
+
+- **AI names** (default): a small on-device language model (SmolLM2) suggests a name from the column names only, never from cell values. Names are marked *suggested*.
+- **Key names**: names are built from the table's key columns (`region_code` → *Region*, `order_id, line_no` → *Order Line*) and marked *from key*. No model runs, so large runs finish much sooner.
+
+Either way you can rename a table on the Output page; DBFlow remembers your name for those columns on later runs.
+
+## Scalability
+
+Measured with the native engine, all 19 operations, on a four-core laptop:
+
+| Input | Rows | Columns | Time | Peak memory |
+|---|---|---|---|---|
+| Nine related files (retail export) | 431,991 | 891 | 55 s (115 s on one core) | 7.8 GB |
+| One table | 999,999 | 9 | 16 s | 1.4 GB |
+| One table | 9,999 | 999 | 23 s | 1.8 GB |
+
+What makes this possible: dependencies are mined on a sample and validated on all rows; a nearly unique column (and every set containing it) is not used as a determinant, since two unrelated measures together are a key only by accident; keys are enumerated without trying every subset of columns; files are analysed in parallel, largest first, within a memory budget (half of the available memory by default); short text is stored inside each cell, so splitting tables copies no strings. The result does not depend on the number of threads.
+
+Reproduce it with the bundled generator, which writes a deterministic retail export (nine denormalized tables of 99 columns that copy facts such as a city and its region, linked by nine foreign keys):
+
+```bash
+cargo run --release -p dbflow-core --example demo_data -- demo                       # the nine files
+cargo run --release -p dbflow-core --example demo_data -- demo --single 999999 9      # one wide or long table
+cargo run --release -p dbflow-core --example bench -- demo/*.csv                       # time and peak memory
+```
+
+Details and limits are in [docs/EVALUATION.md](docs/EVALUATION.md). Dependencies are those that hold on your data: on wide tables some are coincidental (customer, employee and date together may identify an order), and they appear in the report as such.
 
 ## Command line
 
@@ -112,55 +175,77 @@ bun run cli analyze data/orders.csv data/customers.csv --out out/ --dialect post
 ```
 
 Options: `--out`, `--dialect` (`postgresql`, `mysql`, `sqlite`, `ansi`), `--ops "FD Miner,3NF"`, `--max-lhs`, `--json`, `--verbose`.
-`bun run bench` scores key, foreign-key and relation recovery on ground-truth schemas (see [docs/EVALUATION.md](docs/EVALUATION.md)).
+`bun run bench` scores key, foreign-key and relation recovery on ground-truth schemas, and `bun run bench:nl` scores the request box.
+
+## Quality
+
+DBFlow is evaluated against the ISO/IEC 25010 product quality model of the SQuaRE (ISO/IEC 25000) series; [docs/QUALITY.md](docs/QUALITY.md) records the requirement, the evidence and the limits for every characteristic. This is a self-assessment, not a certification.
+
+| Command | What it checks |
+|---|---|
+| `bun run quality` | typecheck, lint, all frontend and Rust tests, production-dependency audit |
+| `bun run test` / `bun run test:rust` | the frontend and the Rust test suites |
+| `bun run audit:a11y` | WCAG 2.1 AA with axe-core on every page, light and dark |
+| `bun run audit:design` | design-rule consistency (type, buttons, cards, radii) |
 
 ## Architecture at a glance
 
 ```
 ┌──────────────────────────── WebView (UI only) ─────────────────────────────┐
 │  React + TypeScript + Tailwind CSS + React Flow                            │
-│  ├─ Workflow canvas (nodes = pipeline operations)                          │
-│  └─ Output pages (diagrams, SQL, reports), on-device naming model          │
+│  ├─ Workspaces: pipeline canvas, request box, operation palette            │
+│  └─ Output pages (diagrams, SQL, reports); on-device models in workers     │
 └──────────────────────────────────┬─────────────────────────────────────────┘
-                                   │ Tauri commands (desktop) / WebAssembly (browser)
+                                   │ Tauri commands (desktop) / WebAssembly (browser, CLI)
 ┌──────────────────────────────────▼─────────────────────────────────────────┐
 │  Rust engine (crates/dbflow-core): tabular input · cleaning ·              │
 │  FD mining · keys · 1NF/2NF/3NF/BCNF · chase and preservation checks ·     │
-│  foreign keys · schema · ERD · SQL · reports                               │
+│  cross-file foreign keys · schema · ERD · SQL · reports                    │
+│  parallel per file (native) · memory budget · compact results              │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Read the full story in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-For current package versions, see [`package.json`](package.json) and [`Cargo.lock`](Cargo.lock).
+All computation is in Rust; TypeScript only drives the interface. Read the full story in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Project structure
 
 ```
 dbflow/
-├── src/                  # React frontend
-│   ├── components/       # UI components (canvas nodes, panels, output views)
-│   ├── hooks/            # Reusable state logic (workflow graph, execution)
+├── src/                  # React frontend (UI only)
+│   ├── components/       # Canvas nodes, dialogs, panels, output views
+│   ├── hooks/            # Workspace tabs, workflow graph, runs, naming switch
 │   ├── engine/           # Bridge to the Rust engine (WebAssembly loader, JSON calls)
-│   ├── services/         # Thin TypeScript APIs over the engine, NL workflow builder
+│   ├── services/         # Thin APIs over the engine, request-box resolver, naming model
+│   ├── workers/          # Web Workers: engine, embedding model, naming model
 │   ├── config/           # Operation registry
 │   └── utils/            # Pure helpers (validation, edge rules, result cache)
 ├── crates/
-│   ├── dbflow-core/      # The Rust engine: every parser and algorithm
+│   ├── dbflow-core/      # The Rust engine; examples/ holds the bench and demo-data generator
 │   └── dbflow-wasm/      # WebAssembly bindings of the engine
 ├── src-tauri/            # Desktop shell: window, CSP, native engine commands
-├── docs/                 # Architecture & release docs
+├── scripts/              # CLI, benchmarks, accessibility and design audits
+├── docs/                 # Architecture, design, evaluation, quality, releasing
 └── .github/              # CI, release automation, issue/PR templates
 ```
 
+| Document | Contents |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Structure, data flow, algorithms, parallelism and memory |
+| [EVALUATION.md](docs/EVALUATION.md) | Key, foreign-key and relation recovery; request-box accuracy; scalability |
+| [QUALITY.md](docs/QUALITY.md) | ISO/IEC 25010 self-assessment and how to re-run it |
+| [DESIGN.md](docs/DESIGN.md) | Interface design rules |
+| [RELEASING.md](docs/RELEASING.md) | How a release is cut |
+| [CHANGELOG.md](CHANGELOG.md) | What changed in each version |
+
 ## Contributing
 
-Contributions are welcome — code, docs, bug reports, feature ideas! See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started. Good first issues are labeled [`good first issue`](https://github.com/miskatul-anwar/dbflow/labels/good%20first%20issue).
+Contributions are welcome: code, docs, bug reports, feature ideas. See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started. Good first issues are labeled [`good first issue`](https://github.com/miskatul-anwar/dbflow/labels/good%20first%20issue).
 
-Please read our [`Code of Conduct`](CODE_OF_CONDUCT.md) — be kind, be constructive.
+Please read our [`Code of Conduct`](CODE_OF_CONDUCT.md): be kind, be constructive.
 
 ## Security
 
-Found a vulnerability? Please follow our [security policy](SECURITY.md) and report privately — do not open a public issue.
+Found a vulnerability? Please follow our [security policy](SECURITY.md) and report privately; do not open a public issue.
 
 ## License
 
@@ -175,4 +260,3 @@ If DBFlow saves you time, please consider starring the repo to help others disco
 [Report Bug](https://github.com/miskatul-anwar/dbflow/issues/new?template=bug_report.yml) · [Request Feature](https://github.com/miskatul-anwar/dbflow/issues/new?template=feature_request.yml)
 
 </div>
-
