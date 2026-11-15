@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.6.0] - 2026-11-15
+
+### Added
+- **Android app.** Each release now includes `DBFlow_<version>_android_arm64.apk` (Android 7 or newer, 64-bit ARM). It runs the same Rust engine as the desktop app, entirely on the phone. The download page has an Android tab and picks it on Android phones. The release workflow builds and signs the APK and attaches it to the release; signing uses the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`.
+
+### Fixed
+- Downloads (SQL, CSV, diagrams, reports, PDF and saved workflows) all go through one helper. On Android, where the WebView ignores download links, it opens the system *Save as* screen and writes the file there.
+- On a phone-width screen the toolbar buttons overlapped and *Output* was cut off; the toolbar now wraps onto two rows. On the Output page *Back to workflow* ran into the title; below 640 px it shows the arrow only.
+
 ## [6.5.2] - 2026-11-15
 
 ### Added
