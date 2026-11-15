@@ -83,6 +83,62 @@ jobs:
       - name: Tests (engine and desktop shell)
         run: cargo test --workspace
 
+  android-signing:
+    name: Android signing key
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Decodes the release keystore and signs a test file with it, so a missing, mistyped or rotated secret shows
+      # up here and not in the middle of a release. Only the certificate fingerprint is printed.
+      - name: Check the signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Pull requests from forks and from Dependabot receive no repository secrets.
+          NO_SECRETS_EXPECTED: ${{ github.actor == 'dependabot[bot]' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64$KEYSTORE_PASSWORD$KEY_ALIAS$KEY_PASSWORD" ] && [ "$NO_SECRETS_EXPECTED" = "true" ]; then
+            echo "::notice::No repository secrets for this run (fork or Dependabot); the signing key is not checked."
+            exit 0
+          fi
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The secret ANDROID_${name} is not set (Settings > Secrets and variables > Actions)."
+              exit 1
+            fi
+          done
+          store="$RUNNER_TEMP/release.jks"
+          if ! echo "$KEYSTORE_BASE64" | base64 --decode > "$store" 2>/dev/null || [ ! -s "$store" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64."
+            exit 1
+          fi
+          if ! keytool -list -keystore "$store" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > "$RUNNER_TEMP/list.txt" 2>&1; then
+            echo "::error::The keystore cannot be opened with ANDROID_KEYSTORE_PASSWORD, or it has no key named ANDROID_KEY_ALIAS."
+            grep -iE 'error|exception' "$RUNNER_TEMP/list.txt" | head -n 3 || true
+            exit 1
+          fi
+          # Signing needs the key password too.
+          cd "$RUNNER_TEMP"
+          echo "signing check" > check.txt
+          jar cf check.jar check.txt
+          if ! jarsigner -keystore "$store" -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" check.jar "$KEY_ALIAS" > sign.txt 2>&1; then
+            echo "::error::Signing failed: ANDROID_KEY_PASSWORD does not unlock the key."
+            exit 1
+          fi
+          jarsigner -verify check.jar > /dev/null
+          fingerprint="$(keytool -list -v -keystore "$store" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep -m1 'SHA256:' | sed 's/.*SHA256: *//')"
+          echo "The signing key works. Certificate SHA-256: $fingerprint"
+          echo "### Android signing key works" >> "$GITHUB_STEP_SUMMARY"
+          echo "Certificate SHA-256: \`$fingerprint\`" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$store"
+
   android:
     name: Android (unsigned APK)
     # Skipped only when the release workflow passes android: false (inputs are empty on other events).
