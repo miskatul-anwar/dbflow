@@ -6,6 +6,7 @@
  */
 import { marked, type Token, type Tokens } from 'marked';
 import type { jsPDF } from 'jspdf';
+import { saveFile } from './saveFile';
 
 // Built-in PDF fonts are WinAnsi only: map the symbols reports use, drop the rest.
 const SYMBOLS: Record<string, string> = {
@@ -138,5 +139,6 @@ export async function markdownToPdf(markdown: string, title = 'Report'): Promise
 }
 
 export async function downloadMarkdownAsPdf(markdown: string, filename: string, title?: string): Promise<void> {
-  (await markdownToPdf(markdown, title ?? filename)).save(filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+  const doc = await markdownToPdf(markdown, title ?? filename);
+  await saveFile(filename.endsWith('.pdf') ? filename : `${filename}.pdf`, doc.output('blob'));
 }

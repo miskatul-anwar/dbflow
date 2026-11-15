@@ -26,6 +26,7 @@ const fixture = {
     asset("DBFlow_6.0.0_amd64.AppImage"),
     asset("DBFlow_6.0.0_amd64.deb"),
     asset("DBFlow-6.0.0-1.x86_64.rpm"),
+    asset("DBFlow_6.0.0_android_arm64.apk"),
     asset("DBFlow_aarch64.app.tar.gz"),
     asset("DBFlow_6.0.0_x64-setup.exe", {
       browser_download_url: "https://example.com/bad.exe",
@@ -33,9 +34,9 @@ const fixture = {
   ],
 };
 
-test("lists only the seven installable, trusted release assets in useful order", () => {
+test("lists only the eight installable, trusted release assets in useful order", () => {
   const files = getInstallers(fixture);
-  assert.equal(files.length, 7);
+  assert.equal(files.length, 8);
   assert.deepEqual(
     files.map((file) => file.kind),
     [
@@ -46,6 +47,7 @@ test("lists only the seven installable, trusted release assets in useful order",
       "AppImage",
       "DEB package",
       "RPM package",
+      "APK",
     ],
   );
   assert.ok(
@@ -87,6 +89,11 @@ test("detects common desktop, mobile, and ARM platforms", () => {
     detectSystem({ platform: "MacIntel", userAgent: "Macintosh" }).id,
     "macos",
   );
+  assert.deepEqual(
+    detectSystem({ platform: "Linux armv81", userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 7)" }),
+    { id: "android", arch: null },
+  );
+  assert.equal(classifyAsset(asset("DBFlow_7.0.0_android_arm64.apk")).system, "android");
 });
 
 test("formats size and accepts only GitHub SHA-256 digests", () => {

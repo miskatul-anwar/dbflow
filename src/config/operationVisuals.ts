@@ -54,6 +54,7 @@ export const OPERATION_VISUALS: Record<string, OperationVisual> = {
   '2nf': { glyph: '2NF' },
   '3nf': { glyph: '3NF' },
   'bcnf': { glyph: 'BCNF' },
+  '4nf': { glyph: '4NF' },
   'fd-miner': { icon: GitBranch },
   'key-discovery': { icon: KeyRound },
   'relation-detector': { icon: Link2 },

@@ -116,7 +116,7 @@ file or for every file.
    swapping in the left side of a dependency, so the work is polynomial per key); `chooseKey` picks one that
    is unique and has no missing cells, preferring identifier-like single
    columns, and adds a `row_id` surrogate when none exists.
-6. **Normalize** — 1NF (non-destructive), 2NF, Bernstein 3NF synthesis, BCNF
+6. **Normalize** — 1NF (non-destructive), 2NF, Bernstein 3NF synthesis, BCNF, 4NF (multivalued dependencies mined on the data, Fagin decomposition, chase with MVDs; `crates/dbflow-core/src/mvd.rs`)
    decomposition.
 7. **Verify** — chase (lossless with respect to the FDs), re-join of the
    projections on the data (lossless on this data), and dependency
@@ -201,6 +201,8 @@ Windows and macOS. The Vitest suite exercises the Rust engine through its WebAss
 
 ## Release engineering
 
-Tag-driven: pushing `vX.Y.Z` triggers `.github/workflows/release.yml`, which
-builds installers (MSI, DMG x2 arches, deb/rpm/AppImage) via `tauri-action`
-and publishes a GitHub Release. See `docs/RELEASING.md`.
+Tag-driven: pushing `vX.Y.Z` triggers `.github/workflows/release.yml`. It checks that the tag matches the
+version everywhere and creates a draft release. It runs the full CI, then builds the desktop installers
+(MSI and EXE, DMG for two architectures, deb, rpm and AppImage, via `tauri-action`) and the signed Android APK
+in parallel. It publishes the release only when every file is attached, with a `SHA256SUMS.txt`. See
+`docs/RELEASING.md`.

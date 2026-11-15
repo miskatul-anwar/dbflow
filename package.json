@@ -1,6 +1,6 @@
 {
   "name": "dbflow",
-  "description": "Turn raw CSV files into normalized database schemas \u2014 ERDs, SQL DDL and normalization reports. Local-first desktop app: a Rust engine (native in Tauri, WebAssembly in the browser) with a React UI.",
+  "description": "Turn raw CSV files into normalized database schemas — ERDs, SQL DDL and normalization reports. Local-first desktop app: a Rust engine (native in Tauri, WebAssembly in the browser) with a React UI.",
   "keywords": [
     "erd",
     "entity-relationship-diagram",
@@ -17,7 +17,7 @@
   ],
   "license": "MIT",
   "private": true,
-  "version": "6.5.2",
+  "version": "6.6.0",
   "type": "module",
   "repository": {
     "type": "git",
@@ -33,6 +33,7 @@
   },
   "scripts": {
     "build:engine": "node scripts/build-engine.mjs",
+    "check:version": "node scripts/check-version.mjs",
     "predev": "node scripts/build-engine.mjs && node scripts/prepare-nl-assets.mjs",
     "dev": "vite",
     "prebuild": "node scripts/build-engine.mjs && node scripts/prepare-nl-assets.mjs",
@@ -61,6 +62,8 @@
     "@radix-ui/react-slot": "^1.5.0",
     "@tailwindcss/vite": "^4.3.5",
     "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-fs": "^2",
     "@tauri-apps/plugin-notification": "^2.8.1",
     "@xyflow/react": "^12.12.1",
     "class-variance-authority": "^0.7.1",

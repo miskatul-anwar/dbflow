@@ -736,3 +736,147 @@ fn office_files_that_are_not_spreadsheets_are_named() {
         "{reasons}"
     );
 }
+
+// ----- 4NF --------------------------------------------------------------------------------------
+
+fn ops_with_4nf() -> Vec<String> {
+    let mut o = ops();
+    let at = o.iter().position(|x| x == "BCNF").unwrap() + 1;
+    o.insert(at, "4NF".into());
+    o
+}
+
+/// A course's teachers and books are independent: every teacher is listed with every book. Teachers and books
+/// are shared between courses, so no functional dependency holds (the table is in BCNF).
+fn course_teacher_book() -> String {
+    let mut out = String::from("course,teacher,book\n");
+    for (course, teachers, books) in [
+        ("Databases", &["Ann", "Bob"][..], &["Date", "Ullman", "Lang"][..]),
+        ("Physics", &["Cy", "Ann"][..], &["Feynman", "Date"][..]),
+        ("Algebra", &["Bob", "Dee"][..], &["Lang", "Artin"][..]),
+        ("Biology", &["Cy", "Eve", "Dee"][..], &["Raven", "Feynman"][..]),
+    ] {
+        for t in teachers {
+            for b in books {
+                out.push_str(&format!("{course},{t},{b}\n"));
+            }
+        }
+    }
+    out
+}
+
+fn attr_sets(v: &Value) -> Vec<Vec<String>> {
+    let mut s: Vec<Vec<String>> = v
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| {
+            let mut a: Vec<String> = r["attributes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|x| x.as_str().unwrap().to_string())
+                .collect();
+            a.sort();
+            a
+        })
+        .collect();
+    s.sort();
+    s
+}
+
+#[test]
+fn fourth_normal_form_splits_independent_multivalued_facts() {
+    let r = process(
+        vec![file("ctb.csv", &course_teacher_book())],
+        ops_with_4nf(),
+        json!({ "namingMode": "rules" }),
+    );
+    assert_eq!(r["success"], json!(true), "{}", r["error"]);
+    // No functional dependency holds, so BCNF keeps the one all-key table.
+    assert_eq!(attr_sets(&r["bcnf"]), vec![vec!["book", "course", "teacher"]]);
+    // 4NF splits it on course ->> teacher | book.
+    let expected = vec![
+        vec!["book".to_string(), "course".to_string()],
+        vec!["course".to_string(), "teacher".to_string()],
+    ];
+    assert_eq!(attr_sets(&r["relations4NF"]), expected);
+    assert_eq!(attr_sets(&r["relations"]), expected, "the 4NF set is the final schema");
+    let m = &r["multivaluedDependencies"][0];
+    assert_eq!(m["lhs"], json!(["course"]));
+    assert_eq!(r["multivaluedDependencies"].as_array().unwrap().len(), 1);
+    // The split is proven lossless by the chase with the MVD, and confirmed on the data.
+    assert_eq!(r["losslessCheck"]["isLossless"], json!(true), "{}", r["losslessCheck"]);
+    assert_eq!(r["losslessCheck"]["chaseLossless"], json!(true));
+    let files: Vec<&str> = r["outputFiles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["name"].as_str().unwrap())
+        .collect();
+    assert!(
+        files.contains(&"relations_4nf.json") && files.contains(&"multivalued_dependencies.json"),
+        "{files:?}"
+    );
+    let report = r["outputFiles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["name"] == "process_report.md")
+        .unwrap()["content"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        report.contains("Fourth Normal Form (4NF)") && report.contains("{course} ->>"),
+        "{report}"
+    );
+    let sql = r["outputFiles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["type"] == "sql")
+        .unwrap()["content"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(sql.matches("CREATE TABLE").count(), 2, "{sql}");
+}
+
+#[test]
+fn fourth_normal_form_leaves_tables_without_multivalued_dependencies_alone() {
+    let r = process(
+        vec![file("orders.csv", &orders_csv())],
+        ops_with_4nf(),
+        json!({ "namingMode": "rules" }),
+    );
+    assert_eq!(r["success"], json!(true), "{}", r["error"]);
+    assert_eq!(r["multivaluedDependencies"], json!([]));
+    assert_eq!(attr_sets(&r["relations4NF"]), attr_sets(&r["bcnf"]));
+}
+
+#[test]
+fn fourth_normal_form_in_a_multi_file_run() {
+    let r = process(
+        vec![
+            file("ctb.csv", &course_teacher_book()),
+            file("orders.csv", &orders_csv()),
+        ],
+        ops_with_4nf(),
+        json!({ "namingMode": "rules" }),
+    );
+    assert_eq!(r["success"], json!(true), "{}", r["error"]);
+    let ctb = r["tables"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["tableName"] == "ctb")
+        .unwrap();
+    assert_eq!(ctb["multivaluedDependencies"].as_array().unwrap().len(), 1);
+    assert_eq!(attr_sets(&ctb["fourthNormalForm"]).len(), 2);
+    assert_eq!(
+        attr_sets(&ctb["thirdNormalForm"]).len(),
+        2,
+        "the final set (3NF slot) is the 4NF one"
+    );
+}

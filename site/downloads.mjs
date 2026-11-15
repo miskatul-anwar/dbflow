@@ -5,6 +5,7 @@ export const SYSTEMS = [
   { id: "windows", name: "Windows" },
   { id: "macos", name: "macOS" },
   { id: "linux", name: "Linux" },
+  { id: "android", name: "Android" },
 ];
 
 export function detectSystem(navigatorInfo) {
@@ -12,8 +13,9 @@ export function detectSystem(navigatorInfo) {
     navigatorInfo.userAgentData?.platform || navigatorInfo.platform || "";
   const userAgent = navigatorInfo.userAgent || "";
   const source = `${platform} ${userAgent}`;
+  if (/android/i.test(source)) return { id: "android", arch: null };
   if (
-    /android|iphone|ipad|ipod/i.test(source) ||
+    /iphone|ipad|ipod/i.test(source) ||
     (/mac/i.test(platform) && navigatorInfo.maxTouchPoints > 1)
   ) {
     return { id: "mobile", arch: null };
@@ -68,6 +70,14 @@ export function classifyAsset(asset) {
       detail: "Debian and Ubuntu",
       arch: arm ? "arm64" : "x64",
       rank: 2,
+    };
+  if (/\.apk$/i.test(name))
+    return {
+      system: "android",
+      kind: "APK",
+      detail: "Phones and tablets with Android 7 or newer",
+      arch: arm || !/x86|x64/i.test(name) ? "arm64" : "x64",
+      rank: 1,
     };
   if (/\.rpm$/i.test(name))
     return {

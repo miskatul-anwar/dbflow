@@ -12,7 +12,7 @@ export const TERMINAL_OPERATIONS = new Set<string>([
   'Report Generator',
 ]);
 
-const NORMALIZATION_NODES = new Set<string>(['1NF', '2NF', '3NF', 'BCNF']);
+const NORMALIZATION_NODES = new Set<string>(['1NF', '2NF', '3NF', 'BCNF', '4NF']);
 
 export type EdgeConnectionCandidate =
   | Connection
@@ -115,7 +115,7 @@ export function validateEdgeConnection(
         if (NORMALIZATION_NODES.has(sourceLabel) && NORMALIZATION_NODES.has(targetLabel)) {
           return {
             isValid: false,
-            error: `Normalization forms must proceed in forward order: 1NF → 2NF → 3NF → BCNF (cannot connect '${sourceLabel}' backwards to '${targetLabel}').`,
+            error: `Normalization forms must proceed in forward order: 1NF → 2NF → 3NF → BCNF → 4NF (cannot connect '${sourceLabel}' backwards to '${targetLabel}').`,
           };
         }
         return {
@@ -138,10 +138,10 @@ export function validateEdgeConnection(
 
   // 8. Specific prerequisite / dependency rules
   if (targetLabel === 'SQL Generator') {
-    if (sourceLabel !== 'Relation Generator' && sourceLabel !== '3NF' && sourceLabel !== 'BCNF') {
+    if (sourceLabel !== 'Relation Generator' && sourceLabel !== '3NF' && sourceLabel !== 'BCNF' && sourceLabel !== '4NF') {
       return {
         isValid: false,
-        error: `'SQL Generator' must receive input from 'Relation Generator', 'BCNF', or '3NF'.`,
+        error: `'SQL Generator' must receive input from 'Relation Generator', '4NF', 'BCNF', or '3NF'.`,
       };
     }
   }

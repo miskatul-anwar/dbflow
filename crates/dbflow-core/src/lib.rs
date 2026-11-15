@@ -78,6 +78,7 @@ pub mod input_check;
 pub mod js;
 pub mod keys;
 pub mod legacy;
+pub mod mvd;
 pub mod naming;
 pub mod normalization;
 pub mod pipeline;

@@ -4,24 +4,14 @@
  * Date: 2025-07-30 05:40:38 UTC
  */
 
+import { saveFileInBackground } from '../../utils/saveFile';
+
 export class FileUtils {
   /**
    * Download content as a file
    */
   static downloadAsFile(content: string, filename: string, mimeType: string = 'text/plain'): void {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.style.display = 'none';
-    
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    URL.revokeObjectURL(url);
+    saveFileInBackground(filename, content, mimeType);
   }
 
   /**

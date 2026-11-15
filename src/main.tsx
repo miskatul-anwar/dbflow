@@ -4,9 +4,11 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import '@xyflow/react/dist/style.css';
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { wantsMobileUi } from './utils/platform';
+import { modelNamingChosen, setModelNaming } from './services/naming/userNames';
 import './styles/theme.css';
 import { initTheme } from './theme/theme';
 import { initEngine } from './engine';
@@ -14,11 +16,23 @@ import { initEngine } from './engine';
 // Set data-theme before the first render so there is no flash of the wrong theme.
 initTheme();
 
+// The phone interface (Android app) is its own bundle; the desktop interface is unchanged.
+const MobileApp = lazy(() => import('./mobile/MobileApp'));
+const mobile = wantsMobileUi();
+// On a phone the naming model is slow, so names come from key columns until the user switches it on.
+if (mobile && !modelNamingChosen()) setModelNaming(false);
+
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 const render = () =>
   root.render(
     <React.StrictMode>
-      <App />
+      {mobile ? (
+        <Suspense fallback={null}>
+          <MobileApp />
+        </Suspense>
+      ) : (
+        <App />
+      )}
     </React.StrictMode>
   );
 

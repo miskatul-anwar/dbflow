@@ -159,5 +159,5 @@ Please use the issue templates so we can reproduce quickly. For bugs include:
 
 ## Releasing
 
-Maintainers only — see [`docs/RELEASING.md`](docs/RELEASING.md). In short: bump versions, update `CHANGELOG.md`, tag `vX.Y.Z`, and CI builds installers for all platforms automatically.
+Maintainers only: see [`docs/RELEASING.md`](docs/RELEASING.md). In short, update `CHANGELOG.md` and bump the version (`bun run check:version` confirms the files agree). Merge to `main` and tag `vX.Y.Z`. The release workflow then builds the desktop and Android apps, checks them, and publishes them together.
 

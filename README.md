@@ -13,7 +13,7 @@
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
 [![Engine: Rust](https://img.shields.io/badge/Engine-Rust-b7410e?logo=rust&logoColor=white)](crates/dbflow-core)
 
-*One desktop app from raw tables to 1NF, 2NF, 3NF or BCNF, an ER diagram and SQL. Private by design: your data never leaves your machine.*
+*One app from raw tables to 1NF, 2NF, 3NF, BCNF or 4NF, an ER diagram and SQL. Private by design: your data never leaves your machine.*
 
 </div>
 
@@ -32,8 +32,8 @@ Drop in one or many files: CSV, Excel workbooks and templates (`.xlsx`, `.xlsm`,
 - **mines the functional dependencies** that hold on every row (partition refinement, sampled and validated on the full data);
 - **finds every candidate key** (attribute closure and Lucchesi–Osborn enumeration) and picks an identifier-like primary key;
 - **finds foreign keys across files** (inclusion dependencies scored by containment, coverage, name and type);
-- **normalizes** to 1NF, 2NF, 3NF (Bernstein synthesis) or BCNF;
-- **verifies every split**: a chase proves the join lossless, a re-join of your rows confirms it, and a projected-closure test reports which dependencies are preserved;
+- **normalizes** to 1NF, 2NF, 3NF (Bernstein synthesis), BCNF or 4NF (multivalued dependencies mined on your data);
+- **verifies every split**: a chase (with functional and multivalued dependencies) proves the join lossless, a re-join of your rows confirms it, and a projected-closure test reports which dependencies are preserved;
 - **generates** an ER diagram, SQL DDL, the normalized data and a report.
 
 ## Highlights
@@ -59,9 +59,13 @@ Use the [**download page**](https://miskatul-anwar.github.io/dbflow/), which pic
 | Windows | `.msi` / `.exe` |
 | macOS | `.dmg` / `.app` |
 | Linux | `.deb` / `.rpm` / `.AppImage` |
+| Android 7 or newer (64-bit ARM) | `.apk` |
 
 > [!NOTE]
 > macOS builds are unsigned. On first launch right-click → **Open**, or allow the app under *System Settings → Privacy & Security*. The Windows installer is not code-signed either, so SmartScreen may ask you to choose *More info → Run anyway*.
+
+> [!NOTE]
+> **Android.** The app is not in the Play Store. Open the `.apk` on the phone and allow your browser or file manager to install apps when Android asks. It runs the same engine as the desktop app, entirely on the phone, with an interface made for touch on phones and tablets and the same features: workspaces, *Data*, *Pipeline* and *Results* screens behind a bottom bar, goals, the request box with its plan preview, and a step checklist with undo, redo, open and save instead of the canvas. Files are chosen with the system file picker, and downloads open a *Save as* screen. Large inputs need a phone with plenty of memory. AI table names are off by default on a phone (Settings turns them on).
 
 ### Build from source
 
@@ -98,16 +102,27 @@ sudo apt update && sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatan
 
 ## The pipeline
 
-A pipeline is a chain of these 19 operations. Each one lists the steps it needs, and the planner, the canvas and the command line share this one definition ([`src/config/operations.ts`](src/config/operations.ts)).
+A pipeline is a chain of these 20 operations. Each one lists the steps it needs, and the planner, the canvas and the command line share this one definition ([`src/config/operations.ts`](src/config/operations.ts)).
 
 | Phase | Operations |
 |---|---|
 | Prepare | **Data Loader** (CSV, Excel and ODS files), Data Cleaner, Atomicity Checker, Data Type Profiler, Column Classifier |
 | Analyze | FD Miner, Key Discovery, Relation Detector (cross-file foreign keys), Cardinality Analyzer |
-| Normalize | 1NF, 2NF, 3NF, BCNF, Lossless Check, Dependency Preservation |
+| Normalize | 1NF, 2NF, 3NF, BCNF, 4NF, Lossless Check, Dependency Preservation |
 | Output | ERD Generator, Relation Generator, SQL Generator, Report Generator |
 
 Pipelines save to and load from versioned JSON (**Save** / **Open**). Older operation names, such as *CSV Data Loader* and *NER Classifier*, are still understood.
+
+## Fourth normal form
+
+BCNF only looks at functional dependencies. A table can be in BCNF and still repeat facts when it holds two independent lists about the same thing. A course's teachers and its books are an example: every teacher is stored once for every book. That is a **multivalued dependency**, `course ->> teacher`. The 4NF step finds these on your data, then splits the table into `(course, teacher)` and `(course, book)`.
+
+- **Exact test.** For every `course`, the rows must be every combination of its teachers and its books.
+- **Evidence required.** At least one course must have several teachers and several books, so the dependency is not an accident of the data. A functional dependency is left to BCNF.
+- **Proven lossless.** The chase uses the multivalued dependencies too, so each split is proven lossless. Re-joining your rows then confirms it.
+- **Limits.** Relations of up to 16 columns are searched, with up to two columns on each side of a dependency. The search has a 15-second time limit per table.
+
+The *Normal Forms* view has a 4NF tab that lists each dependency with its evidence. The report and the files `relations_4nf.json` and `multivalued_dependencies.json` show it too.
 
 ## Outputs
 
@@ -212,7 +227,7 @@ DBFlow is evaluated against the ISO/IEC 25010 product quality model of the SQuaR
                                    │ Tauri commands (desktop) / WebAssembly (browser, CLI)
 ┌──────────────────────────────────▼─────────────────────────────────────────┐
 │  Rust engine (crates/dbflow-core): tabular input · cleaning ·              │
-│  FD mining · keys · 1NF/2NF/3NF/BCNF · chase and preservation checks ·     │
+│  FD mining · keys · 1NF to 4NF · chase and preservation checks ·          │
 │  cross-file foreign keys · schema · ERD · SQL · reports                    │
 │  parallel per file (native) · memory budget · compact results              │
 └────────────────────────────────────────────────────────────────────────────┘

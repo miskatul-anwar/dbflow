@@ -7,7 +7,12 @@ dist
 dist-ssr
 target
 src-tauri/target
-src-tauri/gen
+# Tauri's generated capability schemas; the Android project under gen/android is kept.
+src-tauri/gen/schemas
+# Android release signing: never committed (CI writes these from repository secrets).
+*.jks
+*.keystore
+src-tauri/gen/android/keystore.properties
 
 # Logs
 logs

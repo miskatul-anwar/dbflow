@@ -1,42 +1,43 @@
 name: CI
 
+# Every pull request and every push to main. The release workflow calls it too (workflow_call), so nothing is
+# released that does not pass it.
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      android:
+        description: Also check that the Android app builds (the release workflow builds it itself).
+        type: boolean
+        default: true
 
+permissions:
+  contents: read
+
+# Superseded pull-request runs are cancelled; runs on main and release checks always finish.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   frontend:
-    name: Frontend (typecheck, tests, build)
+    name: Frontend (versions, typecheck, lint, tests, build)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: ./.github/actions/setup
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
+      - name: Versions agree
+        run: node scripts/check-version.mjs --changelog
 
       # The engine is Rust; the frontend tests and the web build use its WebAssembly build.
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - uses: Swatinem/rust-cache@v2
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-bindgen@0.2.130
-
-      - run: bun install --frozen-lockfile
-
       - name: Build the Rust engine (WebAssembly)
         run: bun run build:engine
 
@@ -59,27 +60,122 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: ./.github/actions/setup
         with:
-          components: clippy, rustfmt
+          frontend: "false"
+          rust-targets: ""
+          rust-components: clippy, rustfmt
+          linux-deps: "true"
 
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Install Tauri system dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
+      # Formatting does not depend on the platform: checked once.
       - name: Format check
+        if: runner.os == 'Linux'
         run: cargo fmt --all -- --check
 
+      # Clippy and the tests run everywhere: the engine and the desktop shell have platform-specific code.
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Tests (engine and desktop shell)
         run: cargo test --workspace
 
+  android-signing:
+    name: Android signing key
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Decodes the release keystore and signs a test file with it, so a missing, mistyped or rotated secret shows
+      # up here and not in the middle of a release. Only the certificate fingerprint is printed.
+      - name: Check the signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Pull requests from forks and from Dependabot receive no repository secrets.
+          NO_SECRETS_EXPECTED: ${{ github.actor == 'dependabot[bot]' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64$KEYSTORE_PASSWORD$KEY_ALIAS$KEY_PASSWORD" ] && [ "$NO_SECRETS_EXPECTED" = "true" ]; then
+            echo "::notice::No repository secrets for this run (fork or Dependabot); the signing key is not checked."
+            exit 0
+          fi
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The secret ANDROID_${name} is not set (Settings > Secrets and variables > Actions)."
+              exit 1
+            fi
+          done
+          store="$RUNNER_TEMP/release.jks"
+          if ! echo "$KEYSTORE_BASE64" | base64 --decode > "$store" 2>/dev/null || [ ! -s "$store" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64."
+            exit 1
+          fi
+          if ! keytool -list -keystore "$store" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > "$RUNNER_TEMP/list.txt" 2>&1; then
+            echo "::error::The keystore cannot be opened with ANDROID_KEYSTORE_PASSWORD, or it has no key named ANDROID_KEY_ALIAS."
+            grep -iE 'error|exception' "$RUNNER_TEMP/list.txt" | head -n 3 || true
+            exit 1
+          fi
+          # Signing needs the key password too.
+          cd "$RUNNER_TEMP"
+          echo "signing check" > check.txt
+          jar cf check.jar check.txt
+          if ! jarsigner -keystore "$store" -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" check.jar "$KEY_ALIAS" > sign.txt 2>&1; then
+            echo "::error::Signing failed: ANDROID_KEY_PASSWORD does not unlock the key."
+            exit 1
+          fi
+          jarsigner -verify check.jar > /dev/null
+          fingerprint="$(keytool -list -v -keystore "$store" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep -m1 'SHA256:' | sed 's/.*SHA256: *//')"
+          echo "The signing key works. Certificate SHA-256: $fingerprint"
+          echo "### Android signing key works" >> "$GITHUB_STEP_SUMMARY"
+          echo "Certificate SHA-256: \`$fingerprint\`" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$store"
+
+  android:
+    name: Android (unsigned APK)
+    # Skipped only when the release workflow passes android: false (inputs are empty on other events).
+    if: format('{0}', inputs.android) != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      # The runner image includes the Android SDK; the NDK version is pinned (same as the release workflow).
+      - name: Install the Android NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.2.12479018" > /dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - uses: ./.github/actions/setup
+        with:
+          rust-targets: aarch64-linux-android,wasm32-unknown-unknown
+          cache-key: android
+
+      # No signing key here: this checks that the Android app builds. Releases are signed (release.yml).
+      - name: Build the APK
+        run: bun run tauri android build --apk --target aarch64
+
+      - name: Check the APK
+        run: |
+          apk="$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -n 1)"
+          test -n "$apk"
+          ls -l "$apk"
+          aapt2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)/aapt2"
+          badging="$("$aapt2" dump badging "$apk" | head -n 1)"
+          echo "$badging"
+          version="$(node scripts/check-version.mjs)"
+          echo "$badging" | grep -q "versionName='$version'" || { echo "APK version is not $version" >&2; exit 1; }

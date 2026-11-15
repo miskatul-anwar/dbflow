@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.6.0] - 2026-11-15
+
+### Added
+- **Fourth normal form (4NF).** A new *4NF* operation, which runs after BCNF, removes redundancy that BCNF cannot see: independent lists stored in one table, such as a course's teachers and its books.
+  - **Mining:** multivalued dependencies (`X ->> Y`) are found on the data. The test is exact: every `X` group must be the complete product of its `Y` values and its other values. A dependency is reported only with evidence, meaning at least one group where both sides vary (at least four rows). Functional dependencies are left to BCNF.
+  - **Decomposition:** Fagin's. A table `R` is split into `X ∪ Y` and `X ∪ (R − X − Y)` until no non-key left side remains.
+  - **Lossless check:** the chase uses multivalued dependencies too, so the splits are proven lossless, and re-joining the rows confirms it on the data.
+  - **Where it shows:**
+    - result fields `relations4NF` and `multivaluedDependencies`, or `fourthNormalForm` per table in a multi-file run
+    - a 4NF tab on the *Normal Forms* view, listing each dependency with its evidence
+    - a 4NF section in the report
+    - the files `relations_4nf.json`, `multivalued_dependencies.json` and one CSV per relation
+  - **Request box:** "4NF", "fourth normal form" and "multivalued dependencies" now plan it.
+  - **Android app:** a *4NF schema* goal.
+  - **Limits:** relations of up to 16 columns, up to two columns on each side, 15 seconds per table.
+- **A touch interface for the Android app (phones and tablets), with every feature of the desktop app.** The desktop interface (a canvas, side panels and many small controls) is hard to use on a touch screen, so the Android app has its own interface; the desktop app is unchanged. It is function-first: flat lists, one accent colour, 48 px touch targets, and colour only where it means something (the four phases, primary and foreign keys, errors). It runs on the desktop app's own state hooks, so features behave the same.
+  - **Workspaces:** switch, create, rename, colour and close (with a confirmation when there is work in it) from the app bar. Runs continue in the background while another workspace is open. Each workspace keeps its results, and its title follows the first file added.
+  - **Data:** the files to analyse, each with its type and size.
+  - **Pipeline:** Undo, Redo, Open and Save of workflow files (the same `.json` as the desktop app). A goal list builds a whole pipeline in one tap (3NF schema, BCNF schema, keys and foreign keys, clean and profile, all steps). The request box shows the desktop's plan preview (requested and added steps, dialect), then Replace, Extend, Apply & run, Dismiss, "did you mean" choices and Undo of the last build. The 19 steps are a filterable checklist by phase: checking a step adds its prerequisites, and unchecking it removes the steps that need it.
+  - **Running:** a panel above the bottom bar with progress, the engine's current step, the four phases and Cancel. It does not block the screen, so you can switch workspaces during a run. Run completion and failure go to the system notifications.
+  - **Results:** four numbers (tables, links, dependencies, rows), then tabs:
+    - Overview: input checks with the merge, the normalization journey or column meaning, and the new schema with PK and FK tags
+    - Tables, with renaming
+    - Diagram, in four notations, with downloads
+    - SQL: copy and save
+    - Keys, Links, Dependencies and Checks
+    - Report: Markdown and PDF
+    - Files
+  - **Settings:** AI table names (off by default on a phone, where the model is slow), dark theme, and Reset everything.
+  - **Tablets:** content keeps a readable width, and sheets open as centred dialogs.
+  - **Navigation:** Android's back button moves back through the screens. In a browser, `?ui=mobile` shows this interface.
+- **Android app.** Each release now includes `DBFlow_<version>_android_arm64.apk` (Android 7 or newer, 64-bit ARM). It runs the same Rust engine as the desktop app, entirely on the phone. The download page has an Android tab and picks it on Android phones. The release workflow builds and signs the APK and attaches it to the release; signing uses the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`.
+
+### Changed — build and release
+- **Every release contains the desktop and Android apps, published together.**
+  - **Draft first:** the release workflow creates a draft and checks that the tag matches the version in every file and that the changelog has a section for it. That section becomes the release notes.
+  - **Tested before building:** it runs the full CI, then builds the desktop installers and the signed APK in parallel. Before, Android waited for the slowest desktop build.
+  - **Complete or not published:** it publishes only when all eight installers are attached, and adds `SHA256SUMS.txt`. Before, the release went public when the first installer finished.
+  - **Android checks:** the signing secrets are required, and the APK's signature and version are checked.
+  - **Re-runs:** they reuse the draft, and an already published release is never overwritten.
+  - **Fixes:** a manual run no longer falls back to the tag `v2.4.0`, and the tag input is no longer pasted into shell code.
+- **CI:**
+  - The checks shared by every job come from one setup action (`.github/actions/setup`).
+  - The version check runs on every pull request.
+  - The format check runs once instead of on three operating systems.
+  - Runs on `main` are no longer cancelled by later pushes.
+  - Every job has a timeout, and the Android build caches Gradle and checks the APK's version.
+- **Dependabot:** it now covers the Cargo workspace at the repository root (it pointed at `src-tauri` and missed the engine crates and the lockfile), the Android Gradle project, and the shared setup action.
+- **Docs:** `docs/RELEASING.md` is rewritten for the new process.
+
+### Fixed
+- Downloads (SQL, CSV, diagrams, reports, PDF and saved workflows) all go through one helper. On Android, where the WebView ignores download links, it opens the system *Save as* screen and writes the file there.
+- On a phone-width screen the toolbar buttons overlapped and *Output* was cut off; the toolbar now wraps onto two rows. On the Output page *Back to workflow* ran into the title; below 640 px it shows the arrow only.
+
 ## [6.5.2] - 2026-11-15
 
 ### Added

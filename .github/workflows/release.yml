@@ -1,97 +1,273 @@
 name: Release
 
-# Builds signed-free installers for all platforms and publishes a GitHub Release.
-# Trigger: push a tag like v2.4.0 or dispatch manually via GitHub Actions.
+# Builds every installer, desktop and Android, and publishes them together as one GitHub release.
+#
+#   prepare  → the tag matches the app version everywhere, the changelog has a section for it;
+#              a draft release is created with that section as its notes
+#   verify   → the full CI (the Android build is checked by the android job below)
+#   desktop  → Windows, macOS (Apple Silicon and Intel) and Linux installers, uploaded to the draft
+#   android  → the signed APK, checked and uploaded to the draft         (desktop and android run in parallel)
+#   publish  → every expected file is present; SHA256SUMS.txt is added; the release is published
+#
+# Nothing is public until every file is built, so the download page never shows a partial release.
+#
+# Trigger: push a tag (vMAJOR.MINOR.PATCH), or run the workflow with a tag; a tag that does not exist yet is
+# created on the selected commit when the release is published. Re-running a failed workflow reuses its draft.
+#
+# Android signing (required): repository secrets ANDROID_KEYSTORE_BASE64 (the .jks file, base64-encoded),
+# ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD. Every release must be signed with the
+# same key, or Android refuses to install it over the previous version.
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: "Release tag name (e.g. v2.4.0)"
-        required: false
-        default: ""
+      tag:
+        description: "Version tag to release, e.g. v6.6.0 (must match the app version)"
+        required: true
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 env:
   # Fail the build if the relation-naming model cannot be fetched and verified (see scripts/prepare-nl-assets.mjs).
   NF_REQUIRE_NAMING_MODEL: "1"
 
 jobs:
-  release:
-    name: Build & Release (${{ matrix.platform }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            args: "--target aarch64-apple-darwin"
-          - platform: macos-latest
-            args: "--target x86_64-apple-darwin"
-          - platform: ubuntu-22.04
-            args: ""
-          - platform: windows-latest
-            args: ""
-
-    runs-on: ${{ matrix.platform }}
+  prepare:
+    name: Prepare (versions, notes, draft release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      release_id: ${{ steps.draft.outputs.release_id }}
     steps:
       - uses: actions/checkout@v6
-
-      - name: Determine release tag
-        id: tag
-        shell: bash
-        run: |
-          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
-            echo "tag=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=v2.4.0" >> $GITHUB_OUTPUT
-          fi
-
-      - uses: oven-sh/setup-bun@v2
 
       - uses: actions/setup-node@v6
         with:
           node-version: 24
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin,wasm32-unknown-unknown' || 'wasm32-unknown-unknown' }}
-
-      - uses: Swatinem/rust-cache@v2
-
-      # The web build embeds the WebAssembly build of the engine (scripts/build-engine.mjs).
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-bindgen@0.2.130
-
-      - name: Install Tauri system dependencies (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Resolve the tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          tag="${INPUT_TAG:-$REF_NAME}"
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$tag' is not a release tag (vMAJOR.MINOR.PATCH)."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - name: Install frontend dependencies
-        run: bun install --frozen-lockfile
+      - name: Versions agree with the tag; changelog has the version
+        id: version
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: echo "version=$(node scripts/check-version.mjs --tag "$TAG" --changelog)" >> "$GITHUB_OUTPUT"
 
-      - name: Build & upload app bundle
+      - name: Create (or reuse) the draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node scripts/release-notes.mjs "$VERSION" > "$RUNNER_TEMP/notes.md"
+          existing="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | [.id, .draft] | @tsv" | head -n 1)"
+          if [ -n "$existing" ]; then
+            read -r id draft <<< "$existing"
+            if [ "$draft" != "true" ]; then
+              echo "::error::Release $TAG is already published. Bump the version to release again."
+              exit 1
+            fi
+            gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+            echo "Reusing draft release $id"
+          else
+            gh release create "$TAG" --draft --title "DBFlow $TAG" --notes-file "$RUNNER_TEMP/notes.md" --target "$GITHUB_SHA"
+            id="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .id" | head -n 1)"
+          fi
+          test -n "$id"
+          echo "release_id=$id" >> "$GITHUB_OUTPUT"
+
+  verify:
+    name: Verify
+    needs: prepare
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      android: false
+
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    needs: [prepare, verify]
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Apple Silicon
+            os: macos-latest
+            args: --target aarch64-apple-darwin
+            targets: aarch64-apple-darwin,wasm32-unknown-unknown
+          - name: macOS Intel
+            os: macos-latest
+            args: --target x86_64-apple-darwin
+            targets: x86_64-apple-darwin,wasm32-unknown-unknown
+          - name: Linux
+            os: ubuntu-22.04
+            args: ""
+            targets: wasm32-unknown-unknown
+          - name: Windows
+            os: windows-latest
+            args: ""
+            targets: wasm32-unknown-unknown
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+        with:
+          rust-targets: ${{ matrix.targets }}
+          cache-key: ${{ matrix.name }}
+          linux-deps: "true"
+
+      - name: Build and upload the installers
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
-          tagName: ${{ steps.tag.outputs.tag }}
-          releaseName: "DBFlow ${{ steps.tag.outputs.tag }}"
-          releaseBody: |
-            See the assets below to download and install DBFlow for your platform.
-
-            **Changes**: see [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md).
-
-            > macOS builds are unsigned — right-click → Open on first launch.
-          releaseDraft: false
-          prerelease: false
+          releaseId: ${{ needs.prepare.outputs.release_id }}
           args: ${{ matrix.args }}
+
+  android:
+    name: Android (signed APK)
+    needs: [prepare, verify]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      # The runner image includes the Android SDK; the NDK version is pinned for reproducible builds.
+      - name: Install the Android NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.2.12479018" > /dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - uses: ./.github/actions/setup
+        with:
+          rust-targets: aarch64-linux-android,wasm32-unknown-unknown
+          cache-key: android
+
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The Android signing secret ANDROID_${name} is not set (Settings > Secrets and variables > Actions)."
+              exit 1
+            fi
+          done
+          store="$RUNNER_TEMP/dbflow-release.jks"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$store"
+          {
+            echo "storeFile=$store"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > src-tauri/gen/android/keystore.properties
+
+      - name: Build the APK
+        run: bun run tauri android build --apk --target aarch64
+
+      - name: Check and upload the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          apk="$(find src-tauri/gen/android/app/build/outputs/apk -name '*-release.apk' | head -n 1)"
+          if [ -z "$apk" ]; then
+            echo "::error::No signed release APK was built."
+            find src-tauri/gen/android/app/build/outputs -name '*.apk' >&2
+            exit 1
+          fi
+          tools="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)"
+          "$tools/apksigner" verify --print-certs "$apk" | head -n 2
+          "$tools/aapt2" dump badging "$apk" | head -n 1 | grep -q "versionName='$VERSION'" \
+            || { echo "::error::The APK's version is not $VERSION."; exit 1; }
+          out="DBFlow_${VERSION}_android_arm64.apk"
+          cp "$apk" "$out"
+          gh release upload "$TAG" "$out" --clobber
+
+  publish:
+    name: Publish
+    needs: [prepare, desktop, android]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Every installer is attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/assets.txt"
+          cat "$RUNNER_TEMP/assets.txt"
+          missing=0
+          for pattern in '_x64-setup\.exe$' '_x64_en-US\.msi$' '_aarch64\.dmg$' '_x64\.dmg$' \
+                         '_amd64\.AppImage$' '_amd64\.deb$' '\.x86_64\.rpm$' '_android_arm64\.apk$'; do
+            if ! grep -Eq "$pattern" "$RUNNER_TEMP/assets.txt"; then
+              echo "::error::No file matching $pattern in release $TAG."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Add SHA256SUMS.txt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+        run: |
+          # GitHub records the SHA-256 digest of every uploaded file; no download needed.
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --paginate \
+            --jq '.[] | select(.name != "SHA256SUMS.txt") | "\(.digest | ltrimstr("sha256:"))  \(.name)"' \
+            | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          if grep -qv '^[0-9a-f]\{64\}  ' SHA256SUMS.txt; then
+            echo "::error::A file has no SHA-256 digest."
+            exit 1
+          fi
+          gh release upload "$TAG" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: gh release edit "$TAG" --draft=false --latest --repo "$GITHUB_REPOSITORY"

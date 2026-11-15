@@ -26,7 +26,7 @@ describe('header layout', () => {
 
   it('keeps undo, redo and reset beside the logo, file actions in the centre, run and output on the right', () => {
     const { container } = render(<Heading />);
-    const zones = Array.from(container.querySelector('.grid')!.children) as HTMLElement[];
+    const zones = Array.from(container.querySelector('.sm\\:grid')!.children) as HTMLElement[];
     expect(zones).toHaveLength(3);
     const [left, centre, right] = zones;
     const inZone = (z: HTMLElement) => Array.from(z.querySelectorAll('button')).map(b => b.getAttribute('aria-label') ?? b.textContent);
@@ -38,8 +38,10 @@ describe('header layout', () => {
     expect(pos(centre, right)).toBe('before');
   });
 
-  it('centres the middle zone between two equal-width side columns', () => {
+  it('centres the middle zone between two equal-width side columns, and wraps the zones on a phone', () => {
     const { container } = render(<Heading />);
-    expect(container.querySelector('.grid')!.className).toContain('grid-cols-[1fr_auto_1fr]');
+    const bar = container.querySelector('.sm\\:grid')!;
+    expect(bar.className).toContain('sm:grid-cols-[1fr_auto_1fr]');
+    expect(bar.className).toContain('flex-wrap');
   });
 });

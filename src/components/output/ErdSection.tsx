@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Download, AlertCircle, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCopy } from '../../hooks/useCopy';
+import { saveFileInBackground } from '../../utils/saveFile';
 import { buildChenDot, attributeCount } from '../../services/erd/chenErd';
 import { buildBarkerDot, buildUmlDot, type BoxRelation } from '../../services/erd/boxNotations';
 import { renderDot } from '../../services/erd/renderDot';
@@ -22,14 +23,7 @@ interface Props {
   erdContent: string;
 }
 
-function save(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+const save = (blob: Blob, name: string) => saveFileInBackground(name, blob);
 
 export function ErdSection({ relations, erdContent }: Props) {
   const [notation, setNotation] = useState<Notation>('chen');

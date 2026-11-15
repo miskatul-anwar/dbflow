@@ -16,6 +16,8 @@ import { GeneratedFilesSection } from './output/GeneratedFilesSection';
 import { ReportView, NormalizationJourney } from './output/ReportView';
 import { ErdSection } from './output/ErdSection';
 import { InputChecksSection } from './output/InputChecksSection';
+import { saveFileInBackground } from '../utils/saveFile';
+import { useResultViews } from '../hooks/useResultViews';
 import { StatCard } from './output/StatCard';
 import { CodeViewer } from './output/CodeViewer';
 import { Button } from '@/components/ui/button';
@@ -61,111 +63,13 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
     return loadCachedResult(tabId);
   }, [results, tabId]);
 
-  const isMultiTable = safeResults?.isMultiTable || false;
-  const multiTables = safeResults?.tables || [];
-  const crossTableRelationships = safeResults?.crossTableRelationships || [];
-
-  const relationData = useMemo(() => {
-    if (safeResults?.relations && safeResults.relations.length > 0) return safeResults.relations;
-    if (multiTables.length > 0) {
-      return multiTables.flatMap((t: any) => t.thirdNormalForm || []);
-    }
-    return [];
-  }, [safeResults, multiTables]);
-
-  const relations1NF = useMemo(() => {
-    if (safeResults?.relations1NF && safeResults.relations1NF.length > 0) return safeResults.relations1NF;
-    if (multiTables.length > 0) {
-      return multiTables.flatMap((t: any) => t.firstNormalForm || []);
-    }
-    return [];
-  }, [safeResults, multiTables]);
-
-  const relations2NF = useMemo(() => {
-    if (safeResults?.relations2NF && safeResults.relations2NF.length > 0) return safeResults.relations2NF;
-    if (multiTables.length > 0) {
-      return multiTables.flatMap((t: any) => t.secondNormalForm || []);
-    }
-    return [];
-  }, [safeResults, multiTables]);
-
-  const relationsBCNF = useMemo(() => {
-    if (safeResults?.bcnf && safeResults.bcnf.length > 0) return safeResults.bcnf;
-    if (multiTables.length > 0) {
-      return multiTables.flatMap((t: any) => t.bcnf || []);
-    }
-    return [];
-  }, [safeResults, multiTables]);
-
-  // The ERD follows the final schema (BCNF if it ran, otherwise 3NF).
-  const erdRelations = useMemo(() => {
-    const final = safeResults?.relations;
-    if (Array.isArray(final) && final.length > 0) return final;
-    return relationsBCNF.length > 0 ? relationsBCNF : relationData;
-  }, [safeResults, relationsBCNF, relationData]);
-
-  const erdContent = safeResults?.erdContent || safeResults?.erdDiagram || '';
-  const cardinalityAnalysis = safeResults?.cardinalityAnalysis || {};
-  const losslessCheck = safeResults?.losslessCheck || null;
-  const dependencyPreservation = safeResults?.dependencyPreservation || null;
-
-  const fdData = useMemo(() => {
-    if (safeResults?.functionalDependencies && Array.isArray(safeResults.functionalDependencies)) {
-      return safeResults.functionalDependencies;
-    }
-    if (multiTables.length > 0) {
-      return multiTables.flatMap((t: any) => (t.functionalDependencies || []).map((fd: any) => ({ ...fd, table: t.tableName })));
-    }
-    if (safeResults?.outputFiles && Array.isArray(safeResults.outputFiles)) {
-      const fdFile = safeResults.outputFiles.find((f: any) => f?.name?.includes('functional_dependencies') && f?.type === 'json');
-      if (fdFile?.content && Array.isArray(fdFile.content)) {
-        return fdFile.content;
-      }
-    }
-    return [];
-  }, [safeResults, multiTables]);
-
-  const keyData = useMemo(() => {
-    if (safeResults?.candidateKeys || safeResults?.primaryKey) {
-      return {
-        candidateKeys: safeResults.candidateKeys?.map((k: any) => k.attributes || k) || [],
-        superkeys: []
-      };
-    }
-    if (multiTables.length > 0) {
-      const keys = multiTables.flatMap((t: any) => t.candidateKeys || []);
-      if (keys.length > 0) {
-        return {
-          candidateKeys: keys.map((k: any) => k.attributes || k),
-          superkeys: []
-        };
-      }
-    }
-    if (safeResults?.outputFiles && Array.isArray(safeResults.outputFiles)) {
-      const keyFile = safeResults.outputFiles.find((f: any) => f?.name?.includes('keys_analysis') && f?.type === 'json');
-      return keyFile?.content || null;
-    }
-    return null;
-  }, [safeResults, multiTables]);
+  const {
+    isMultiTable, multiTables, crossTableRelationships, relationData, relations1NF, relations2NF, relationsBCNF,
+    relations4NF, mvds, erdRelations, erdContent, cardinalityAnalysis, losslessCheck, dependencyPreservation, fdData, keyData, sqlFile, reportFile,
+  } = useResultViews(safeResults);
 
   const [activeTab, setActiveTab] = useState("overview");
   const { copied: sqlCopied, copy: copySql } = useCopy();
-
-  const sqlFile = useMemo(() => {
-    const files = safeResults?.outputFiles || [];
-    const found = files.find((f: any) => f?.type === "sql");
-    const rawContent = found?.content || safeResults?.sqlStatements || '';
-    const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent, null, 2);
-    return { content };
-  }, [safeResults]);
-
-  const reportFile = useMemo(() => {
-    const files = safeResults?.outputFiles || [];
-    const found = files.find((f: any) => f?.name?.includes("report"));
-    const rawContent = found?.content || safeResults?.reportMarkdown || '';
-    const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent, null, 2);
-    return { content };
-  }, [safeResults]);
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -179,12 +83,12 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
     {
       id: "normal-forms",
       group: "analysis",
-      description: "1NF to BCNF relations",
+      description: "1NF to 4NF relations",
       label: "Normal Forms",
       icon: <Layers className="w-4 h-4" />,
       // Relations in the final schema (the deepest normal form reached), not a sum over all levels.
-      count: relationsBCNF.length || relationData.length || relations2NF.length || relations1NF.length || 0,
-      hasData: relations1NF.length > 0 || relations2NF.length > 0 || relationData.length > 0 || relationsBCNF.length > 0
+      count: relations4NF.length || relationsBCNF.length || relationData.length || relations2NF.length || relations1NF.length || 0,
+      hasData: relations1NF.length > 0 || relations2NF.length > 0 || relationData.length > 0 || relationsBCNF.length > 0 || relations4NF.length > 0
     },
     {
       id: "functional-dependencies",
@@ -287,9 +191,9 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
         <div className="flex w-full items-center justify-between gap-3 px-3 py-1.5">
           <div className="flex min-w-0 items-center gap-3">
             <img src="/icon.png" alt="DBFlow" title="DBFlow" className="h-9 w-9 shrink-0 object-contain drop-shadow-xs" />
-            <Button onClick={() => navigate('/')} title="Return to the workflow canvas" aria-label="Back to the workflow canvas">
+            <Button onClick={() => navigate('/')} title="Return to the workflow canvas" aria-label="Back to the workflow canvas" className="shrink-0">
               <ArrowLeft />
-              <span>Back to workflow</span>
+              <span className="hidden sm:inline">Back to workflow</span>
             </Button>
           </div>
           <div className="min-w-0 text-right leading-tight">
@@ -337,6 +241,7 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
                     { id: '2NF', relations: relations2NF },
                     { id: '3NF', relations: relationData },
                     { id: 'BCNF', relations: relationsBCNF },
+                    { id: '4NF', relations: relations4NF },
                   ].filter(l => l.relations.length > 0).map(({ id, relations }) => ({ id, relations }))}
                 />
               )}
@@ -386,6 +291,8 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
               relations2NF={relations2NF}
               relations3NF={relationData}
               relationsBCNF={relationsBCNF}
+              relations4NF={relations4NF}
+              mvds={mvds}
             />
           )}
 
@@ -426,15 +333,7 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => {
-                      const blob = new Blob([sqlFile.content], { type: 'application/sql' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = 'schema.sql';
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
+                    onClick={() => saveFileInBackground('schema.sql', sqlFile.content, 'application/sql')}
                   >
                     <Download /> Download .sql
                   </Button>
@@ -456,6 +355,7 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
                 { id: '2NF', relations: relations2NF },
                 { id: '3NF', relations: relationData },
                 { id: 'BCNF', relations: relationsBCNF },
+                    { id: '4NF', relations: relations4NF },
               ].filter(l => l.relations.length > 0)}
             />
           )}
