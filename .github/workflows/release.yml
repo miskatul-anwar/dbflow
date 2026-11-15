@@ -215,7 +215,7 @@ jobs:
       - name: Check and upload the APK
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.prepare.outputs.tag }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           apk="$(find src-tauri/gen/android/app/build/outputs/apk -name '*-release.apk' | head -n 1)"
@@ -230,7 +230,7 @@ jobs:
             || { echo "::error::The APK's version is not $VERSION."; exit 1; }
           out="DBFlow_${VERSION}_android_arm64.apk"
           cp "$apk" "$out"
-          gh release upload "$TAG" "$out" --clobber
+          bash .github/scripts/upload-asset.sh "$RELEASE_ID" "$out" application/vnd.android.package-archive
 
   publish:
     name: Publish
@@ -240,12 +240,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/scripts
+
       - name: Every installer is attached
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
         run: |
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/assets.txt"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --paginate --jq '.[].name' > "$RUNNER_TEMP/assets.txt"
           cat "$RUNNER_TEMP/assets.txt"
           missing=0
           for pattern in '_x64-setup\.exe$' '_x64_en-US\.msi$' '_aarch64\.dmg$' '_x64\.dmg$' \
@@ -272,10 +277,15 @@ jobs:
             echo "::error::A file has no SHA-256 digest."
             exit 1
           fi
-          gh release upload "$TAG" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+          bash .github/scripts/upload-asset.sh "$RELEASE_ID" SHA256SUMS.txt text/plain
 
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
-        run: gh release edit "$TAG" --draft=false --latest --repo "$GITHUB_REPOSITORY"
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+        run: |
+          # The tag is created on the run's commit as the release is published.
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -f tag_name="$TAG" \
+            -f target_commitish="$GITHUB_SHA" -F draft=false -f make_latest=true \
+            --jq '"Published \(.tag_name) at \(.target_commitish): \(.html_url)"'
