@@ -54,8 +54,8 @@ function failedResolution(e: unknown): Resolution {
 }
 
 let sharedProvider: EmbeddingProvider | null = null;
-/** One embedding worker (and one copy of the model in memory) for every workspace tab. */
-function getSharedProvider(): EmbeddingProvider {
+/** One embedding worker (and one copy of the model in memory) for every workspace tab (and the phone app). */
+export function getSharedProvider(): EmbeddingProvider {
   sharedProvider ??= createAppProvider();
   return sharedProvider;
 }

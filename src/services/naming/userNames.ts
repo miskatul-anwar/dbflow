@@ -46,6 +46,15 @@ export function modelNamingEnabled(): boolean {
   }
 }
 
+/** True once the user has chosen (the switch was used on this device). */
+export function modelNamingChosen(): boolean {
+  try {
+    return localStorage.getItem(MODEL_KEY) !== null;
+  } catch {
+    return memoryChoice !== null;
+  }
+}
+
 export function setModelNaming(on: boolean): void {
   try {
     localStorage.setItem(MODEL_KEY, on ? 'on' : 'off');
