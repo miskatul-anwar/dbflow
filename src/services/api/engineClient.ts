@@ -50,7 +50,10 @@ function runNative(
       const prepared = await prepareEngineFiles(files);
       const uploads: number[] = [];
       for (const f of prepared.files) {
-        uploads.push(await invoke<number>('engine_upload', f.bytes, { headers: { 'x-file-name': encodeURIComponent(f.name) } }));
+        if (cancelled) throw new Error('Processing was cancelled.');
+        uploads.push(
+          await invoke<number>('engine_upload', f.bytes, { headers: { 'x-file-name': encodeURIComponent(f.name), 'x-run-id': runId } }),
+        );
       }
       const run = await invoke<{ session: number; naming: Array<{ key: string; columns: string[] }> }>('engine_prepare', {
         runId,

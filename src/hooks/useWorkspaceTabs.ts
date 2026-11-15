@@ -48,8 +48,11 @@ export function useWorkspaceTabs() {
     return tab.id;
   }, []);
 
-  /** Closes a tab; the last remaining tab is replaced by a fresh empty one. */
-  const closeTab = useCallback((id: string) => {
+  /**
+   * Closes a tab. The last remaining tab is replaced by a fresh empty one, named `replacementName` when given
+   * (the app asks for it first), otherwise "Workspace n".
+   */
+  const closeTab = useCallback((id: string, replacementName?: string) => {
     const current = tabsRef.current;
     const index = current.findIndex(t => t.id === id);
     if (index < 0) return;
@@ -57,7 +60,8 @@ export function useWorkspaceTabs() {
     let nextActive = activeRef.current;
     if (next.length === 0) {
       const n = ++counter.current;
-      next = [{ id: `t${n}`, title: `Workspace ${n}`, autoTitle: true, color: null }];
+      const given = replacementName?.trim().slice(0, 40);
+      next = [{ id: `t${n}`, title: given || `Workspace ${n}`, autoTitle: !given, color: null }];
       nextActive = next[0].id;
     } else if (activeRef.current === id) {
       nextActive = (next[index] ?? next[index - 1]).id;

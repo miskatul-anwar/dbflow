@@ -51,7 +51,8 @@
     "test:rust": "cargo test --workspace",
     "audit:a11y": "node scripts/a11y-audit.cjs",
     "quality": "bun run build:engine && bun run typecheck && bun run lint && vitest run && cargo test --workspace && bun audit --prod --audit-level=high",
-    "audit:ui": "node scripts/ui-audit.cjs"
+    "audit:ui": "node scripts/ui-audit.cjs",
+    "audit:design": "node scripts/consistency-audit.cjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",

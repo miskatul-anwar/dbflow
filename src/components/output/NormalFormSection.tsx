@@ -198,7 +198,8 @@ export function NormalFormSection({ relations1NF, relations2NF, relations3NF, re
 }
 
 /**
- * A relation's name with where it came from: "suggested" for the on-device model, "unnamed" when there is none, and a
+ * A relation's name with where it came from: "suggested" for the on-device model, "from key" when it was built from
+ * the key columns (AI naming off), "unnamed" when there is none, and a
  * rename box either way. A typed name is remembered for these columns and used on the next run.
  */
 function RelationTitle({ relation }: { relation: RelationSchema }) {
@@ -235,6 +236,7 @@ function RelationTitle({ relation }: { relation: RelationSchema }) {
     <>
       <span className={source === 'placeholder' ? 'italic text-gray-500' : undefined}>{shown}</span>
       {source === 'model' && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-normal text-amber-800" title="Suggested by the on-device model. Check it and rename if it is wrong.">suggested</span>}
+      {source === 'rule' && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-normal text-blue-800" title="Built from the key columns (AI naming is off). Rename it if a better name fits.">from key</span>}
       {source === 'placeholder' && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-600">unnamed</span>}
       {canRename && (
         <button type="button" onClick={() => setEditing(true)} className="text-xs font-normal text-teal-700 underline underline-offset-2 hover:text-teal-900">

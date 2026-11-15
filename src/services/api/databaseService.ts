@@ -33,6 +33,10 @@ export interface ProcessingOptions {
   sqlDialect?: SQLDialect;
   /** Writes relation names (the on-device model). Absent in tests and the CLI: relations stay "unnamed". */
   namer?: NamerFn | null;
+  /** `model`: the on-device model names new relations; `rules`: names are built from the key columns (no model). */
+  namingMode?: 'model' | 'rules';
+  /** Files analysed at once in a multi-file run (desktop app; default: one per CPU core). */
+  maxParallelFiles?: number;
   /** Names the user typed, by relation signature (see `relationSignature`). They always win over the model. */
   userNames?: Record<string, string>;
 }
