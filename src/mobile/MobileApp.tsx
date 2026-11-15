@@ -1,11 +1,11 @@
 /**
- * DBFlow for phones (the Android app). The same engine, hooks and result views as the desktop app,
- * with an interface built for touch: three screens (Data, Pipeline, Results) behind a bottom bar,
- * goals instead of a canvas, and a run sheet that shows the engine's progress.
+ * DBFlow for phones (the Android app). The same engine, hooks and result views as the desktop app, with an
+ * interface built for touch: three screens (Data, Pipeline, Results) behind a bottom bar, a goal list and a step
+ * checklist instead of the canvas, and a progress sheet while the engine runs.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- engine results are untyped (see useResultViews) */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Moon, Play, Sparkles } from 'lucide-react';
+import { Play } from 'lucide-react';
 import './mobile.css';
 import { useNormalization } from '../hooks/useNormalization';
 import { useModelNaming } from '../hooks/useModelNaming';
@@ -15,17 +15,13 @@ import { isSupportedInputName } from '../services/processors/spreadsheetProcesso
 import type { ProcessingOptions, SQLDialect } from '../services/api/databaseService';
 import { useTheme } from '../theme/theme';
 import { DEFAULT_GOAL, ordered, planForGoal, toggleStep } from './pipeline';
-import { DataScreen } from './DataScreen';
+import { DataScreen, fileSize } from './DataScreen';
 import { PipelineScreen, type AskState } from './PipelineScreen';
 import { ResultsScreen } from './ResultsScreen';
 import { RunSheet } from './RunSheet';
 import { BottomNav, Sheet, Switch, Toast, TopBar, type Screen, type ToastMessage } from './ui';
 
-const SUBTITLE: Record<Screen, string> = {
-  data: 'Step 1 · your tables',
-  pipeline: 'Step 2 · what to build',
-  results: 'Step 3 · your database',
-};
+const TITLE: Record<Screen, string> = { data: 'Data', pipeline: 'Pipeline', results: 'Results' };
 
 export default function MobileApp() {
   const [screen, setScreenState] = useState<Screen>('data');
@@ -37,7 +33,6 @@ export default function MobileApp() {
   const [settings, setSettings] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [ask, setAsk] = useState<AskState>({ busy: false, message: null, candidates: [] });
-  const [finished, setFinished] = useState(false);
   const { isProcessing, progress, processFiles, cancelProcessing } = useNormalization();
   const [aiNames, setAiNames] = useModelNaming();
   const { theme, toggle: toggleTheme } = useTheme();
@@ -81,15 +76,10 @@ export default function MobileApp() {
         say('Pick a goal or switch on at least one step.', true);
         return;
       }
-      setFinished(false);
       const result: any = await processFiles(files, ordered(steps), { sqlDialect: dialect, ...extra });
       if (result?.success) {
         setResults(result);
-        setFinished(true);
-        setTimeout(() => {
-          setFinished(false);
-          setScreen('results');
-        }, 900);
+        setScreen('results');
       } else if (result && !/cancel/i.test(result.error ?? '')) {
         say(result.error ?? 'The run failed.', true);
       }
@@ -145,9 +135,20 @@ export default function MobileApp() {
     [say, steps],
   );
 
+  const detail =
+    screen === 'data'
+      ? files.length
+        ? `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${fileSize(files.reduce((n, f) => n + f.size, 0))}`
+        : 'No files'
+      : screen === 'pipeline'
+        ? `${steps.length} of 19 steps${dialect ? ` · SQL: ${dialect}` : ''}`
+        : results
+          ? `Last run: ${results.duration ?? '—'}`
+          : 'No run yet';
+
   return (
     <div className="m-app">
-      <TopBar subtitle={SUBTITLE[screen]} onSettings={() => setSettings(true)} />
+      <TopBar title={TITLE[screen]} detail={detail} onSettings={() => setSettings(true)} />
 
       <main className={`m-screen${screen === 'pipeline' ? ' m-with-cta' : ''}`} key={screen}>
         {screen === 'data' && (
@@ -156,7 +157,6 @@ export default function MobileApp() {
             busy={isProcessing}
             onAdd={addFiles}
             onRemove={i => setFiles(prev => prev.filter((_, j) => j !== i))}
-            onNext={() => setScreen('pipeline')}
           />
         )}
         {screen === 'pipeline' && (
@@ -176,37 +176,33 @@ export default function MobileApp() {
 
       {screen === 'pipeline' && (
         <div className="m-cta">
-          <button className="m-btn m-btn-primary m-press" onClick={() => void run()} disabled={isProcessing || !steps.length}>
-            <Play fill="currentColor" />
-            {files.length ? `Run ${steps.length} steps on ${files.length} ${files.length === 1 ? 'file' : 'files'}` : 'Add tables to run'}
+          <button className="m-btn m-btn-primary m-btn-block" onClick={() => void run()} disabled={isProcessing || !steps.length || !files.length}>
+            <Play />
+            {files.length ? `Run ${steps.length} steps on ${files.length} ${files.length === 1 ? 'file' : 'files'}` : 'Add files first'}
           </button>
         </div>
       )}
 
       <BottomNav screen={screen} onGo={setScreen} files={files.length} resultsReady={freshResults} />
 
-      {(isProcessing || finished) && <RunSheet progress={progress} done={finished} onCancel={cancelProcessing} />}
+      {isProcessing && <RunSheet progress={progress} onCancel={cancelProcessing} />}
 
       {settings && (
-        <Sheet label="Settings" onClose={() => setSettings(false)}>
-          <h2 className="m-h1" style={{ fontSize: 22, marginTop: 0 }}>
-            Settings
-          </h2>
-          <div className="m-setting">
-            <Sparkles color="var(--m-normal)" />
-            <span>
-              <strong>AI table names</strong>
-              <small>A small on-device model names new tables. Off: names come from the key columns, much faster on a phone.</small>
-            </span>
-            <Switch on={aiNames} onChange={setAiNames} label="AI table names" />
-          </div>
-          <div className="m-setting">
-            <Moon color="var(--m-analyze)" />
-            <span>
-              <strong>Dark mode</strong>
-              <small>Easier on the eyes at night.</small>
-            </span>
-            <Switch on={theme === 'dark'} onChange={() => toggleTheme()} label="Dark mode" />
+        <Sheet title="Settings" onClose={() => setSettings(false)}>
+          <div className="m-group">
+            <div className="m-row">
+              <span className="m-row-text">
+                <strong>AI table names</strong>
+                <small>An on-device model names new tables. Off: names come from key columns (faster).</small>
+              </span>
+              <Switch on={aiNames} onChange={setAiNames} label="AI table names" />
+            </div>
+            <div className="m-row">
+              <span className="m-row-text">
+                <strong>Dark theme</strong>
+              </span>
+              <Switch on={theme === 'dark'} onChange={() => toggleTheme()} label="Dark theme" />
+            </div>
           </div>
         </Sheet>
       )}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Send, Sparkles } from 'lucide-react';
+import { Check, CornerDownLeft } from 'lucide-react';
 import { OPERATIONS } from '../config/operations';
 import { GOALS, PHASES, goalOf, planForGoal, phaseOf, type Phase } from './pipeline';
 
@@ -8,14 +8,6 @@ export const PHASE_COLOR: Record<Phase, string> = {
   ANALYZE: 'var(--m-analyze)',
   NORMAL: 'var(--m-normal)',
   OUTPUT: 'var(--m-output)',
-};
-
-const GOAL_COLOR: Record<string, string> = {
-  '3nf': 'var(--m-normal)',
-  bcnf: '#6d28d9',
-  keys: 'var(--m-analyze)',
-  profile: 'var(--m-prep)',
-  all: 'var(--m-output)',
 };
 
 export interface AskState {
@@ -43,61 +35,50 @@ export function PipelineScreen({
   const current = goalOf(steps);
   const all = Object.keys(OPERATIONS);
   return (
-    <div className="m-enter">
-      <h1 className="m-h1">What should we build?</h1>
-      <p className="m-lead">Pick a goal, or just say it. You can switch single steps on and off below.</p>
-
-      <div className="m-goals" role="group" aria-label="Goals">
+    <>
+      <div className="m-label">Goal</div>
+      <div className="m-group" role="radiogroup" aria-label="Goal">
         {GOALS.map(g => {
-          const selected = current?.id === g.id;
+          const plan = planForGoal(g);
           return (
-            <button
-              key={g.id}
-              className="m-goal m-press"
-              aria-pressed={selected}
-              style={{ ['--goal-color' as string]: GOAL_COLOR[g.id] }}
-              onClick={() => onSteps(planForGoal(g))}
-            >
-              <strong>{g.title}</strong>
-              <p>{g.blurb}</p>
-              <span className="m-goal-foot">
-                {planForGoal(g).length} steps
-                {selected && (
-                  <span className="m-check">
-                    <Check size={16} strokeWidth={3} />
-                  </span>
-                )}
+            <button key={g.id} className="m-row" role="radio" aria-checked={current?.id === g.id} onClick={() => onSteps(plan)}>
+              <span className="m-radio" aria-hidden />
+              <span className="m-row-text">
+                <strong>{g.title}</strong>
+                <small>{g.blurb}</small>
               </span>
+              <span className="m-row-end">{plan.length} steps</span>
             </button>
           );
         })}
       </div>
+      {!current && steps.length > 0 && <p className="m-hint">Custom selection: {steps.length} steps.</p>}
 
+      <div className="m-label">Or describe it</div>
       <form
-        className="m-card m-ask"
+        className="m-group m-ask"
         onSubmit={e => {
           e.preventDefault();
           if (text.trim()) onAsk(text);
         }}
       >
-        <Sparkles size={20} color="var(--m-accent)" aria-hidden />
         <input
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder="e.g. normalize to BCNF in MySQL"
+          placeholder="normalize to BCNF in MySQL"
           aria-label="Describe the pipeline"
           enterKeyHint="go"
         />
-        <button className="m-send m-press" type="submit" disabled={!text.trim() || ask.busy} aria-label="Plan it">
-          <Send size={20} />
+        <button type="submit" disabled={!text.trim() || ask.busy} aria-label="Plan it">
+          <CornerDownLeft size={20} />
         </button>
       </form>
-      {ask.busy && <p className="m-note">Reading your request…</p>}
-      {!ask.busy && ask.message && <p className="m-note">{ask.message}</p>}
+      {ask.busy && <p className="m-hint">Planning…</p>}
+      {!ask.busy && ask.message && <p className="m-hint">{ask.message}</p>}
       {!ask.busy && ask.candidates.length > 0 && (
         <div className="m-chips">
           {ask.candidates.map(c => (
-            <button key={c} className="m-chip m-press" onClick={() => onPickCandidate(c)}>
+            <button key={c} className="m-chip" onClick={() => onPickCandidate(c)}>
               {c}
             </button>
           ))}
@@ -109,33 +90,29 @@ export function PipelineScreen({
       </div>
       {PHASES.map(phase => {
         const ops = all.filter(o => phaseOf(o) === phase.id);
-        const on = ops.filter(o => steps.includes(o)).length;
         return (
-          <section key={phase.id} className="m-card m-phase" style={{ ['--phase' as string]: PHASE_COLOR[phase.id] }}>
+          <section key={phase.id} className="m-group" style={{ ['--phase' as string]: PHASE_COLOR[phase.id] }} aria-label={phase.title}>
             <div className="m-phase-head">
-              <span className="m-phase-dot" />
+              <span className="m-swatch" aria-hidden />
               <span>{phase.title}</span>
               <span>
-                {on}/{ops.length}
+                {ops.filter(o => steps.includes(o)).length}/{ops.length}
               </span>
             </div>
-            {ops.map(op => {
-              const active = steps.includes(op);
-              return (
-                <button key={op} className="m-step m-press" aria-pressed={active} onClick={() => onToggle(op)}>
-                  <span className="m-step-toggle">
-                    <Check size={18} strokeWidth={3} />
-                  </span>
-                  <span>
-                    <strong>{op}</strong>
-                    <small>{OPERATIONS[op].description}</small>
-                  </span>
-                </button>
-              );
-            })}
+            {ops.map(op => (
+              <button key={op} className="m-row" role="checkbox" aria-checked={steps.includes(op)} onClick={() => onToggle(op)}>
+                <span className="m-box" aria-hidden>
+                  <Check size={16} strokeWidth={3} />
+                </span>
+                <span className="m-row-text">
+                  <strong>{op}</strong>
+                  <small>{OPERATIONS[op].description}</small>
+                </span>
+              </button>
+            ))}
           </section>
         );
       })}
-    </div>
+    </>
   );
 }

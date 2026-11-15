@@ -19,32 +19,32 @@ export interface Goal {
 export const GOALS: Goal[] = [
   {
     id: '3nf',
-    title: 'Clean schema (3NF)',
-    blurb: 'Tables without repeated facts, checked on your data, with diagram, SQL and report.',
+    title: '3NF schema',
+    blurb: 'Normalized tables, checks, diagram, SQL, report',
     targets: ['3NF', 'Relation Detector', 'Lossless Check', 'Dependency Preservation', 'ERD Generator', 'SQL Generator', 'Report Generator'],
   },
   {
     id: 'bcnf',
-    title: 'Strictest (BCNF)',
-    blurb: 'Goes one step further than 3NF. Some dependencies may be lost; the report says which.',
+    title: 'BCNF schema',
+    blurb: 'Stricter than 3NF; may lose dependencies',
     targets: ['BCNF', 'Relation Detector', 'Lossless Check', 'Dependency Preservation', 'ERD Generator', 'SQL Generator', 'Report Generator'],
   },
   {
     id: 'keys',
-    title: 'Keys and links',
-    blurb: 'Dependencies, keys, and the foreign keys between your files.',
+    title: 'Keys and foreign keys',
+    blurb: 'Dependencies, keys, links between files, diagram',
     targets: ['Key Discovery', 'Relation Detector', 'Cardinality Analyzer', 'ERD Generator'],
   },
   {
     id: 'profile',
-    title: 'Tidy and profile',
-    blurb: 'Clean the data and learn what each column holds. Quick.',
+    title: 'Clean and profile',
+    blurb: 'Cleaning, types and column meaning only',
     targets: ['Column Classifier'],
   },
   {
     id: 'all',
-    title: 'Everything',
-    blurb: 'All 19 steps.',
+    title: 'All steps',
+    blurb: 'Every operation',
     targets: Object.keys(OPERATIONS),
   },
 ];

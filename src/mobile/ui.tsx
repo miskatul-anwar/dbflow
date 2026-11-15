@@ -1,20 +1,18 @@
 /** Small building blocks of the phone interface (see mobile.css). */
 import { useEffect, type ReactNode } from 'react';
-import { Database, Settings2, Sparkles, Workflow } from 'lucide-react';
+import { Database, ListChecks, Settings2, Table2 } from 'lucide-react';
 
 export type Screen = 'data' | 'pipeline' | 'results';
 
-export function TopBar({ subtitle, onSettings }: { subtitle: string; onSettings: () => void }) {
+/** The screen's name and its current state, e.g. "Data · 3 files, 19 KB". */
+export function TopBar({ title, detail, onSettings }: { title: string; detail: string; onSettings: () => void }) {
   return (
     <header className="m-top">
-      <div className="m-brand">
-        <img src="/icon.png" alt="" />
-        <div>
-          DBFlow
-          <small>{subtitle}</small>
-        </div>
+      <div>
+        <h1>{title}</h1>
+        <p>{detail}</p>
       </div>
-      <button className="m-icon-btn m-press" onClick={onSettings} aria-label="Settings">
+      <button className="m-icon-btn" onClick={onSettings} aria-label="Settings">
         <Settings2 size={22} />
       </button>
     </header>
@@ -32,24 +30,24 @@ export function BottomNav({
   files: number;
   resultsReady: boolean;
 }) {
-  const item = (id: Screen, label: string, icon: ReactNode, extra?: ReactNode) => (
-    <button className="m-press" aria-current={screen === id ? 'page' : undefined} onClick={() => onGo(id)}>
+  const item = (id: Screen, label: string, icon: ReactNode, count?: ReactNode) => (
+    <button aria-current={screen === id ? 'page' : undefined} onClick={() => onGo(id)}>
       {icon}
       {label}
-      {extra}
+      {count}
     </button>
   );
   return (
     <nav className="m-nav" aria-label="Screens">
-      {item('data', 'Data', <Database />, files > 0 ? <span className="m-badge">{files}</span> : null)}
-      {item('pipeline', 'Pipeline', <Workflow />)}
-      {item('results', 'Results', <Sparkles />, resultsReady && screen !== 'results' ? <span className="m-dot" aria-label="new results" /> : null)}
+      {item('data', 'Data', <Database />, files > 0 ? <span className="m-count">{files}</span> : null)}
+      {item('pipeline', 'Pipeline', <ListChecks />)}
+      {item('results', 'Results', <Table2 />, resultsReady && screen !== 'results' ? <span className="m-count">new</span> : null)}
     </nav>
   );
 }
 
-/** A sheet that rises from the bottom. Tapping outside closes it (when `onClose` is given). */
-export function Sheet({ label, onClose, children }: { label: string; onClose?: () => void; children: ReactNode }) {
+/** A sheet from the bottom of the screen. Tapping outside closes it (when `onClose` is given). */
+export function Sheet({ title, onClose, children }: { title: string; onClose?: () => void; children: ReactNode }) {
   useEffect(() => {
     if (!onClose) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -58,8 +56,8 @@ export function Sheet({ label, onClose, children }: { label: string; onClose?: (
   }, [onClose]);
   return (
     <div className="m-overlay" onClick={onClose} role="presentation">
-      <div className="m-sheet" role="dialog" aria-modal="true" aria-label={label} onClick={e => e.stopPropagation()}>
-        <div className="m-grip" />
+      <div className="m-sheet" role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()}>
+        <h2>{title}</h2>
         {children}
       </div>
     </div>
@@ -79,7 +77,7 @@ export interface ToastMessage {
 export function Toast({ toast, onDone }: { toast: ToastMessage | null; onDone: () => void }) {
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(onDone, toast.error ? 6000 : 3200);
+    const t = setTimeout(onDone, toast.error ? 6000 : 3000);
     return () => clearTimeout(t);
   }, [toast, onDone]);
   if (!toast) return null;

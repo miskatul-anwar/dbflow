@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- engine results are untyped (see useResultViews) */
 import { useMemo, useState, type ReactNode } from 'react';
-import { Check, Copy, Download, Rocket } from 'lucide-react';
+import { Check, Copy, Download } from 'lucide-react';
 import { useResultViews } from '../hooks/useResultViews';
 import { useCopy } from '../hooks/useCopy';
 import { saveFileInBackground } from '../utils/saveFile';
@@ -21,7 +21,7 @@ type Tab = 'overview' | 'tables' | 'diagram' | 'sql' | 'keys' | 'links' | 'deps'
 const titleOf = (r: any): string => r.displayName ?? (r.nameSource === 'placeholder' ? 'Unnamed table' : r.name);
 
 function Card({ children }: { children: ReactNode }) {
-  return <div className="m-card m-section">{children}</div>;
+  return <div className="m-group m-section">{children}</div>;
 }
 
 export function ResultsScreen({
@@ -41,14 +41,10 @@ export function ResultsScreen({
 
   if (!results) {
     return (
-      <div className="m-enter m-empty">
-        <div className="m-empty-art">
-          <Rocket size={40} />
-        </div>
-        <h2>Nothing here yet</h2>
-        <p>Add your tables, pick a goal and press Run. Your new database appears here.</p>
-        <button className="m-btn m-btn-primary m-press" onClick={onGoData}>
-          Get started
+      <div className="m-group m-empty-note">
+        <p style={{ marginTop: 0 }}>No results yet. Add files, choose a goal, then run.</p>
+        <button className="m-btn m-btn-outline" onClick={onGoData}>
+          Go to Data
         </button>
       </div>
     );
@@ -69,69 +65,69 @@ export function ResultsScreen({
     { id: 'files', label: 'Files', show: Boolean(results.outputFiles?.length) },
   ];
 
+  const rowsRead: number = v.isMultiTable ? v.multiTables.reduce((n: number, t: any) => n + (t.rowCount || 0), 0) : Number(results.stats?.originalRows ?? 0);
   return (
-    <div className="m-enter">
-      <section className="m-hero" aria-label="Summary">
-        <h2>Your database is ready</h2>
-        <p>
-          {v.isMultiTable ? `${v.multiTables.length} files` : '1 file'} analysed in {results.duration ?? '—'}
-        </p>
-        <div className="m-stats">
-          <div>
-            <b>{finalRelations.length}</b>
-            <span>tables in the new schema</span>
-          </div>
-          <div>
-            <b>{links}</b>
-            <span>{v.isMultiTable ? 'links between files' : 'relationships'}</span>
-          </div>
-          <div>
-            <b>{fdCount}</b>
-            <span>dependencies found</span>
-          </div>
-          <div>
-            <b>{v.isMultiTable ? v.multiTables.reduce((n: number, t: any) => n + (t.rowCount || 0), 0).toLocaleString() : (results.stats?.originalRows ?? '—')}</b>
-            <span>rows read</span>
-          </div>
+    <>
+      <div className="m-group m-summary" aria-label="Summary">
+        <div>
+          <b>{finalRelations.length}</b>
+          <span>tables</span>
         </div>
-      </section>
+        <div>
+          <b>{links}</b>
+          <span>links</span>
+        </div>
+        <div>
+          <b>{fdCount}</b>
+          <span>FDs</span>
+        </div>
+        <div>
+          <b>{rowsRead.toLocaleString()}</b>
+          <span>rows</span>
+        </div>
+      </div>
+      <p className="m-hint">
+        {v.isMultiTable ? `${v.multiTables.length} files analysed` : '1 file analysed'}
+      </p>
 
       <div className="m-tabs" role="tablist" aria-label="Result sections">
         {tabs
           .filter(t => t.show)
           .map(t => (
-            <button key={t.id} role="tab" aria-selected={tab === t.id} className="m-press" onClick={() => setTab(t.id)}>
+            <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
               {t.label}
             </button>
           ))}
       </div>
 
-      <div key={tab} className="m-enter">
+      <div role="tabpanel">
         {tab === 'overview' && (
           <>
             <InputChecksSection checks={results.inputChecks} onMerge={onMerge} />
-            <div className="m-label">New tables</div>
-            {finalRelations.map((r: any, i: number) => {
-              const pk = new Set<string>(r.primaryKey ?? []);
-              const fk = new Set<string>((r.foreignKeys ?? []).flatMap((f: any) => f.attributes ?? []));
-              const rows = r.rowCount ?? r.metadata?.rowCount ?? r.rows?.length;
-              return (
-                <article key={`${r.name}-${i}`} className="m-card m-table-card">
-                  <header>
-                    <h3>{titleOf(r)}</h3>
-                    <span>{typeof rows === 'number' ? `${rows.toLocaleString()} rows` : ''}</span>
-                  </header>
-                  <div className="m-cols">
-                    {(r.attributes ?? []).map((a: string) => (
-                      <span key={a} className={`m-col${pk.has(a) ? ' m-pk' : fk.has(a) ? ' m-fk' : ''}`}>
-                        {pk.has(a) ? '🔑 ' : fk.has(a) ? '↗ ' : ''}
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
+            <div className="m-label">New schema</div>
+            <div className="m-group">
+              {finalRelations.map((r: any, i: number) => {
+                const pk = new Set<string>(r.primaryKey ?? []);
+                const fk = new Set<string>((r.foreignKeys ?? []).flatMap((f: any) => f.attributes ?? []));
+                const rows = r.rowCount ?? r.metadata?.rowCount ?? r.rows?.length;
+                return (
+                  <article key={`${r.name}-${i}`} className="m-table">
+                    <header>
+                      <h3>{titleOf(r)}</h3>
+                      <span>{typeof rows === 'number' ? `${rows.toLocaleString()} rows` : ''}</span>
+                    </header>
+                    <div className="m-cols">
+                      {(r.attributes ?? []).map((a: string) => (
+                        <span key={a} className={`m-col${pk.has(a) ? ' m-pk' : fk.has(a) ? ' m-fk' : ''}`}>
+                          {pk.has(a) ? <b>PK</b> : fk.has(a) ? <b>FK</b> : null}
+                          {a}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           </>
         )}
         {tab === 'tables' && (
@@ -146,12 +142,12 @@ export function ResultsScreen({
         )}
         {tab === 'sql' && (
           <Card>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <button className="m-btn m-btn-soft m-btn-small m-press" onClick={() => void copy(v.sqlFile.content)}>
+            <div className="m-actions">
+              <button className="m-btn m-btn-outline" onClick={() => void copy(v.sqlFile.content)}>
                 {copied ? <Check /> : <Copy />} {copied ? 'Copied' : 'Copy'}
               </button>
               <button
-                className="m-btn m-btn-primary m-btn-small m-press"
+                className="m-btn m-btn-primary"
                 onClick={() => saveFileInBackground('schema.sql', v.sqlFile.content, 'application/sql')}
               >
                 <Download /> Save .sql
@@ -208,6 +204,6 @@ export function ResultsScreen({
           </Card>
         )}
       </div>
-    </div>
+    </>
   );
 }

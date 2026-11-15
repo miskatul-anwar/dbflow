@@ -18,11 +18,12 @@ describe('phone screens', () => {
     render(
       <PipelineScreen steps={planForGoal(GOALS[0])} onSteps={onSteps} onToggle={onToggle} ask={idleAsk} onAsk={() => {}} onPickCandidate={() => {}} />,
     );
-    expect(screen.getByRole('button', { name: /Clean schema \(3NF\)/ }).getAttribute('aria-pressed')).toBe('true');
-    fireEvent.click(screen.getByRole('button', { name: /Everything/ }));
+    expect(screen.getByRole('radio', { name: /3NF schema/ }).getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(screen.getByRole('radio', { name: /All steps/ }));
     expect(onSteps).toHaveBeenCalledWith(planForGoal(GOALS.find(g => g.id === 'all')!));
-    const bcnf = screen.getByRole('button', { name: /^BCNF/ });
-    expect(bcnf.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('checkbox', { name: /^Data Loader/ }).getAttribute('aria-checked')).toBe('true');
+    const bcnf = screen.getByRole('checkbox', { name: /^BCNF/ });
+    expect(bcnf.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(bcnf);
     expect(onToggle).toHaveBeenCalledWith('BCNF');
   });
@@ -47,9 +48,10 @@ describe('phone screens', () => {
   it('data: lists the files and removes one', () => {
     const onRemove = vi.fn();
     const files = [new File(['a,b\n1,2'], 'customers.csv'), new File(['x'], 'shop.xlsx')];
-    render(<DataScreen files={files} onAdd={() => {}} onRemove={onRemove} onNext={() => {}} busy={false} />);
-    expect(screen.getByText('2 files · 8 B')).toBeTruthy();
-    expect(screen.getByText(/Excel workbook/)).toBeTruthy();
+    render(<DataScreen files={files} onAdd={() => {}} onRemove={onRemove} busy={false} />);
+    expect(screen.getByText('customers.csv')).toBeTruthy();
+    expect(screen.getByText('XLSX')).toBeTruthy();
+    expect(screen.getByText('7 B')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Remove shop.xlsx' }));
     expect(onRemove).toHaveBeenCalledWith(1);
   });
@@ -57,7 +59,7 @@ describe('phone screens', () => {
   it('results: invites a first run when there is nothing yet', () => {
     const onGo = vi.fn();
     render(<ResultsScreen results={null} onGoData={onGo} onMerge={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Get started' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go to Data' }));
     expect(onGo).toHaveBeenCalled();
   });
 
@@ -66,6 +68,7 @@ describe('phone screens', () => {
     render(<BottomNav screen="pipeline" onGo={onGo} files={3} resultsReady />);
     expect(screen.getByRole('button', { name: /Pipeline/ }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('new')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Results/ }));
     expect(onGo).toHaveBeenCalledWith('results');
   });
