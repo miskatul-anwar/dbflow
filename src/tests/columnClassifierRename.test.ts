@@ -20,7 +20,7 @@ describe('Column Classifier (formerly NER Classifier)', () => {
   it('the engine accepts the old name and still classifies the columns', async () => {
     const rows = ['order_id,customer_email,total'];
     for (let i = 1; i <= 30; i++) rows.push(`${i},user${i}@example.com,${i * 2}.5`);
-    const ops = ['CSV Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', 'NER Classifier', '1NF'];
+    const ops = ['Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', 'NER Classifier', '1NF'];
     const r: any = await new DatabaseService().processFile(csv('orders.csv', rows.join('\n')), ops);
     expect(r.success).toBe(true);
   });
@@ -38,7 +38,7 @@ describe('Column Classifier (formerly NER Classifier)', () => {
       format: 'dbflow-workflow', version: 2, nextId: 6,
       nodes: [
         { id: '0', type: 'start', position: { x: 0, y: 0 }, data: { label: 'Start' } },
-        mk('1', 'CSV Data Loader', 'csv-loader'), mk('2', 'Data Cleaner', 'data-cleaner'),
+        mk('1', 'Data Loader', 'csv-loader'), mk('2', 'Data Cleaner', 'data-cleaner'),
         mk('3', 'Atomicity Checker', 'atomicity-checker'), mk('4', 'Data Type Profiler', 'data-profiler'),
         mk('5', 'NER Classifier', 'ner-classifier'),
       ],

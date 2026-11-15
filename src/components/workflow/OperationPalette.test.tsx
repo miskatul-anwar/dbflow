@@ -21,9 +21,9 @@ describe('OperationPalette (list)', () => {
   });
 
   it('marks added, ready and locked steps, and says why in words', () => {
-    setup({ activeOperations: ['CSV Data Loader'] });
-    expect(item('CSV Data Loader').getAttribute('data-state')).toBe('added');
-    expect((item('CSV Data Loader') as HTMLButtonElement).disabled).toBe(true);
+    setup({ activeOperations: ['Data Loader'] });
+    expect(item('Data Loader').getAttribute('data-state')).toBe('added');
+    expect((item('Data Loader') as HTMLButtonElement).disabled).toBe(true);
     expect(item('Data Cleaner').getAttribute('data-state')).toBe('ready');
     expect(item('3NF').getAttribute('data-state')).toBe('locked');
     expect(item('3NF').getAttribute('aria-label')).toMatch(/Needs 2NF\. Click to add it with its prerequisites/);
@@ -31,7 +31,7 @@ describe('OperationPalette (list)', () => {
   });
 
   it('a ready step is added directly; a locked step adds its prerequisites', () => {
-    const h = setup({ activeOperations: ['CSV Data Loader'] });
+    const h = setup({ activeOperations: ['Data Loader'] });
     fireEvent.click(item('Data Cleaner'));
     expect(h.onAdd).toHaveBeenCalledWith('Data Cleaner');
     fireEvent.click(item('3NF'));
@@ -40,13 +40,13 @@ describe('OperationPalette (list)', () => {
   });
 
   it('an added step does nothing when clicked', () => {
-    const h = setup({ activeOperations: ['CSV Data Loader'] });
-    fireEvent.click(item('CSV Data Loader'));
+    const h = setup({ activeOperations: ['Data Loader'] });
+    fireEvent.click(item('Data Loader'));
     expect(h.onAdd).not.toHaveBeenCalled();
   });
 
   it('shows progress per phase and overall', () => {
-    setup({ activeOperations: ['CSV Data Loader', 'Data Cleaner'] });
+    setup({ activeOperations: ['Data Loader', 'Data Cleaner'] });
     expect(screen.getByLabelText('2 of 19 on the canvas')).toBeTruthy();
     expect(within(screen.getByRole('region', { name: 'Prepare' })).getByText('2/5')).toBeTruthy();
   });
@@ -64,11 +64,11 @@ describe('OperationPalette (list)', () => {
 
   it('arrow keys move focus between operations, skipping added ones', () => {
     setup({ activeOperations: ['Data Cleaner'] });
-    item('CSV Data Loader').focus();
-    fireEvent.keyDown(item('CSV Data Loader'), { key: 'ArrowDown' });
+    item('Data Loader').focus();
+    fireEvent.keyDown(item('Data Loader'), { key: 'ArrowDown' });
     expect(document.activeElement).toBe(item('Atomicity Checker'));
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowUp' });
-    expect(document.activeElement).toBe(item('CSV Data Loader'));
+    expect(document.activeElement).toBe(item('Data Loader'));
   });
 
   it('collapse and reset-width buttons work', () => {

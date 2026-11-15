@@ -110,7 +110,11 @@ fn subsets(arr: &[String], size: usize) -> Vec<Vec<String>> {
 // Keys
 // ---------------------------------------------------------------------------
 
-/// All minimal candidate keys (L/R/B/N classification plus lattice search on B).
+/// Upper bound on the candidate keys listed for one relation (a pathological set of dependencies can
+/// have exponentially many).
+pub const MAX_CANDIDATE_KEYS: usize = 999;
+
+/// All minimal candidate keys (L/R/B/N classification, then Lucchesi–Osborn enumeration).
 pub fn find_candidate_keys(attributes: &[String], fds: &[Fd]) -> Vec<Vec<String>> {
     let all = sorted(dedup(attributes.iter().cloned()));
     if all.is_empty() {
@@ -138,27 +142,50 @@ pub fn find_candidate_keys(attributes: &[String], fds: &[Fd]) -> Vec<Vec<String>
         .filter(|a| !lhs_attrs.contains(*a) && !rhs_attrs.contains(*a))
         .cloned()
         .collect();
-    let b: Vec<String> = all
-        .iter()
-        .filter(|a| lhs_attrs.contains(*a) && rhs_attrs.contains(*a))
-        .cloned()
-        .collect();
     let core = sorted(dedup(l.into_iter().chain(n)));
     if closure(&core, &valid).len() == all.len() {
         return vec![if core.is_empty() { all.clone() } else { core }];
     }
-    let mut keys: Vec<Vec<String>> = Vec::new();
-    let blist = sorted(b);
-    for size in 1..=blist.len() {
-        for subset in subsets(&blist, size) {
-            let cand = sorted(dedup(core.iter().cloned().chain(subset)));
+    // Lucchesi–Osborn: every candidate key is reached from another one by swapping in the left side of
+    // a dependency, so all keys are found with work polynomial in the number of keys (the former
+    // lattice search over every subset ran out of memory on wide tables).
+    let reduce = |set: Vec<String>| -> Vec<String> {
+        let mut cur = sorted(set);
+        let mut i = 0;
+        while i < cur.len() {
+            let mut without = cur.clone();
+            without.remove(i);
+            if closure(&without, &valid).len() == all.len() {
+                cur = without;
+            } else {
+                i += 1;
+            }
+        }
+        cur
+    };
+    let mut keys: Vec<Vec<String>> = vec![reduce(all.clone())];
+    let mut i = 0;
+    while i < keys.len() && keys.len() < MAX_CANDIDATE_KEYS {
+        let key = keys[i].clone();
+        for fd in &valid {
+            if !key.contains(&fd.rhs) {
+                continue;
+            }
+            let cand = sorted(dedup(
+                fd.lhs
+                    .iter()
+                    .cloned()
+                    .chain(key.iter().filter(|a| **a != fd.rhs).cloned()),
+            ));
             if keys.iter().any(|k| k.iter().all(|x| cand.contains(x))) {
                 continue;
             }
-            if closure(&cand, &valid).len() == all.len() {
-                keys.push(cand);
+            keys.push(reduce(cand));
+            if keys.len() >= MAX_CANDIDATE_KEYS {
+                break;
             }
         }
+        i += 1;
     }
     if keys.is_empty() {
         keys.push(all.clone());
@@ -427,7 +454,9 @@ pub fn is_1nf(rows: &Table, attributes: Option<&[String]>) -> Value {
                 continue;
             }
             let desc = match v {
-                Cell::Json(Value::Array(_)) => Some(format!("Column '{attr}' contains nested array data.")),
+                Cell::Json(j) if matches!(**j, Value::Array(_)) => {
+                    Some(format!("Column '{attr}' contains nested array data."))
+                }
                 Cell::Json(_) => Some(format!("Column '{attr}' contains complex nested object data.")),
                 Cell::Str(s) => {
                     let t = js::trim(s);
@@ -784,7 +813,10 @@ pub fn apply_1nf(data: &Table, unnest: Option<(&[String], Option<&str>)>) -> Tab
                 for r in 0..current.len() {
                     let v = current.get(r, col).clone();
                     let items: Vec<Cell> = match &v {
-                        Cell::Json(Value::Array(a)) => a.iter().cloned().map(Cell::from_json).collect(),
+                        Cell::Json(j) => match &**j {
+                            Value::Array(a) => a.iter().cloned().map(Cell::from_json).collect(),
+                            _ => vec![],
+                        },
                         Cell::Str(s) => match serde_json::from_str::<Value>(s) {
                             Ok(Value::Array(a)) => a.into_iter().map(Cell::from_json).collect(),
                             Ok(_) => vec![],
@@ -824,11 +856,32 @@ pub fn apply_1nf(data: &Table, unnest: Option<(&[String], Option<&str>)>) -> Tab
 }
 
 pub fn apply_2nf(data: &Table, fds: &[Fd]) -> Vec<Relation> {
+    apply_2nf_preferring(data, fds, None)
+}
+
+/// Candidate keys with `preferred` (the key chosen for the table) moved to the front, so it becomes the
+/// primary key of the relation that holds it rather than whichever key sorts first by name.
+pub fn keys_preferring(keys: &[Vec<String>], preferred: Option<&[String]>) -> Vec<Vec<String>> {
+    let mut out = keys.to_vec();
+    if let Some(p) = preferred {
+        if let Some(i) = out
+            .iter()
+            .position(|k| k.len() == p.len() && k.iter().all(|a| p.contains(a)))
+        {
+            let k = out.remove(i);
+            out.insert(0, k);
+        }
+    }
+    out
+}
+
+/// 2NF with the table's chosen key as the primary key where it is a candidate key.
+pub fn apply_2nf_preferring(data: &Table, fds: &[Fd], preferred: Option<&[String]>) -> Vec<Relation> {
     if data.is_empty() {
         return vec![];
     }
     let attributes = data.keys();
-    let keys = find_keys(&attributes, fds).candidate_keys;
+    let keys = keys_preferring(&find_keys(&attributes, fds).candidate_keys, preferred);
     if keys.is_empty() {
         return vec![make_relation(
             new_relation_id(),
@@ -1103,8 +1156,33 @@ pub fn synthesize_3nf(
             ..Default::default()
         });
     }
+    prefer_identifier_keys(&mut non, &keys, &cc.singleton_cover);
     establish_foreign_keys(&mut non);
     non
+}
+
+/// In a relation whose key is one column, another column that determines it is an equally valid key (a city's
+/// code, name and population can all identify it). The most identifier-like one (`*_id`, then `*_code`, `*_no`,
+/// …) becomes the primary key, so the schema reads `city_code` rather than whichever column the cover listed
+/// first. Keys chosen for the table itself are left as they are.
+fn prefer_identifier_keys(relations: &mut [Relation], table_keys: &[Vec<String>], cover: &[Fd]) {
+    let fds = singletons(cover);
+    for rel in relations.iter_mut() {
+        if rel.primary_key.len() != 1 || table_keys.iter().any(|k| k == &rel.primary_key) {
+            continue;
+        }
+        let current = rel.primary_key[0].clone();
+        let score = |c: &str| crate::keys::looks_like_identifier(c);
+        let best = rel
+            .attributes
+            .iter()
+            .filter(|a| **a != current && score(a) > score(&current))
+            .filter(|a| closure(std::slice::from_ref(*a), &fds).contains(&current))
+            .max_by_key(|a| score(a));
+        if let Some(b) = best {
+            rel.primary_key = vec![b.clone()];
+        }
+    }
 }
 
 fn build_bcnf_relation(name: String, attributes: &[String], fds: &[Fd], rows: &Table) -> Relation {

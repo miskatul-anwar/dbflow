@@ -28,6 +28,31 @@ pub(crate) fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync 
     }
 }
 
+/// Upper bound on the threads the engine uses (0 = one per CPU core). Set once at start-up.
+static THREAD_LIMIT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Threads the engine may use: the configured limit, otherwise one per CPU core.
+pub fn engine_threads() -> usize {
+    let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
+    match THREAD_LIMIT.load(std::sync::atomic::Ordering::Relaxed) {
+        0 => cores,
+        n => n.min(cores),
+    }
+}
+
+/// Leave `reserved` CPU cores to the rest of the application (the desktop app keeps one for its window, so
+/// the interface stays responsive while a large run uses every other core). Call once, before any run.
+pub fn reserve_cores(reserved: usize) {
+    let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
+    let n = cores.saturating_sub(reserved).max(1);
+    THREAD_LIMIT.store(n, std::sync::atomic::Ordering::Relaxed);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // Fails only if the pool already exists; the limit above still bounds the per-file threads.
+        let _ = rayon::ThreadPoolBuilder::new().num_threads(n).build_global();
+    }
+}
+
 pub mod analysis;
 pub mod api;
 pub mod csv;

@@ -12,7 +12,7 @@ fn file(name: &str, text: &str) -> InputFile {
 }
 
 const ALL_OPS: [&str; 19] = [
-    "CSV Data Loader",
+    "Data Loader",
     "Data Cleaner",
     "Atomicity Checker",
     "Data Type Profiler",
@@ -162,4 +162,319 @@ fn json_api_dispatches_and_rejects_unknown_methods() {
         Value::String("`order_date`".into())
     );
     assert!(call("no.such.method", json!([])).is_err());
+}
+
+/// A small three-file retail export: orders reference customers and products, and copy facts about them.
+fn retail_files(rows: usize) -> Vec<InputFile> {
+    let cities = ["Lisbon", "Dhaka", "Osaka", "Cairo"];
+    let mut customers = String::from("customer_id,customer_name,city_code,city_name\n");
+    for c in 1..=40 {
+        let city = c % 4;
+        customers += &format!("{c},Customer {c},C{city},{}\n", cities[city]);
+    }
+    let mut products = String::from("product_id,product_name,unit_price\n");
+    for p in 1..=30 {
+        products += &format!("{p},Product {p},{}.99\n", p * 3);
+    }
+    let mut orders = String::from("order_id,customer_id,customer_name,product_id,quantity\n");
+    for o in 1..=rows {
+        let c = 1 + (o * 7) % 40;
+        orders += &format!("{o},{c},Customer {c},{},{}\n", 1 + (o * 11) % 30, 1 + o % 5);
+    }
+    vec![
+        file("customers.csv", &customers),
+        file("products.csv", &products),
+        file("orders.csv", &orders),
+    ]
+}
+
+/// The result without the parts that legitimately differ between runs (timings, log time stamps).
+fn comparable(mut v: Value) -> Value {
+    fn scrub(v: &mut Value) {
+        match v {
+            Value::Object(m) => {
+                for key in [
+                    "duration",
+                    "processDuration",
+                    "logs",
+                    "performanceMetrics",
+                    "totalDuration",
+                ] {
+                    m.remove(key);
+                }
+                m.values_mut().for_each(scrub);
+            }
+            Value::Array(a) => a.iter_mut().for_each(scrub),
+            // Generated files carry a time stamp line.
+            Value::String(t) if t.contains("Generated: ") => {
+                *t = t
+                    .lines()
+                    .filter(|l| !l.contains("Generated: "))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+            }
+            _ => {}
+        }
+    }
+    scrub(&mut v);
+    v
+}
+
+#[test]
+fn parallel_and_sequential_multi_file_runs_give_the_same_result() {
+    let parallel = process(retail_files(300), ops(), json!({ "maxParallelFiles": 4 }));
+    let sequential = process(retail_files(300), ops(), json!({ "maxParallelFiles": 1 }));
+    assert_eq!(parallel["success"], json!(true), "{parallel}");
+    let (a, b) = (comparable(parallel), comparable(sequential));
+    assert!(
+        a == b,
+        "first difference at {}",
+        first_difference(&a, &b, "$".into()).unwrap_or_default()
+    );
+}
+
+/// Path and values of the first place two JSON values differ.
+fn first_difference(a: &Value, b: &Value, path: String) -> Option<String> {
+    match (a, b) {
+        (Value::Object(x), Value::Object(y)) => {
+            for (k, v) in x {
+                match y.get(k) {
+                    Some(w) => {
+                        if let Some(d) = first_difference(v, w, format!("{path}.{k}")) {
+                            return Some(d);
+                        }
+                    }
+                    None => return Some(format!("{path}.{k} missing on the right")),
+                }
+            }
+            y.keys()
+                .find(|k| !x.contains_key(*k))
+                .map(|k| format!("{path}.{k} missing on the left"))
+        }
+        (Value::Array(x), Value::Array(y)) => {
+            for (i, (v, w)) in x.iter().zip(y).enumerate() {
+                if let Some(d) = first_difference(v, w, format!("{path}[{i}]")) {
+                    return Some(d);
+                }
+            }
+            (x.len() != y.len()).then(|| format!("{path}: {} vs {} items", x.len(), y.len()))
+        }
+        _ => (a != b).then(|| {
+            format!(
+                "{path}: {} vs {}",
+                a.to_string().chars().take(200).collect::<String>(),
+                b.to_string().chars().take(200).collect::<String>()
+            )
+        }),
+    }
+}
+
+#[test]
+fn multi_file_run_finds_the_foreign_keys() {
+    let r = process(retail_files(300), ops(), json!({}));
+    let links: Vec<(String, String)> = r["crossTableRelationships"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| {
+            (
+                l["sourceColumn"].as_str().unwrap().into(),
+                l["targetTable"].as_str().unwrap().into(),
+            )
+        })
+        .collect();
+    assert!(links.contains(&("customer_id".into(), "customers".into())), "{links:?}");
+    assert!(links.contains(&("product_id".into(), "products".into())), "{links:?}");
+}
+
+#[test]
+fn cancelling_a_parallel_run_stops_it() {
+    let cancel_now = || true;
+    let none = |_: dbflow_core::analysis::Progress| {};
+    let p = dbflow_core::pipeline::prepare(retail_files(300), ops(), json!({}), &none, &cancel_now);
+    let out: Value = serde_json::from_str(&dbflow_core::pipeline::finish(p, None, None, &none)).unwrap();
+    assert_eq!(out["success"], json!(false));
+    assert!(out["error"].as_str().unwrap().contains("cancelled"), "{out}");
+}
+
+#[test]
+fn rule_naming_names_every_new_relation_from_its_key() {
+    let r = process(retail_files(300), ops(), json!({ "namingMode": "rules" }));
+    let mut sources = std::collections::HashSet::new();
+    for rel in r["relations"].as_array().unwrap() {
+        let source = rel["nameSource"].as_str().unwrap_or("").to_string();
+        assert_ne!(source, "placeholder", "unnamed relation: {rel}");
+        sources.insert(source);
+    }
+    assert!(sources.contains("rule"), "{sources:?}");
+    // The city facts copied into customers become their own relation, named after its key.
+    assert!(r["relations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|rel| rel["displayName"] == json!("City")));
+}
+
+#[test]
+fn candidate_keys_are_all_found_without_enumerating_subsets() {
+    // 30 attributes, each one a key (a chain of equivalences): the old subset lattice was 2^30 here.
+    let attrs: Vec<String> = (0..30).map(|i| format!("a{i:02}")).collect();
+    let fds: Vec<dbflow_core::types::Fd> = (0..30)
+        .map(|i| {
+            serde_json::from_value(json!({"lhs": [attrs[i].clone()], "rhs": attrs[(i + 1) % 30].clone()})).unwrap()
+        })
+        .collect();
+    let keys = nf::find_candidate_keys(&attrs, &fds);
+    assert_eq!(keys.len(), 30);
+    assert!(keys.iter().all(|k| k.len() == 1));
+}
+
+#[test]
+fn candidate_keys_match_the_textbook_example() {
+    // R(A, B, C, D) with AB -> C, C -> D, D -> A: keys are AB, BC and BD.
+    let fds: Vec<dbflow_core::types::Fd> = serde_json::from_value(json!([
+        {"lhs": ["A", "B"], "rhs": "C"},
+        {"lhs": ["C"], "rhs": "D"},
+        {"lhs": ["D"], "rhs": "A"}
+    ]))
+    .unwrap();
+    let attrs: Vec<String> = ["A", "B", "C", "D"].iter().map(|s| s.to_string()).collect();
+    let keys = nf::find_candidate_keys(&attrs, &fds);
+    let keys: Vec<String> = keys.iter().map(|k| k.join("")).collect();
+    assert_eq!(keys, vec!["AB", "BC", "BD"]);
+}
+
+#[test]
+fn large_inputs_get_a_compact_result_with_row_counts() {
+    // 20,000 rows × 52 columns > 999,999 cells.
+    let mut text = String::from("id,group_id,group_name");
+    for c in 0..49 {
+        text += &format!(",m{c}");
+    }
+    text.push('\n');
+    for r in 0..20_000u64 {
+        let g = r % 7;
+        text += &format!("{r},{g},Group {g}");
+        for c in 0..49u64 {
+            text += &format!(",{}", (r * 7_919 + c * 104_729) % 9_999_991);
+        }
+        text.push('\n');
+    }
+    let r = process(vec![file("wide.csv", &text)], ops(), json!({}));
+    assert_eq!(r["success"], json!(true));
+    let rels = r["relations"].as_array().unwrap();
+    assert!(rels
+        .iter()
+        .all(|rel| rel["rows"].as_array().map(|a| a.is_empty()).unwrap_or(false)));
+    let main = rels
+        .iter()
+        .find(|rel| rel["primaryKey"] == json!(["id"]))
+        .expect("main relation keeps the id key");
+    assert_eq!(main["rowCount"], json!(20_000));
+    let group = rels
+        .iter()
+        .find(|rel| rel["primaryKey"] == json!(["group_id"]))
+        .expect("group relation");
+    assert_eq!(group["rowCount"], json!(7));
+    // The data is still exported, once per relation.
+    let files: Vec<&str> = r["outputFiles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["name"].as_str().unwrap())
+        .collect();
+    assert!(
+        files
+            .iter()
+            .any(|f| f.starts_with("relation_3nf_") && f.ends_with(".csv")),
+        "{files:?}"
+    );
+    assert!(
+        !files.iter().any(|f| f.starts_with("relation_bcnf_")),
+        "BCNF CSVs repeat the 3NF ones: {files:?}"
+    );
+}
+
+#[test]
+fn a_composite_key_survives_sampling() {
+    // 30,000 order lines (3 per order): in a 10,000-row sample order_id looks almost unique, yet
+    // (order_id, line_no) must still be found as the key on the full data.
+    let mut text = String::from("order_id,line_no,product_id,quantity,amount\n");
+    for i in 0..30_000u64 {
+        text += &format!(
+            "{},{},{},{},{}.{:02}\n",
+            1 + i / 3,
+            1 + i % 3,
+            1 + (i * 37) % 999,
+            1 + i % 9,
+            (i * 7_919) % 99_999,
+            i % 100
+        );
+    }
+    let r = process(vec![file("lines.csv", &text)], ops(), json!({}));
+    let keys: Vec<Value> = r["outputFiles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["name"] == json!("keys_analysis.json"))
+        .map(|f| f["content"]["candidateKeys"].as_array().unwrap().clone())
+        .unwrap();
+    assert!(keys.contains(&json!(["line_no", "order_id"])), "{keys:?}");
+}
+
+#[test]
+fn a_determinant_that_only_looks_unique_in_the_sample_is_still_used() {
+    // 20,000 orders by 5,000 customers: in a 500-row sample customer_id is ~96 % unique, on the data 25 %.
+    // customer_id -> customer_name must still be found and split out.
+    let mut text = String::from("order_id,customer_id,customer_name,amount\n");
+    for i in 0..20_000u64 {
+        let c = (i * 7_919) % 5_000;
+        text += &format!("{i},{c},Customer {c},{}\n", (i * 104_729) % 9_999_991);
+    }
+    let r = process(vec![file("orders.csv", &text)], ops(), json!({ "fdSampleSize": 500 }));
+    let rels = r["relations"].as_array().unwrap();
+    assert!(
+        rels.iter().any(|rel| rel["primaryKey"] == json!(["customer_id"])),
+        "{:?}",
+        rels.iter().map(|r| r["primaryKey"].clone()).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn split_out_relations_prefer_an_identifier_column_as_key() {
+    // city_code, city_name and city_population determine each other; the city relation should be keyed by the code.
+    let mut text = String::from("order_id,city_population,city_name,city_code,amount\n");
+    for i in 0..400u64 {
+        let c = i % 9;
+        text += &format!("{i},{},City {c},C{c},{}\n", 10_000 + c * 7_919, (i * 104_729) % 99_991);
+    }
+    let r = process(vec![file("orders.csv", &text)], ops(), json!({}));
+    let city = r["relations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|rel| {
+            rel["attributes"].as_array().unwrap().contains(&json!("city_name"))
+                && rel["primaryKey"] != json!(["order_id"])
+        })
+        .expect("city relation");
+    assert_eq!(city["primaryKey"], json!(["city_code"]), "{city}");
+}
+
+#[test]
+fn the_former_csv_data_loader_name_still_runs() {
+    let old = process(
+        vec![file(
+            "t.csv",
+            "id,city,region\n1,A,X\n2,B,Y\n3,A,X\n4,C,Y\n5,B,Y\n6,A,X\n7,C,Y\n8,A,X\n9,B,Y\n10,C,Y\n11,A,X\n12,B,Y\n",
+        )],
+        vec![
+            "CSV Data Loader".into(),
+            "FD Miner".into(),
+            "Key Discovery".into(),
+            "3NF".into(),
+        ],
+        json!({}),
+    );
+    assert_eq!(old["success"], json!(true), "{old}");
 }

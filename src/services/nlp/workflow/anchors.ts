@@ -14,9 +14,9 @@ export interface Anchor {
 }
 
 export const ANCHORS: Record<string, Anchor> = {
-  'CSV Data Loader': {
-    aliases: [/\b(load|loader|import|ingest|read|open|upload)\b/i, /\bcsv\b/i],
-    phrases: ['load the CSV file', 'import my data file', 'read the uploaded table', 'open the spreadsheet export', 'start by loading the data'],
+  'Data Loader': {
+    aliases: [/\b(load|loader|import|ingest|read|open|upload)\b/i, /\b(csv|excel|xlsx?|ods|spreadsheets?)\b/i],
+    phrases: ['load the CSV file', 'load the Excel workbook', 'import my data file', 'read the uploaded table', 'open the spreadsheet export', 'start by loading the data'],
   },
   'Data Cleaner': {
     aliases: [/\bclean(s|ed|er|ing|se|sing|up)?\b/i, /\bdedup(e|licate)?\b/i, /\bsanit[iy]/i, /\bremove (the )?(nulls?|blanks?|duplicates?)\b/i],

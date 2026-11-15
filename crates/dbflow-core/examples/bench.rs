@@ -1,4 +1,5 @@
-//! `cargo run --release -p dbflow-core --example bench -- file.csv [more.csv]`: times a full run.
+//! `cargo run --release -p dbflow-core --example bench -- file.csv [more.csv]`: times a full run and
+//! reports peak memory (Linux). Set `DBFLOW_BENCH_OUT=result.json` to keep the result.
 use dbflow_core::analysis::Progress;
 use dbflow_core::pipeline::{finish, prepare, InputFile};
 use std::time::Instant;
@@ -12,7 +13,7 @@ fn main() {
         })
         .collect();
     let ops = [
-        "CSV Data Loader",
+        "Data Loader",
         "Data Cleaner",
         "Atomicity Checker",
         "Data Type Profiler",
@@ -37,9 +38,10 @@ fn main() {
     let progress = |p: Progress| {
         let now = Instant::now();
         eprintln!(
-            "{:>8.1} ms  (+{:>7.1})  {}",
+            "{:>8.1} ms  (+{:>7.1})  {:>6} MB  {}",
             (now - start).as_secs_f64() * 1e3,
             (now - *last.borrow()).as_secs_f64() * 1e3,
+            mem_mb("VmRSS:"),
             p.message
         );
         *last.borrow_mut() = now;
@@ -48,11 +50,16 @@ fn main() {
     let p = prepare(
         files,
         ops.iter().map(|s| s.to_string()).collect(),
-        serde_json::json!({}),
+        // DBFLOW_BENCH_OPTIONS='{"maxParallelFiles":1}' passes engine options.
+        std::env::var("DBFLOW_BENCH_OPTIONS")
+            .ok()
+            .and_then(|o| serde_json::from_str(&o).ok())
+            .unwrap_or_else(|| serde_json::json!({})),
         &progress,
         &never,
     );
     let t1 = start.elapsed();
+    eprintln!("peak memory after prepare: {} MB", peak_mb());
     let json = finish(p, None, None, &progress);
     let t2 = start.elapsed();
     eprintln!(
@@ -62,4 +69,27 @@ fn main() {
         json.len() / 1_000_000,
         json.starts_with("{\"success\":true")
     );
+    eprintln!("peak memory: {} MB", peak_mb());
+    // DBFLOW_BENCH_OUT=result.json keeps the result for inspection.
+    if let Ok(path) = std::env::var("DBFLOW_BENCH_OUT") {
+        std::fs::write(&path, &json).expect("write result");
+    }
+}
+
+/// Peak resident memory of this process, in MB (Linux; 0 elsewhere).
+fn peak_mb() -> u64 {
+    mem_mb("VmHWM:")
+}
+
+/// A memory figure of this process from /proc/self/status, in MB (Linux; 0 elsewhere).
+fn mem_mb(field: &str) -> u64 {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with(field))
+                .and_then(|l| l.split_whitespace().nth(1)?.parse::<u64>().ok())
+        })
+        .map(|kb| kb / 1024)
+        .unwrap_or(0)
 }

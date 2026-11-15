@@ -59,6 +59,11 @@ test("shows latest installers and updates help when the visitor changes systems"
     1,
   );
   assert.equal(document.querySelectorAll("#all-files tr").length, 5);
+  // Each cell names its column, for the stacked layout on phones.
+  assert.deepEqual(
+    [...document.querySelector("#all-files tr").children].map((td) => td.dataset.label),
+    ["System", "Format", "File", "Size", "SHA-256"],
+  );
   assert.equal(
     document.querySelector("#install-system").textContent,
     "Windows",

@@ -32,6 +32,8 @@ export const buttonVariants = cva(
         primary: 'bg-[#0f766e] text-white shadow-xs hover:bg-[#115e59]',
         secondary: 'border border-gray-200 bg-white text-gray-800 shadow-xs hover:border-gray-300 hover:bg-gray-50',
         ghost: 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+        // Destructive confirmations (6.2:1 against white text, WCAG AA); the same colour in both themes.
+        danger: 'bg-[#b42318] text-white shadow-xs hover:bg-[#912018]',
       },
       size: {
         sm: 'h-8 px-3',

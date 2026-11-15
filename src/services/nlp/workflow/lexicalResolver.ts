@@ -75,7 +75,7 @@ function hitsIn(clause: string): Hit[] {
 /** Operations that a more specific hit in the same clause makes redundant (substring-style aliases). */
 const SUPERSEDED_BY: Record<string, string[]> = {
   'Relation Generator': ['SQL Generator', 'ERD Generator', 'Report Generator', 'Relation Detector'],
-  'CSV Data Loader': ['Data Cleaner', 'Data Type Profiler', 'Atomicity Checker', 'Report Generator', 'Relation Detector'],
+  'Data Loader': ['Data Cleaner', 'Data Type Profiler', 'Atomicity Checker', 'Report Generator', 'Relation Detector'],
   'Key Discovery': ['Relation Detector'],
 };
 
@@ -95,7 +95,7 @@ export function resolveLexical(text: string): LexicalResult {
     const present = new Set(hits.map(h => h.operation));
     hits = hits.filter(h => !(SUPERSEDED_BY[h.operation] ?? []).some(s => present.has(s)));
     // "read"/"open"/"load" are only loader requests when nothing else is asked in the clause.
-    if (hits.length > 1) hits = hits.filter(h => h.operation !== 'CSV Data Loader');
+    if (hits.length > 1) hits = hits.filter(h => h.operation !== 'Data Loader');
 
     if (hits.length === 0 && wantsAll) {
       matchedClauses++;

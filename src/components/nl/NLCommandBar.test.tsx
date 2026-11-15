@@ -37,14 +37,14 @@ describe('NLCommandBar', () => {
     await type('Can you pls convert it to 1NF');
     const steps = await screen.findAllByRole('listitem');
     expect(steps.map(s => s.textContent?.replace('→', '').trim())).toEqual([
-      'CSV Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF',
+      'Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF',
     ]);
     // Dependencies are dimmed with an explanatory tooltip; the request itself is not.
     expect(screen.getByTitle('You asked for this').textContent).toBe('1NF');
     expect(screen.getAllByTitle(/Added because 1NF requires it/).length).toBe(4);
 
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-    await waitFor(() => expect(latest!.placedOperationLabels).toEqual(['CSV Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF']));
+    await waitFor(() => expect(latest!.placedOperationLabels).toEqual(['Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF']));
     expect(latest!.nodes.length).toBe(6); // Start + 5
     expect(latest!.edges.length).toBe(5);
   });
@@ -58,7 +58,7 @@ describe('NLCommandBar', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Replace workflow' }));
     await waitFor(() => expect(latest!.placedOperationLabels.length).toBe(5));
     fireEvent.click(await screen.findByRole('button', { name: 'Undo last build' }));
-    expect(latest!.placedOperationLabels).toEqual(['CSV Data Loader', 'Data Cleaner']);
+    expect(latest!.placedOperationLabels).toEqual(['Data Loader', 'Data Cleaner']);
     expect(latest!.edges.length).toBe(2);
   });
 

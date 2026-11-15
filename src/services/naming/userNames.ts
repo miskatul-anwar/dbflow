@@ -25,11 +25,24 @@ export function saveUserName(signature: string, name: string): void {
   }
 }
 
+const namingListeners = new Set<() => void>();
+/** The switch when storage is unavailable (private window): kept for this session. */
+let memoryChoice: boolean | null = null;
+
+/** Called whenever the naming switch changes (every workspace shows the same switch). */
+export function subscribeModelNaming(listener: () => void): () => void {
+  namingListeners.add(listener);
+  return () => {
+    namingListeners.delete(listener);
+  };
+}
+
+/** True when the on-device model names new relations; false when names are built from the key columns. */
 export function modelNamingEnabled(): boolean {
   try {
     return localStorage.getItem(MODEL_KEY) !== 'off';
   } catch {
-    return true;
+    return memoryChoice ?? true;
   }
 }
 
@@ -37,6 +50,8 @@ export function setModelNaming(on: boolean): void {
   try {
     localStorage.setItem(MODEL_KEY, on ? 'on' : 'off');
   } catch {
-    /* ignore */
+    /* storage unavailable: the choice lasts for this session only */
+    memoryChoice = on;
   }
+  namingListeners.forEach(l => l());
 }

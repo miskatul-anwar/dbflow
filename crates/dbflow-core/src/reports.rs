@@ -675,8 +675,8 @@ pub fn process_report(i: &ReportInput) -> String {
         c += &format!("**Dependency Preservation:** {r}% of dependencies preserved\n");
     }
     c += "\n## Analysis Results by Operation\n\n";
-    if has(ops, "CSV Data Loader") || i.row_count > 0 {
-        c += "### CSV Data Loader\n\n";
+    if has(ops, "Data Loader") || i.row_count > 0 {
+        c += "### Data Loader\n\n";
         if i.row_count == 0 {
             c += "**Status:** No data loaded\n\n";
         } else {

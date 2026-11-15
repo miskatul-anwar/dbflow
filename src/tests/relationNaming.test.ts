@@ -4,7 +4,7 @@ import { cleanModelName, mainOf, nameRelationSet, relationSignature } from '../s
 import { namingMessages } from '../services/naming/namingPrompt';
 
 const csv = (name: string, text: string) => new File([text], name, { type: 'text/csv' });
-const OPS = ['CSV Data Loader', 'Atomicity Checker', '1NF', 'FD Miner', 'Key Discovery', '2NF', '3NF', 'Lossless Check', 'ERD Generator', 'SQL Generator', 'Report Generator'];
+const OPS = ['Data Loader', 'Atomicity Checker', '1NF', 'FD Miner', 'Key Discovery', '2NF', '3NF', 'Lossless Check', 'ERD Generator', 'SQL Generator', 'Report Generator'];
 // order_id -> customer_id -> customer_city: a transitive dependency, so 3NF splits out the customer columns.
 const orders = (() => {
   const lines = ['order_id,customer_id,customer_city,total'];
@@ -67,7 +67,8 @@ describe('engine naming', () => {
     const names = (r.relations as any[]).map(x => x.name);
     expect(names).toContain('orders');
     for (const n of names.filter(n => n !== 'orders')) expect(n).toMatch(/^relation_\d+$/);
-    expect(r.outputFiles.map(f => f.content).join('\n')).not.toMatch(/customer_id_customer_city|orders_customer/);
+    // Index names (IDX_<table>_<column>) are built from columns by design; relation names must not be.
+    expect(r.outputFiles.map(f => f.content).join('\n')).not.toMatch(/customer_id_customer_city|(?<!IDX_)orders_customer/);
   });
 
   it('uses the model answer, never sends sample values, and the user name wins', async () => {

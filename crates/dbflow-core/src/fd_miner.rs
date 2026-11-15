@@ -39,6 +39,9 @@ impl MinedFd {
     }
 }
 
+/// Whether a set of columns is unique on the full data.
+pub type KeyCheck<'a> = dyn Fn(&[String]) -> bool + Sync + 'a;
+
 #[derive(Clone, Default)]
 pub struct MineOptions<'a> {
     pub max_lhs_size: Option<usize>,
@@ -53,6 +56,12 @@ pub struct MineOptions<'a> {
     pub sample_size: Option<usize>,
     pub max_rounds: Option<usize>,
     pub seed: Option<u32>,
+    /// Distinct-value ratio of each column on the full data, when `mine` runs on a sample. A column that
+    /// looks nearly unique in a sample (e.g. an order id with three lines per order) may not be.
+    pub full_distinct_ratio: Option<std::sync::Arc<HashMap<String, f64>>>,
+    /// When `mine` runs on a sample: whether a set of columns is unique on the full data. A set that is
+    /// unique only in the sample yields no dependencies (they would all be refuted by validation).
+    pub full_key_check: Option<&'a KeyCheck<'a>>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -89,7 +98,7 @@ pub struct MineResult {
 fn cell_key(c: &Cell) -> std::borrow::Cow<'_, str> {
     match c {
         Cell::Num(n) => std::borrow::Cow::Owned(js::num_to_string(*n)),
-        Cell::Str(s) => std::borrow::Cow::Borrowed(s.as_str()),
+        Cell::Str(s) => std::borrow::Cow::Borrowed(&**s),
         other => std::borrow::Cow::Owned(other.json_key()),
     }
 }
@@ -306,16 +315,34 @@ pub fn mine(data: &Table, options: &MineOptions) -> MineResult {
     for (a, p) in base.iter().enumerate() {
         cache.insert(vec![a], p.clone());
     }
+    // Determinants whose supersets are skipped: superkeys and nearly unique sets.
     let mut superkeys: Vec<Vec<usize>> = Vec::new();
     let mut mined_by_rhs: HashMap<usize, Vec<(Vec<usize>, f64)>> = HashMap::new();
     let mut truncated = false;
     let mut level_reached = 0;
 
+    // Attributes that may still appear in a determinant of the next level. A single attribute that is
+    // a key, nearly unique, constant or has missing values (when those are excluded) can only make
+    // supersets that are pruned anyway, so the lattice is generated over the remaining ones only.
+    let mut alive: Vec<usize> = (0..attributes.len()).collect();
     'search: for level in 1..=max_lhs {
         if level >= 3 {
             cache.retain(|k, _| k.len() >= level - 1);
         }
-        for combo in combinations(attributes.len(), level) {
+        if level == 2 {
+            alive.retain(|i| {
+                !constant.contains(i) && !nullable.contains(i) && !superkeys.iter().any(|k| k.len() == 1 && k[0] == *i)
+            });
+            // Single attributes are no longer generated, so only larger pruned sets need checking.
+            superkeys.retain(|k| k.len() > 1);
+        }
+        if alive.len() < level {
+            break;
+        }
+        for combo in combinations(alive.len(), level)
+            .into_iter()
+            .map(|c| c.into_iter().map(|i| alive[i]).collect::<Vec<usize>>())
+        {
             if out_of_budget() {
                 truncated = true;
                 break 'search;
@@ -354,8 +381,34 @@ pub fn mine(data: &Table, options: &MineOptions) -> MineResult {
             if base_count == 0 {
                 continue;
             }
-            let is_superkey = base_count == rows;
-            if prune_near && !is_superkey && base_count as f64 / rows as f64 > near_key_ratio {
+            let unique_in_data = base_count == rows;
+            let is_superkey = unique_in_data
+                && options
+                    .full_key_check
+                    .map(|f| f(&combo.iter().map(|&i| attributes[i].clone()).collect::<Vec<_>>()))
+                    .unwrap_or(true);
+            // A single column's uniqueness is judged on the full data when this is a sample: an id with
+            // ten rows per value looks nearly unique in a sample of a million-row table, but is not.
+            let full_ratio = if level == 1 {
+                options
+                    .full_distinct_ratio
+                    .as_ref()
+                    .and_then(|m| m.get(&attributes[combo[0]]))
+                    .copied()
+            } else {
+                None
+            };
+            let near_key = full_ratio.unwrap_or(base_count as f64 / rows as f64) > near_key_ratio;
+            if prune_near && !is_superkey && near_key {
+                // A nearly unique single column is not used, and neither are its supersets: on large tables
+                // they are keys by accident (two unrelated measures together).
+                if level == 1 {
+                    superkeys.push(combo.clone());
+                }
+                continue;
+            }
+            if unique_in_data && !is_superkey {
+                // Unique in this sample only: every dependency from it would be refuted on the full data.
                 continue;
             }
             if !is_superkey && rows < min_rows_nonkey {
@@ -604,12 +657,51 @@ pub fn mine_sampled(data: &Table, options: &MineOptions) -> MineResult {
     let (mut rows_added, mut refuted, mut rounds) = (0usize, 0usize, 0usize);
     let mut result = MineResult::default();
     let mut totals = CacheStats::default();
+    // Column codes on the full data: distinct ratios, and uniqueness checks for keys found in the sample.
+    let full_attrs = data.keys();
+    let full_codes = encode_columns(data, &full_attrs, options.null_semantics);
+    let full_ratio: HashMap<String, f64> = full_attrs
+        .iter()
+        .zip(&full_codes)
+        .map(|(a, (_, distinct))| (a.clone(), *distinct as f64 / data.len() as f64))
+        .collect();
+    let column_of: HashMap<&str, usize> = full_attrs.iter().enumerate().map(|(i, a)| (a.as_str(), i)).collect();
+    let checked: std::sync::Mutex<HashMap<Vec<String>, bool>> = Default::default();
+    let full_key = |cols: &[String]| -> bool {
+        if let Some(&known) = checked.lock().ok().and_then(|m| m.get(cols).copied()).as_ref() {
+            return known;
+        }
+        let idx: Vec<usize> = cols.iter().filter_map(|c| column_of.get(c.as_str()).copied()).collect();
+        let unique = idx.len() == cols.len() && {
+            let mut seen: HashSet<Vec<u32>> = HashSet::with_capacity(data.len());
+            (0..data.len()).all(|r| seen.insert(idx.iter().map(|&c| full_codes[c].0[r]).collect()))
+        };
+        if let Ok(mut m) = checked.lock() {
+            m.insert(cols.to_vec(), unique);
+        }
+        unique
+    };
+    let options = &MineOptions {
+        full_distinct_ratio: Some(std::sync::Arc::new(full_ratio)),
+        full_key_check: Some(&full_key),
+        ..options.clone()
+    };
     let mut validated: Vec<Validation> = vec![];
+    // One time budget for all rounds (each round used to start a fresh one).
+    let budget_left = || options.time_budget_ms.map(|b| b - (js::now_ms() - started));
     while rounds < max_rounds {
+        if budget_left().is_some_and(|left| left <= 0.0) {
+            result.truncated = true;
+            break;
+        }
         rounds += 1;
         let idx: Vec<usize> = chosen.iter().copied().collect();
         let sample = data.select_rows(&idx);
-        result = mine(&sample, options);
+        let round_options = MineOptions {
+            time_budget_ms: budget_left(),
+            ..options.clone()
+        };
+        result = mine(&sample, &round_options);
         if let Some(c) = &result.partition_cache {
             totals.hits += c.hits;
             totals.misses += c.misses;

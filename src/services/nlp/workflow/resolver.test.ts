@@ -7,8 +7,8 @@ import { clearAnchorMemoryCache } from './anchorIndex';
 describe('hybrid resolver', () => {
   it('the headline example builds exactly the five-step pipeline', async () => {
     const r = await resolve('Can you pls convert it to 1NF', new NullProvider());
-    expect(r.plan).toEqual(['CSV Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF']);
-    expect(r.addedAsDependencies).toEqual(['CSV Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler']);
+    expect(r.plan).toEqual(['Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler', '1NF']);
+    expect(r.addedAsDependencies).toEqual(['Data Loader', 'Data Cleaner', 'Atomicity Checker', 'Data Type Profiler']);
     expect(r.confidence).toBe('high');
   });
 

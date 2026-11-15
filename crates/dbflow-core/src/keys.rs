@@ -45,7 +45,7 @@ pub fn is_unique_and_complete(rows: &Table, cols: &[String]) -> bool {
     true
 }
 
-fn looks_like_identifier(name: &str) -> u8 {
+pub(crate) fn looks_like_identifier(name: &str) -> u8 {
     let n = name.to_lowercase();
     if n == "id" || n == "uuid" || n == "guid" {
         return 3;
@@ -200,7 +200,7 @@ pub fn split_multi_valued_columns(rows: &Table, multi_valued: &[String], table_n
                     continue;
                 }
                 let mut cells = key_vals.clone();
-                cells.push(Cell::Str(value));
+                cells.push(Cell::str(value));
                 let mut ordered = vec![Cell::Absent; child.columns_raw().len()];
                 for (name, v) in child_cols.iter().zip(cells) {
                     let i = child.col(name).unwrap_or(0);

@@ -255,10 +255,10 @@ fn cell_value(cell: Option<&RawCell>) -> Cell {
             if is_null_token(&c.value) {
                 Cell::str("")
             } else {
-                Cell::Str(c.value.clone())
+                Cell::str(c.value.clone())
             }
         }
-        Some(c) => Cell::Str(clean_str(&c.value)),
+        Some(c) => Cell::str(clean_str(&c.value)),
         None => Cell::str(""),
     }
 }
@@ -270,10 +270,10 @@ fn cell_value_owned(cell: Option<&mut RawCell>) -> Cell {
             if is_null_token(&c.value) {
                 Cell::str("")
             } else {
-                Cell::Str(std::mem::take(&mut c.value))
+                Cell::str(std::mem::take(&mut c.value))
             }
         }
-        Some(c) => Cell::Str(clean_str(&c.value)),
+        Some(c) => Cell::str(clean_str(&c.value)),
         None => Cell::str(""),
     }
 }
@@ -301,7 +301,7 @@ pub fn parse(text: &str, options: &CsvOptions) -> Result<CsvParseResult, String>
         let index = if index_column_needs_values(h, allow) {
             let vals: Vec<Cell> = data_rows
                 .iter()
-                .map(|r| r.get(ci).map(|c| Cell::Str(c.value.clone())).unwrap_or(Cell::Absent))
+                .map(|r| r.get(ci).map(|c| Cell::str(c.value.clone())).unwrap_or(Cell::Absent))
                 .collect();
             let refs: Vec<&Cell> = vals.iter().collect();
             is_index_column(h, Some(&refs), allow)

@@ -12,11 +12,13 @@ use crate::encoding::{decode_bytes, Encoding};
 use crate::identifiers::IdentifierRegistry;
 use crate::js;
 use crate::legacy;
-use crate::naming::{accept_model_names, name_relation_set, plan_names, reset_relation_ids, ChosenName, NamableTable};
+use crate::naming::{
+    accept_model_names, accept_rule_names, name_relation_set, plan_names, reset_relation_ids, ChosenName, NamableTable,
+};
 use crate::relations::{detect_foreign_keys, DetectorTable};
 use crate::reports;
 use crate::schema::{
-    build_schema, emit_mermaid_erd, export_normalized_data, to_decomposed_relations, TableSchemaInput,
+    build_schema, emit_mermaid_erd, export_normalized_data_with, to_decomposed_relations, TableSchemaInput,
 };
 use crate::spreadsheet;
 use crate::table::Table;
@@ -77,11 +79,12 @@ impl Logger {
     }
 }
 
+/// Current name of an operation; earlier names still work (saved pipelines, scripts).
 fn canonical(op: &str) -> String {
-    if op == "NER Classifier" {
-        "Column Classifier".into()
-    } else {
-        op.to_string()
+    match op {
+        "NER Classifier" => "Column Classifier".into(),
+        "CSV Data Loader" => "Data Loader".into(),
+        _ => op.to_string(),
     }
 }
 
@@ -266,6 +269,34 @@ fn text(s: impl Into<String>) -> Raw {
 /// Relations without their rows (`{ ...r, rows: undefined }`).
 fn rels_without_rows(rels: &[Relation]) -> Raw {
     raw(&rels.iter().map(|r| r.without_rows()).collect::<Vec<_>>())
+}
+
+/// Inputs above this many cells (rows × columns) get a compact result: relations carry `rowCount`
+/// instead of their rows, and each relation's data is exported once, as CSV, instead of several times.
+pub const COMPACT_RESULT_CELLS: usize = 999_999;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CompactRelation<'a> {
+    #[serde(flatten)]
+    relation: crate::types::RelationNoRows<'a>,
+    rows: [u8; 0],
+    row_count: usize,
+}
+
+/// Relations for the result JSON: with their rows (small inputs) or with `rowCount` only (large inputs).
+fn rels(set: &[Relation], compact: bool) -> Raw {
+    if !compact {
+        return raw(set);
+    }
+    raw(&set
+        .iter()
+        .map(|r| CompactRelation {
+            relation: r.without_rows(),
+            rows: [],
+            row_count: r.row_count(),
+        })
+        .collect::<Vec<_>>())
 }
 
 /// Which normal-form sets a table names: the final set and the distinct others.
@@ -627,49 +658,56 @@ fn prepare_single(
 
 type MultiTables = (Vec<String>, Vec<(String, NamedTable)>);
 
+/// In a multi-file run only the final relation set's rows are used after analysis (for the data
+/// export); the result reports the other sets by row count. Large tables release those rows right
+/// away, so memory holds one copy of each table's data instead of four or five.
+fn release_intermediate_rows(a: &mut TableAnalysis, options: &Options) {
+    if options.keep_intermediate_rows.unwrap_or(false)
+        || a.rows.len() * a.attributes.len().max(1) <= COMPACT_RESULT_CELLS
+    {
+        return;
+    }
+    for r in a
+        .relations_1nf
+        .iter_mut()
+        .chain(a.relations_2nf.iter_mut())
+        .chain(a.relations_bcnf.iter_mut())
+    {
+        r.release_rows();
+    }
+}
+
 fn prepare_multi(
     files: Vec<InputFile>,
     p: &Prepared,
     progress: &dyn Fn(Progress),
     cancelled: &dyn Fn() -> bool,
 ) -> Result<MultiTables, String> {
-    let start = p.start;
     let mut logs = vec![format!(
         "[INFO] Multi-CSV Pipeline initiated for {} dataset files.",
         files.len()
     )];
+    // Table names are assigned up front, in file order, so they do not depend on scheduling.
     let mut names = IdentifierRegistry::new();
+    let jobs: Vec<(usize, &InputFile, String)> = files
+        .iter()
+        .enumerate()
+        .map(|(i, f)| (i, f, names.fresh(&strip_extension(&f.name).to_lowercase())))
+        .collect();
+    let workers = parallel_file_workers(&p.options, jobs.len());
+    if workers > 1 {
+        logs.push(format!(
+            "[INFO] Analysing {} files in parallel on {workers} threads.",
+            jobs.len()
+        ));
+    }
+    let results = analyze_files(&jobs, p, workers, progress, cancelled);
     let mut out = Vec::new();
-    let n = files.len();
-    for (idx, file) in files.iter().enumerate() {
-        if cancelled() {
-            return Err("Processing was cancelled.".into());
-        }
-        let lo = 3.0 + (idx as f64 / n as f64) * 67.0;
-        let hi = 3.0 + ((idx + 1) as f64 / n as f64) * 67.0;
-        let table_name = names.fresh(&strip_extension(&file.name).to_lowercase());
-        progress(Progress {
-            phase: "PREP".into(),
-            operation: "csv-loader".into(),
-            progress: lo.round(),
-            message: format!("Loading table {}/{}: {}…", idx + 1, n, file.name),
-            ..Default::default()
-        });
-        let mut scratch = Logger::new();
-        let rows = load_csv(file, &mut scratch)?.rows;
-        if rows.is_empty() {
+    for ((_, file, table_name), result) in jobs.iter().zip(results) {
+        let Some(analysis) = result? else {
             logs.push(format!("[WARN] {} has no data rows and was skipped.", file.name));
             continue;
-        }
-        let ctx = Ctx {
-            progress,
-            cancelled,
-            start,
-            memory_mb: footprint_mb(&rows),
         };
-        let analysis = analyze_rows(rows, &p.ops, &p.options, &table_name, &ctx, &|pct| {
-            lo + (pct / 100.0) * (hi - lo)
-        })?;
         for note in &analysis.notes {
             logs.push(format!("[WARN] {note}"));
         }
@@ -690,7 +728,7 @@ fn prepare_multi(
         out.push((
             file.name.clone(),
             NamedTable {
-                name: table_name,
+                name: table_name.clone(),
                 pk,
                 analysis,
             },
@@ -700,6 +738,244 @@ fn prepare_multi(
         return Err("None of the uploaded files contained data rows.".into());
     }
     Ok((logs, out))
+}
+
+/// Relation ids of file `i` start at `i × RELATION_ID_BLOCK`, so files analysed concurrently never
+/// share an id and every run numbers relations the same way.
+const RELATION_ID_BLOCK: u64 = 100_000;
+
+/// How many files to analyse at once: `maxParallelFiles` when given, otherwise one per CPU core (native)
+/// or one (WebAssembly, which has no threads here).
+fn parallel_file_workers(options: &Options, files: usize) -> usize {
+    if cfg!(target_arch = "wasm32") || !options.enable_parallel_processing.unwrap_or(true) {
+        return 1;
+    }
+    let cores = crate::engine_threads();
+    let wanted = options.max_parallel_files.map(|n| n.max(1.0) as usize).unwrap_or(cores);
+    wanted.min(files).max(1)
+}
+
+/// Rough peak memory for analysing one file: parsed cells, cleaned and normalised copies, encodings.
+/// Measured at about 20 bytes of memory per byte of CSV on wide numeric tables.
+#[cfg(not(target_arch = "wasm32"))]
+fn estimated_peak_bytes(file: &InputFile) -> u64 {
+    (file.bytes.len() as u64).saturating_mul(20).max(16 << 20)
+}
+
+/// Memory the parallel analysis may plan for: `memoryBudgetMb` when given, otherwise half of the
+/// memory currently available (Linux) or 4 GB elsewhere.
+#[cfg(not(target_arch = "wasm32"))]
+fn memory_budget_bytes(options: &Options) -> u64 {
+    if let Some(mb) = options.memory_budget_mb {
+        return (mb.max(64.0) as u64) << 20;
+    }
+    let available_kb = std::fs::read_to_string("/proc/meminfo").ok().and_then(|s| {
+        s.lines()
+            .find(|l| l.starts_with("MemAvailable:"))
+            .and_then(|l| l.split_whitespace().nth(1)?.parse::<u64>().ok())
+    });
+    match available_kb {
+        Some(kb) => (kb * 1024) / 2,
+        None => 4 << 30,
+    }
+}
+
+/// Load and analyse one file. `Ok(None)` when it has no data rows.
+fn analyze_file(
+    file: &InputFile,
+    table_name: &str,
+    p: &Prepared,
+    ctx: &Ctx,
+    pct: &dyn Fn(f64) -> f64,
+) -> Result<Option<TableAnalysis>, String> {
+    ctx.check()?;
+    let mut scratch = Logger::new();
+    let rows = load_csv(file, &mut scratch)?.rows;
+    if rows.is_empty() {
+        return Ok(None);
+    }
+    let ctx = Ctx {
+        memory_mb: footprint_mb(&rows),
+        ..*ctx
+    };
+    let mut analysis = analyze_rows(rows, &p.ops, &p.options, table_name, &ctx, pct)?;
+    release_intermediate_rows(&mut analysis, &p.options);
+    Ok(Some(analysis))
+}
+
+type FileResult = Result<Option<TableAnalysis>, String>;
+
+/// Analyse every file, one after another or on `workers` threads. Results are in file order.
+fn analyze_files(
+    jobs: &[(usize, &InputFile, String)],
+    p: &Prepared,
+    workers: usize,
+    progress: &dyn Fn(Progress),
+    cancelled: &dyn Fn() -> bool,
+) -> Vec<FileResult> {
+    let n = jobs.len();
+    let span = |idx: usize| {
+        (
+            3.0 + (idx as f64 / n as f64) * 67.0,
+            3.0 + ((idx + 1) as f64 / n as f64) * 67.0,
+        )
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    if workers > 1 {
+        return analyze_files_parallel(jobs, p, workers, progress, cancelled);
+    }
+    let _ = workers;
+    let mut results = Vec::with_capacity(n);
+    for (idx, file, table_name) in jobs {
+        let (lo, hi) = span(*idx);
+        progress(Progress {
+            phase: "PREP".into(),
+            operation: "csv-loader".into(),
+            progress: lo.round(),
+            message: format!("Loading table {}/{}: {}…", idx + 1, n, file.name),
+            ..Default::default()
+        });
+        let ctx = Ctx {
+            progress,
+            cancelled,
+            start: p.start,
+            memory_mb: 0.0,
+        };
+        // Same id blocks as a parallel run, so the result does not depend on the number of threads.
+        crate::naming::set_relation_id_base(*idx as u64 * RELATION_ID_BLOCK);
+        let r = analyze_file(file, table_name, p, &ctx, &|pct| lo + (pct / 100.0) * (hi - lo));
+        let failed = r.is_err();
+        results.push(r);
+        if failed {
+            break;
+        }
+    }
+    results
+}
+
+/// Each file gets its own thread (bounded by `workers`); the operations inside a file still use the
+/// shared rayon pool. Progress and cancellation stay on the calling thread: workers send progress
+/// over a channel, and a cancel request is passed on through a shared flag.
+#[cfg(not(target_arch = "wasm32"))]
+fn analyze_files_parallel(
+    jobs: &[(usize, &InputFile, String)],
+    p: &Prepared,
+    workers: usize,
+    progress: &dyn Fn(Progress),
+    cancelled: &dyn Fn() -> bool,
+) -> Vec<FileResult> {
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    use std::sync::{mpsc, Mutex};
+    use std::time::Duration;
+
+    let n = jobs.len();
+    // Largest files first, so the longest analyses start early (results are still kept in file order).
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by_key(|&i| std::cmp::Reverse(jobs[i].1.bytes.len()));
+    // A file starts only when its estimated peak memory fits the budget next to the files in progress
+    // (a file always starts when nothing else runs), so wide inputs do not exhaust memory.
+    let budget = memory_budget_bytes(&p.options);
+    let in_use = Mutex::new(0u64);
+    let freed = std::sync::Condvar::new();
+    let next = AtomicUsize::new(0);
+    let stop = AtomicBool::new(false);
+    let results: Mutex<Vec<Option<FileResult>>> = Mutex::new((0..n).map(|_| None).collect());
+    let (tx, rx) = mpsc::channel::<(usize, Progress)>();
+    let mut fraction = vec![0.0f64; n];
+
+    std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for w in 0..workers {
+            let tx = tx.clone();
+            let (next, stop, results, order) = (&next, &stop, &results, &order);
+            let (in_use, freed) = (&in_use, &freed);
+            let spawned = std::thread::Builder::new()
+                .name(format!("dbflow-file-{w}"))
+                .stack_size(16 * 1024 * 1024)
+                .spawn_scoped(scope, move || loop {
+                    let k = next.fetch_add(1, Ordering::SeqCst);
+                    if k >= n {
+                        break;
+                    }
+                    let (idx, file, table_name) = &jobs[order[k]];
+                    let need = estimated_peak_bytes(file);
+                    if let Ok(mut used) = in_use.lock() {
+                        while *used > 0 && *used + need > budget && !stop.load(Ordering::Relaxed) {
+                            used = match freed.wait_timeout(used, Duration::from_millis(200)) {
+                                Ok((g, _)) => g,
+                                Err(e) => e.into_inner().0,
+                            };
+                        }
+                        *used += need;
+                    }
+                    crate::naming::set_relation_id_base(*idx as u64 * RELATION_ID_BLOCK);
+                    let send = |pr: Progress| {
+                        let _ = tx.send((*idx, pr));
+                    };
+                    let is_cancelled = || stop.load(Ordering::Relaxed);
+                    send(Progress {
+                        phase: "PREP".into(),
+                        operation: "csv-loader".into(),
+                        progress: 0.0,
+                        message: format!("Loading table {}/{}: {}…", idx + 1, n, file.name),
+                        ..Default::default()
+                    });
+                    let ctx = Ctx {
+                        progress: &send,
+                        cancelled: &is_cancelled,
+                        start: p.start,
+                        memory_mb: 0.0,
+                    };
+                    let r = analyze_file(file, table_name, p, &ctx, &|pct| pct);
+                    if let Ok(mut used) = in_use.lock() {
+                        *used = used.saturating_sub(need);
+                    }
+                    freed.notify_all();
+                    if r.is_err() {
+                        stop.store(true, Ordering::Relaxed);
+                    }
+                    if let Ok(mut all) = results.lock() {
+                        all[*idx] = Some(r);
+                    }
+                });
+            match spawned {
+                Ok(h) => handles.push(h),
+                Err(_) => break,
+            }
+        }
+        drop(tx);
+        // Forward progress as one overall percentage and pass a cancel request on to the workers.
+        loop {
+            match rx.recv_timeout(Duration::from_millis(100)) {
+                Ok((idx, mut pr)) => {
+                    fraction[idx] = (pr.progress / 100.0).clamp(fraction[idx], 1.0);
+                    pr.progress = (3.0 + 67.0 * fraction.iter().sum::<f64>() / n as f64).round();
+                    pr.estimated_time_remaining = None;
+                    progress(pr);
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            }
+            if cancelled() {
+                stop.store(true, Ordering::Relaxed);
+            }
+        }
+        for h in handles {
+            let _ = h.join();
+        }
+    });
+    let mut collected = results.into_inner().unwrap_or_default();
+    // Report the first failure in file order; files after it are not used.
+    let mut out = Vec::with_capacity(n);
+    for r in collected.drain(..) {
+        let r = r.unwrap_or_else(|| Err("Processing was cancelled.".into()));
+        let failed = r.is_err();
+        out.push(r);
+        if failed {
+            break;
+        }
+    }
+    out
 }
 
 /// Apply names (model answers or the reason the model was unavailable) and build all outputs.
@@ -721,6 +997,10 @@ pub fn finish(
     } = p;
     if let Some(a) = &answers {
         accept_model_names(&mut chosen, &to_ask, a);
+    }
+    let by_rule = options.naming_mode.as_deref() == Some("rules");
+    if by_rule {
+        accept_rule_names(&mut chosen, &to_ask);
     }
     match mode {
         Mode::Failed(v) => v.to_string(),
@@ -882,7 +1162,15 @@ fn finish_single(
         "cacheHits": a.cache_hits,
         "cacheMisses": a.cache_misses,
     });
-    let files = output_files(&a, ops, &erd, &schemas, &sql, &perf);
+    let compact = a.compact || a.rows.len() * a.attributes.len().max(1) > COMPACT_RESULT_CELLS;
+    if compact {
+        run.log.info(format!(
+            "Large input ({} rows × {} columns): each relation's data is exported once as CSV; row data is not repeated in the JSON result.",
+            a.rows.len(),
+            a.attributes.len()
+        ));
+    }
+    let files = output_files(&a, ops, &erd, &schemas, &sql, &perf, compact);
     run.log.success(format!(
         "Optimized database normalization completed successfully in {dur}"
     ));
@@ -916,11 +1204,11 @@ fn finish_single(
         "memoryUsage": format!("{} MB", js::to_fixed(peak, 2)),
         "performanceMetrics": perf,
     });
-    let relations_json = raw(r3);
+    let relations_json = rels(r3, compact);
     let bcnf_json = if a.bcnf_is_final {
         relations_json.clone()
     } else {
-        raw(&a.relations_bcnf)
+        rels(&a.relations_bcnf, compact)
     };
     object(vec![
         ("success", raw(&true)),
@@ -928,8 +1216,8 @@ fn finish_single(
         ("outputFiles", raw(&files)),
         ("logs", raw(&run.log.lines(tz))),
         ("relations", relations_json),
-        ("relations1NF", raw(&a.relations_1nf)),
-        ("relations2NF", raw(&a.relations_2nf)),
+        ("relations1NF", rels(&a.relations_1nf, compact)),
+        ("relations2NF", rels(&a.relations_2nf, compact)),
         ("bcnf", bcnf_json),
         ("relationships", raw(&relationships)),
         ("erdContent", raw(&erd)),
@@ -951,7 +1239,15 @@ fn engine_name() -> &'static str {
     }
 }
 
-fn output_files(a: &TableAnalysis, ops: &[String], erd: &str, schemas: &str, sql: &str, perf: &Value) -> Vec<Raw> {
+fn output_files(
+    a: &TableAnalysis,
+    ops: &[String],
+    erd: &str,
+    schemas: &str,
+    sql: &str,
+    perf: &Value,
+    compact: bool,
+) -> Vec<Raw> {
     let mut f = Vec::new();
     f.push(out_file(
         "performance_metrics.json",
@@ -1128,7 +1424,7 @@ fn output_files(a: &TableAnalysis, ops: &[String], erd: &str, schemas: &str, sql
             0,
             "Second Normal Form",
         ));
-        for r in &a.relations_2nf {
+        for r in a.relations_2nf.iter().filter(|_| !compact) {
             if !r.rows.is_empty() {
                 let csv = rows_to_csv(&r.rows);
                 let n = js::len16(&csv);
@@ -1175,8 +1471,10 @@ fn output_files(a: &TableAnalysis, ops: &[String], erd: &str, schemas: &str, sql
                 "Third Normal Form",
             ));
         }
-        let r3_json: Vec<(Raw, usize)> = crate::par_map(r3, |r| (raw(&r.rows), json_len(&r.rows)));
-        for ((r, csv), (rows_json, rows_len)) in r3.iter().zip(&r3_csv).zip(r3_json) {
+        // Large inputs: the CSV is the data export; a JSON copy of every row would double it.
+        let r3_json: Vec<Option<(Raw, usize)>> =
+            crate::par_map(r3, |r| (!compact).then(|| (raw(&r.rows), json_len(&r.rows))));
+        for ((r, csv), rows) in r3.iter().zip(&r3_csv).zip(r3_json) {
             if !r.rows.is_empty() {
                 let csv = csv.clone();
                 let n = js::len16(&csv);
@@ -1188,14 +1486,16 @@ fn output_files(a: &TableAnalysis, ops: &[String], erd: &str, schemas: &str, sql
                     n,
                     "Third Normal Form",
                 ));
-                f.push(out_file(
-                    &format!("relation_3nf_{}.json", r.name),
-                    "json",
-                    &format!("3NF JSON data for relation: {}", r.name),
-                    rows_json,
-                    rows_len,
-                    "Third Normal Form",
-                ));
+                if let Some((rows_json, rows_len)) = rows {
+                    f.push(out_file(
+                        &format!("relation_3nf_{}.json", r.name),
+                        "json",
+                        &format!("3NF JSON data for relation: {}", r.name),
+                        rows_json,
+                        rows_len,
+                        "Third Normal Form",
+                    ));
+                }
             }
         }
     }
@@ -1208,7 +1508,13 @@ fn output_files(a: &TableAnalysis, ops: &[String], erd: &str, schemas: &str, sql
             0,
             "Boyce-Codd Normal Form",
         ));
-        for (r, csv) in r3.iter().zip(&r3_csv) {
+        // The BCNF files repeat the 3NF ones (same relations); large inputs export them once.
+        let bcnf_csv = if compact && has(ops, "3NF") {
+            &r3_csv[..0]
+        } else {
+            &r3_csv[..]
+        };
+        for (r, csv) in r3.iter().zip(bcnf_csv) {
             if !r.rows.is_empty() {
                 let csv = csv.clone();
                 let n = js::len16(&csv);
@@ -1309,7 +1615,7 @@ fn output_files(a: &TableAnalysis, ops: &[String], erd: &str, schemas: &str, sql
     f
 }
 
-fn table_json(name: &str, file: &str, t: &NamedTable) -> Raw {
+fn table_json(name: &str, file: &str, t: &NamedTable, row_count: usize, compact: bool) -> Raw {
     let a = &t.analysis;
     let keys: Vec<Value> = a
         .key_result
@@ -1321,16 +1627,16 @@ fn table_json(name: &str, file: &str, t: &NamedTable) -> Raw {
         ("tableName", raw(name)),
         ("fileName", raw(file)),
         ("headers", raw(&a.attributes)),
-        ("rows", raw(&a.rows)),
-        ("rowCount", raw(&a.rows.len())),
+        ("rows", if compact { raw(&[0u8; 0]) } else { raw(&a.rows) }),
+        ("rowCount", raw(&row_count)),
         ("nerTags", raw(&a.ner_tags)),
         ("functionalDependencies", raw(&a.functional_dependencies)),
         ("candidateKeys", raw(&keys)),
         ("primaryKey", raw(&t.pk)),
-        ("firstNormalForm", raw(&a.relations_1nf)),
-        ("secondNormalForm", raw(&a.relations_2nf)),
-        ("thirdNormalForm", raw(&a.relations_3nf)),
-        ("bcnf", raw(&a.relations_bcnf)),
+        ("firstNormalForm", rels(&a.relations_1nf, compact)),
+        ("secondNormalForm", rels(&a.relations_2nf, compact)),
+        ("thirdNormalForm", rels(&a.relations_3nf, compact)),
+        ("bcnf", rels(&a.relations_bcnf, compact)),
         ("keyReason", raw(&a.key_choice.as_ref().map(|k| k.reason.clone()))),
         ("fdSearch", raw(&a.fd_search)),
         ("losslessCheck", raw(&a.lossless_check)),
@@ -1342,17 +1648,23 @@ fn table_json(name: &str, file: &str, t: &NamedTable) -> Raw {
 
 fn finish_multi(
     mut logs: Vec<String>,
-    tables: Vec<NamedTable>,
+    mut tables: Vec<NamedTable>,
     files: Vec<String>,
     ops: &[String],
     options: &Options,
     start: f64,
     progress: &dyn Fn(Progress),
 ) -> String {
+    let total_cells: usize = tables
+        .iter()
+        .map(|t| t.analysis.rows.len() * t.analysis.attributes.len().max(1))
+        .sum();
+    let compact = total_cells > COMPACT_RESULT_CELLS;
     let mut ner: IndexMap<&str, &Vec<crate::types::EntityTag>> = IndexMap::new();
     for t in &tables {
         ner.insert(&t.name, &t.analysis.ner_tags);
     }
+    let ner = raw(&ner);
     let mut links: Vec<CrossLink> = Vec::new();
     if has(ops, "Relation Detector") {
         progress(Progress {
@@ -1377,19 +1689,44 @@ fn finish_multi(
             links.len()
         ));
     }
-    let schema = build_schema(
-        tables
-            .iter()
-            .map(|t| TableSchemaInput {
+    let row_counts: Vec<usize> = tables.iter().map(|t| t.analysis.rows.len()).collect();
+    // Large runs move each table's rows into the schema instead of copying them (the result then reports
+    // row counts only); small runs keep both, as the result includes the rows.
+    let schema_inputs: Vec<TableSchemaInput> = tables
+        .iter_mut()
+        .map(|t| {
+            let (rows, relations) = if compact {
+                let a = &mut t.analysis;
+                let fin = if !a.relations_3nf.is_empty() {
+                    &mut a.relations_3nf
+                } else {
+                    &mut a.relations_2nf
+                };
+                let moved: Vec<Relation> = fin
+                    .iter_mut()
+                    .map(|r| {
+                        let rows = std::mem::take(&mut r.rows);
+                        r.released_rows = Some(rows.len());
+                        let mut copy = r.clone();
+                        copy.rows = rows;
+                        copy.released_rows = None;
+                        copy
+                    })
+                    .collect();
+                (std::mem::take(&mut a.rows), moved)
+            } else {
+                (t.analysis.rows.clone(), t.analysis.final_set().to_vec())
+            };
+            TableSchemaInput {
                 table_name: t.name.clone(),
                 headers: t.analysis.attributes.clone(),
-                rows: t.analysis.rows.clone(),
+                rows,
                 primary_key: t.pk.clone(),
-                relations: t.analysis.final_set().to_vec(),
-            })
-            .collect(),
-        &links,
-    );
+                relations,
+            }
+        })
+        .collect();
+    let schema = build_schema(schema_inputs, &links);
     for u in &schema.unplaced {
         logs.push(format!(
             "[WARN] Foreign key {}.{} → {}.{} skipped: {}.",
@@ -1433,10 +1770,11 @@ fn finish_multi(
     let entries: Vec<reports::MultiTableEntry> = tables
         .iter()
         .zip(&files)
-        .map(|(t, f)| reports::MultiTableEntry {
+        .zip(&row_counts)
+        .map(|((t, f), &row_count)| reports::MultiTableEntry {
             table_name: &t.name,
             file_name: f,
-            row_count: t.analysis.rows.len(),
+            row_count,
             analysis: &t.analysis,
         })
         .collect();
@@ -1461,7 +1799,12 @@ fn finish_multi(
             js::len16(&sql),
             "SQL",
         ));
-        for f in export_normalized_data(&schema, dialect) {
+        if compact {
+            logs.push(format!(
+                "[INFO] Large input ({total_cells} cells): normalized data is exported as one CSV per relation; the INSERT script and repeated row data are left out."
+            ));
+        }
+        for f in export_normalized_data_with(&schema, dialect, !compact) {
             let desc = if f.kind == "csv" {
                 "Normalized rows for one relation (duplicates removed)"
             } else if f.name.starts_with("verify") {
@@ -1491,11 +1834,12 @@ fn finish_multi(
         ..Default::default()
     });
     let all_fds: usize = tables.iter().map(|t| t.analysis.functional_dependencies.len()).sum();
-    let rows: usize = tables.iter().map(|t| t.analysis.rows.len()).sum();
+    let rows: usize = row_counts.iter().sum();
     let table_values: Vec<Raw> = tables
         .iter()
         .zip(&files)
-        .map(|(t, f)| table_json(&t.name, f, t))
+        .zip(&row_counts)
+        .map(|((t, f), &n)| table_json(&t.name, f, t, n, compact))
         .collect();
     let relationships: Vec<Value> = schema
         .relations
@@ -1516,7 +1860,7 @@ fn finish_multi(
         "relations3NF": schema.relations.len(),
         "processDuration": dur,
     });
-    let relations = raw(&schema.relations);
+    let relations = rels(&schema.relations, compact);
     object(vec![
         ("success", raw(&true)),
         ("isMultiTable", raw(&true)),

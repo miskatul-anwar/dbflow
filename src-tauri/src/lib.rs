@@ -5,7 +5,7 @@
 //! (`crates/dbflow-core`), linked natively here. The webview only renders the UI.
 //!
 //! A run is driven by four commands:
-//!   `engine_upload`   one file's raw bytes (binary IPC body, name in the `x-file-name` header);
+//!   `engine_upload`   one file's raw bytes (binary IPC body, name in the `x-file-name` header, run in `x-run-id`);
 //!   `engine_prepare`  parse and analyse the uploads on a background thread, streaming progress;
 //!   `engine_finish`   apply relation names from the on-device model and build every output;
 //!   `engine_cancel`   stop a running `engine_prepare`.
@@ -22,7 +22,8 @@ use tauri::State;
 
 #[derive(Default)]
 struct Engine {
-    uploads: Mutex<HashMap<u64, InputFile>>,
+    /// Uploaded files by id, with the run they belong to (so a cancelled run's files are dropped).
+    uploads: Mutex<HashMap<u64, (String, InputFile)>>,
     cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
     next_upload: AtomicU64,
 }
@@ -45,8 +46,10 @@ fn decode_name(raw: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
+/// Async so the copy of a large file never runs on the main thread (Tauri runs plain commands there, and the
+/// window cannot repaint or take input while one is busy).
 #[tauri::command]
-fn engine_upload(request: Request<'_>, engine: State<'_, Engine>) -> Result<u64, String> {
+async fn engine_upload(request: Request<'_>, engine: State<'_, Engine>) -> Result<u64, String> {
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err("expected the file bytes as the request body".into());
     };
@@ -56,13 +59,22 @@ fn engine_upload(request: Request<'_>, engine: State<'_, Engine>) -> Result<u64,
         .and_then(|v| v.to_str().ok())
         .map(decode_name)
         .unwrap_or_else(|| "data.csv".into());
+    let run = request
+        .headers()
+        .get("x-run-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
     let id = engine.next_upload.fetch_add(1, Ordering::Relaxed) + 1;
     engine.uploads.lock().map_err(|e| e.to_string())?.insert(
         id,
-        InputFile {
-            name,
-            bytes: bytes.clone(),
-        },
+        (
+            run,
+            InputFile {
+                name,
+                bytes: bytes.clone(),
+            },
+        ),
     );
     Ok(id)
 }
@@ -78,7 +90,10 @@ async fn engine_prepare(
 ) -> Result<Value, String> {
     let files: Vec<InputFile> = {
         let mut store = engine.uploads.lock().map_err(|e| e.to_string())?;
-        uploads.iter().filter_map(|id| store.remove(id)).collect()
+        uploads
+            .iter()
+            .filter_map(|id| store.remove(id).map(|(_, f)| f))
+            .collect()
     };
     let flag = Arc::new(AtomicBool::new(false));
     engine
@@ -126,6 +141,10 @@ fn engine_cancel(run_id: String, engine: State<'_, Engine>) {
             flag.store(true, Ordering::Relaxed);
         }
     }
+    // Files uploaded for a run that was cancelled before it started would otherwise stay in memory.
+    if let Ok(mut store) = engine.uploads.lock() {
+        store.retain(|_, (run, _)| *run != run_id);
+    }
 }
 
 #[tauri::command]
@@ -137,6 +156,8 @@ async fn engine_call(method: String, args: Value) -> Result<Value, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // One core stays free for the window, so tabs, dialogs and other workspaces respond during a large run.
+    dbflow_core::reserve_cores(1);
     tauri::Builder::default()
         .manage(Engine::default())
         .plugin(tauri_plugin_opener::init())
@@ -171,7 +192,7 @@ mod tests {
                 bytes: csv.as_bytes().to_vec(),
             }],
             vec![
-                "CSV Data Loader".into(),
+                "Data Loader".into(),
                 "FD Miner".into(),
                 "Key Discovery".into(),
                 "3NF".into(),

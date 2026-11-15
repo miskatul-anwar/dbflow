@@ -60,6 +60,28 @@ streams back over a Tauri channel and `engine_cancel` sets a flag the engine che
 steps and inside FD mining. In the browser the WebAssembly build runs in a Web Worker and
 cancelling terminates the worker.
 
+### Naming modes
+
+`namingMode` decides how new relations are named. `model` (default) asks the on-device model between the two phases;
+`rules` skips the model and names each relation from its key columns (`naming::rule_name`: identifier words such as
+`id`, `code` and `no` are dropped, the rest title-cased and joined, so `order_id, line_no` becomes "Order Line"). The
+toolbar switch (*AI names / Key names*) sets it for every workspace (`useModelNaming`). Names the user typed always win.
+
+### Parallelism and memory
+
+- **Across files** (native only): `pipeline::analyze_files_parallel` gives each file its own scoped thread, largest
+  file first, and starts a file only when its estimated peak memory (about 20 × its size) fits the budget
+  (`memoryBudgetMb`, default half of the available memory). Workers send progress over a channel; the calling thread
+  merges it into one percentage and passes a cancel request on through a shared flag. Relation ids come in a block per
+  file (`RELATION_ID_BLOCK`), in sequential runs too, so the result does not depend on the number of threads.
+- **Inside a file**: per-column and per-relation work uses the rayon pool (`par_map`). The desktop app reserves one core
+  for its window (`reserve_cores(1)`).
+- **Cells** (`table::Cell`) are 24 bytes. Text up to 22 bytes is stored inline; longer text is an `Arc<str>` shared by
+  every relation that holds the value, so projections copy no text.
+- **Compact results**: above 999,999 cells (`COMPACT_RESULT_CELLS`) relations report `rowCount` instead of their rows,
+  each relation's data is exported once as CSV, and a multi-file run releases the rows of intermediate normal forms as
+  soon as a table is analysed (`Relation::release_rows`, `Relation::shadow`).
+
 ### Compatibility layer
 
 The engine replaced a TypeScript implementation. `js.rs` reproduces the JavaScript behaviour
@@ -90,7 +112,8 @@ file or for every file.
    approximate dependencies are returned; **only exact ones** feed keys and
    normal forms unless `acceptApproximateFDs` is set. A time budget and an
    abort signal stop long searches and flag the result as truncated.
-5. **Keys** — candidate keys by attribute closure; `chooseKey` picks one that
+5. **Keys** — all candidate keys by the Lucchesi–Osborn algorithm (each key is reached from another by
+   swapping in the left side of a dependency, so the work is polynomial per key); `chooseKey` picks one that
    is unique and has no missing cells, preferring identifier-like single
    columns, and adds a `row_id` surrogate when none exists.
 6. **Normalize** — 1NF (non-destructive), 2NF, Bernstein 3NF synthesis, BCNF
@@ -111,6 +134,13 @@ file or for every file.
     first, and a Markdown report. Text from the input files is escaped.
 
 ## Why the FD miner is fast enough
+
+A column that is nearly unique on the full data (`nearKeyRatio`, default 0.9) is not used as a determinant, and neither
+are its supersets: on wide tables two unrelated measures together are a key by accident, with a dependency to every
+other column. When mining runs on a sample, a key found in the sample is confirmed on the full data before it yields
+dependencies, so a composite key whose part merely looks unique in the sample (an order id with three lines per order)
+is still found. The time budget covers all sampling rounds together.
+
 
 Columns are integer-encoded once. Partitions are refined along the LHS
 lattice, reusing the parent's partition, and only the previous level is kept

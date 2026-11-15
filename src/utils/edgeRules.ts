@@ -70,16 +70,16 @@ export function validateEdgeConnection(
     if (targetPhase && targetPhase !== 'PREP') {
       return {
         isValid: false,
-        error: `Start node can only connect to Data Preparation operations (e.g. 'CSV Data Loader'), not directly to '${targetLabel}' (${targetPhase}).`,
+        error: `Start node can only connect to Data Preparation operations (e.g. 'Data Loader'), not directly to '${targetLabel}' (${targetPhase}).`,
       };
     }
   }
 
-  // Rule: Only Start node can connect to CSV Data Loader (CSV Data Loader should not have other incoming edges)
-  if (targetLabel === 'CSV Data Loader' && !isSourceStart) {
+  // Rule: Only Start node can connect to Data Loader (Data Loader should not have other incoming edges)
+  if (targetLabel === 'Data Loader' && !isSourceStart) {
     return {
       isValid: false,
-      error: `'CSV Data Loader' is the entry point for dataset ingestion and can only receive incoming connections from the Start node.`,
+      error: `'Data Loader' is the entry point for dataset ingestion and can only receive incoming connections from the Start node.`,
     };
   }
 

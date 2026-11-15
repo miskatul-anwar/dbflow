@@ -3,7 +3,7 @@ import { DatabaseService } from '../services/api/databaseService';
 import { splitMultiValuedColumns } from '../services/processors/atomicSplit';
 
 const csv = (name: string, text: string) => new File([text], name, { type: 'text/csv' });
-const OPS = ['CSV Data Loader', 'Atomicity Checker', '1NF', 'FD Miner', 'Key Discovery', '2NF', '3NF',
+const OPS = ['Data Loader', 'Atomicity Checker', '1NF', 'FD Miner', 'Key Discovery', '2NF', '3NF',
   'Lossless Check', 'ERD Generator', 'SQL Generator', 'Report Generator'];
 
 describe('1NF moves multi-valued columns into child tables', () => {

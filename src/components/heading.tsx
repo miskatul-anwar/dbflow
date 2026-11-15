@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { FileOutput, FolderOpen, Play, Redo2, RotateCcw, Save, Undo2, Upload } from "lucide-react";
+import { FileOutput, FolderOpen, Play, Redo2, RotateCcw, Save, Sparkles, Undo2, Upload } from "lucide-react";
 import { Button, IconButton } from "@/components/ui/button";
 import { INPUT_ACCEPT } from "@/services/processors/spreadsheetProcessor";
 
@@ -17,6 +17,11 @@ interface HeadingProps {
   onLoadState?: (file: File) => void;
   isRunning?: boolean;
   isOutputReady?: boolean;
+  /** Whether the on-device model names new relations (off: names come from the key columns). */
+  aiNaming?: boolean;
+  onToggleAiNaming?: () => void;
+  /** Shows a message in the app's notification area (instead of a browser alert). */
+  onNotice?: (message: string) => void;
 }
 
 export default function Heading({
@@ -32,6 +37,9 @@ export default function Heading({
   onLoadState,
   isRunning,
   isOutputReady,
+  aiNaming = true,
+  onToggleAiNaming,
+  onNotice,
 }: HeadingProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const loadStateInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +67,7 @@ export default function Heading({
       if (extension === "json") {
         onLoadState?.(file);
       } else {
-        alert("Please select a valid JSON state file.");
+        onNotice?.(`${file.name} is not a saved workflow. Choose a .json file saved with Save.`);
       }
     }
     e.target.value = "";
@@ -119,6 +127,23 @@ export default function Heading({
       </div>
 
       <div className="flex items-center justify-end gap-2">
+        {onToggleAiNaming && (
+          <Button
+            onClick={onToggleAiNaming}
+            disabled={isRunning}
+            aria-pressed={aiNaming}
+            aria-label="Name new tables with the on-device AI model"
+            title={
+              aiNaming
+                ? "AI naming is on: the on-device model suggests names for new tables. Click to build names from the key columns instead (faster)."
+                : "AI naming is off: new tables are named from their key columns (faster). Click to let the on-device model suggest names."
+            }
+            className={aiNaming ? "border-teal-600/40 text-teal-800" : "text-gray-600"}
+          >
+            <Sparkles className={aiNaming ? "" : "opacity-50"} />
+            {label(aiNaming ? "AI names" : "Key names")}
+          </Button>
+        )}
         <Button
           variant="primary"
           onClick={onRun}

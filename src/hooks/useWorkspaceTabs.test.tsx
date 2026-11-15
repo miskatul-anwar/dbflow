@@ -36,6 +36,12 @@ describe('useWorkspaceTabs', () => {
     expect(result.current.tabs.map(t => t.id)).toEqual(['t1', 't4']);
   });
 
+  it('closing the last tab with a name gives the fresh one that name', () => {
+    const { result } = renderHook(() => useWorkspaceTabs());
+    act(() => result.current.closeTab('t1', '  Enrollment  '));
+    expect(result.current.tabs.map(t => [t.title, t.autoTitle])).toEqual([['Enrollment', false]]);
+  });
+
   it('closing the last tab leaves a fresh one', () => {
     const { result } = renderHook(() => useWorkspaceTabs());
     act(() => result.current.closeTab('t1'));
