@@ -35,7 +35,7 @@ describe('4NF', () => {
 
   it('splits independent multivalued facts in a full run', async () => {
     const ops = planFor(['4NF', 'Lossless Check', 'SQL Generator']).plan;
-    const res = (await new DatabaseService().processFiles([courseTeacherBook()], ops, { namingMode: 'rules' })) as unknown as {
+    const res = (await new DatabaseService().processFiles([courseTeacherBook()], ops, undefined, { namingMode: 'rules' })) as unknown as {
       success: boolean;
       error?: string;
       bcnf: Array<{ attributes: string[] }>;
