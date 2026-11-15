@@ -101,7 +101,7 @@ export function NormalFormSection({ relations1NF, relations2NF, relations3NF, re
                       </span>
                       <span className="flex items-center gap-1">
                         <Database className="w-4 h-4" />
-                        {relation.rows?.length || 0} rows
+                        {(relation.rowCount ?? relation.rows?.length ?? 0).toLocaleString()} rows
                       </span>
                     </div>
                   </div>

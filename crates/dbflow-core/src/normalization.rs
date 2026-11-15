@@ -1156,8 +1156,33 @@ pub fn synthesize_3nf(
             ..Default::default()
         });
     }
+    prefer_identifier_keys(&mut non, &keys, &cc.singleton_cover);
     establish_foreign_keys(&mut non);
     non
+}
+
+/// In a relation whose key is one column, another column that determines it is an equally valid key (a city's
+/// code, name and population can all identify it). The most identifier-like one (`*_id`, then `*_code`, `*_no`,
+/// …) becomes the primary key, so the schema reads `city_code` rather than whichever column the cover listed
+/// first. Keys chosen for the table itself are left as they are.
+fn prefer_identifier_keys(relations: &mut [Relation], table_keys: &[Vec<String>], cover: &[Fd]) {
+    let fds = singletons(cover);
+    for rel in relations.iter_mut() {
+        if rel.primary_key.len() != 1 || table_keys.iter().any(|k| k == &rel.primary_key) {
+            continue;
+        }
+        let current = rel.primary_key[0].clone();
+        let score = |c: &str| crate::keys::looks_like_identifier(c);
+        let best = rel
+            .attributes
+            .iter()
+            .filter(|a| **a != current && score(a) > score(&current))
+            .filter(|a| closure(std::slice::from_ref(*a), &fds).contains(&current))
+            .max_by_key(|a| score(a));
+        if let Some(b) = best {
+            rel.primary_key = vec![b.clone()];
+        }
+    }
 }
 
 fn build_bcnf_relation(name: String, attributes: &[String], fds: &[Fd], rows: &Table) -> Relation {
