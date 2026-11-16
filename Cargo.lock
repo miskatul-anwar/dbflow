@@ -770,7 +770,7 @@ dependencies = [
 
 [[package]]
 name = "dbflow"
-version = "6.6.1"
+version = "6.6.6"
 dependencies = [
  "dbflow-core",
  "serde",
@@ -785,7 +785,7 @@ dependencies = [
 
 [[package]]
 name = "dbflow-core"
-version = "6.6.1"
+version = "6.6.6"
 dependencies = [
  "calamine",
  "encoding_rs",
@@ -801,7 +801,7 @@ dependencies = [
 
 [[package]]
 name = "dbflow-wasm"
-version = "6.6.1"
+version = "6.6.6"
 dependencies = [
  "dbflow-core",
  "js-sys",
