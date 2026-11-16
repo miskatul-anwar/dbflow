@@ -1,6 +1,7 @@
 /*
- * DBFlow on a phone. Function first: flat surfaces, 1px borders, one accent colour, 48px touch targets,
- * text that says what a control does. Colour carries meaning only (the engine's four phases, primary and
+ * DBFlow on a phone, following Android's Material 3 conventions: the system font (Roboto on Android), a
+ * one-line top app bar, a navigation bar with a pill behind the active icon, sentence-case section headers,
+ * press feedback as a tint (not a fade), 48px touch targets, and text that says what a control does. Colour carries meaning only (the engine's four phases, primary and
  * foreign keys, errors). Everything is scoped under .m-app, so the desktop interface is untouched.
  */
 .m-app {
@@ -19,6 +20,9 @@
   --m-normal: #7c3aed;
   --m-output: #d97706;
   --m-danger: #c62828;
+  --m-nav-bg: #eceff2;
+  --m-pill: #cdeae6;
+  --m-press: rgba(21, 25, 31, 0.1);
   --m-safe-top: env(safe-area-inset-top, 0px);
   --m-safe-bottom: env(safe-area-inset-bottom, 0px);
 
@@ -28,7 +32,7 @@
   flex-direction: column;
   background: var(--m-bg);
   color: var(--m-ink);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Roboto, system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.4;
   -webkit-tap-highlight-color: transparent;
@@ -46,6 +50,9 @@
   --m-accent-soft: #15302d;
   --m-on-accent: #04201d;
   --m-danger: #ef5350;
+  --m-nav-bg: #1b2027;
+  --m-pill: #1f4a45;
+  --m-press: rgba(233, 237, 242, 0.12);
 }
 
 /* Zero specificity, so every component's own background and colour win. */
@@ -60,8 +67,18 @@
   outline: 2px solid var(--m-accent);
   outline-offset: 2px;
 }
-.m-app button:active:not(:disabled) {
-  opacity: 0.7;
+/* Material's pressed state: a tint over whatever the control's own background is. */
+.m-app button:active:not(:disabled),
+.m-app label:active,
+.m-app a:active {
+  background-image: linear-gradient(var(--m-press), var(--m-press));
+}
+/* Phones show no scrollbars; content that scrolls sideways is cut at the edge instead. */
+.m-app * {
+  scrollbar-width: none;
+}
+.m-app *::-webkit-scrollbar {
+  display: none;
 }
 
 /* ---- App bar ---------------------------------------------------------------------------------- */
@@ -69,10 +86,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 56px;
-  padding: var(--m-safe-top) 8px 0 16px;
-  background: var(--m-surface);
-  border-bottom: 1px solid var(--m-line);
+  min-height: 64px;
+  padding: var(--m-safe-top) 4px 0 16px;
+  background: var(--m-bg);
 }
 .m-title {
   display: flex;
@@ -85,17 +101,29 @@
 .m-title-text {
   min-width: 0;
 }
+/* One line, cut with an ellipsis, as an app bar title is. */
 .m-title-name {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 17px;
-  font-weight: 650;
+  font-size: 20px;
+  font-weight: 500;
+}
+.m-title-name > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.m-title-name svg {
+  flex-shrink: 0;
 }
 .m-title-text small {
   display: block;
   font-size: 13px;
   color: var(--m-ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .m-ws-dot {
   width: 10px;
@@ -116,18 +144,16 @@
 .m-screen {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 12px calc(var(--m-safe-bottom) + 80px);
+  padding: 4px 12px calc(var(--m-safe-bottom) + 100px);
 }
 .m-screen.m-with-cta {
-  padding-bottom: calc(var(--m-safe-bottom) + 144px);
+  padding-bottom: calc(var(--m-safe-bottom) + 164px);
 }
 .m-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--m-ink-3);
-  margin: 18px 4px 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--m-accent);
+  margin: 20px 4px 8px;
 }
 .m-label:first-child {
   margin-top: 4px;
@@ -140,7 +166,7 @@
 .m-group {
   background: var(--m-surface);
   border: 1px solid var(--m-line);
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
 }
 .m-row {
@@ -183,10 +209,9 @@
   bottom: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  height: calc(var(--m-safe-bottom) + 60px);
+  height: calc(var(--m-safe-bottom) + 80px);
   padding-bottom: var(--m-safe-bottom);
-  background: var(--m-surface);
-  border-top: 1px solid var(--m-line);
+  background: var(--m-nav-bg);
   z-index: 20;
 }
 .m-nav button {
@@ -195,32 +220,44 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--m-ink-3);
+  color: var(--m-ink-2);
 }
-.m-nav button[aria-current='page'] {
-  color: var(--m-accent);
-  font-weight: 650;
-}
-.m-nav button[aria-current='page']::before {
+/* The active destination: a pill behind its icon. The press tint goes on the pill too, not the whole cell. */
+.m-nav button::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 30%;
-  right: 30%;
-  height: 2px;
-  background: var(--m-accent);
+  top: 12px;
+  left: 50%;
+  width: 64px;
+  height: 32px;
+  margin-left: -32px;
+  border-radius: 16px;
+}
+.m-nav button[aria-current='page'] {
+  color: var(--m-ink);
+  font-weight: 600;
+}
+.m-nav button[aria-current='page']::before {
+  background: var(--m-pill);
+}
+.m-app .m-nav button:active:not(:disabled) {
+  background-image: none;
+}
+.m-nav button:active::before {
+  background-image: linear-gradient(var(--m-press), var(--m-press));
 }
 .m-nav svg {
-  width: 22px;
-  height: 22px;
+  position: relative;
+  width: 24px;
+  height: 24px;
 }
 .m-count {
   position: absolute;
-  top: 6px;
-  left: calc(50% + 6px);
+  top: 10px;
+  left: calc(50% + 4px);
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -271,7 +308,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--m-safe-bottom) + 60px);
+  bottom: calc(var(--m-safe-bottom) + 80px);
   padding: 8px 12px;
   background: var(--m-surface);
   border-top: 1px solid var(--m-line);
@@ -500,7 +537,7 @@
 }
 .m-tabs {
   position: sticky;
-  top: -12px;
+  top: -4px;
   z-index: 5;
   display: flex;
   overflow-x: auto;
@@ -515,16 +552,15 @@
 }
 .m-tabs button {
   flex-shrink: 0;
-  min-height: 44px;
-  padding: 0 12px;
+  min-height: 48px;
+  padding: 0 16px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--m-ink-3);
-  border-bottom: 2px solid transparent !important;
+  color: var(--m-ink-2);
+  border-bottom: 3px solid transparent !important;
 }
 .m-tabs button[aria-selected='true'] {
   color: var(--m-accent);
-  font-weight: 650;
   border-bottom-color: var(--m-accent) !important;
 }
 .m-section {
@@ -548,7 +584,7 @@
   color: var(--m-ink-2);
 }
 .m-col b {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Roboto, system-ui, sans-serif;
   font-size: 10px;
   font-weight: 700;
   margin-right: 4px;
@@ -565,21 +601,42 @@
 .m-table + .m-table {
   border-top: 1px solid var(--m-line);
 }
+/* The name takes the line; the detail (rows, or the file and rows) follows it, wrapping below when it does not fit. */
 .m-table header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 8px;
+  align-items: baseline;
+  gap: 2px 8px;
 }
 .m-table h3 {
+  flex: 1 1 12ch;
+  min-width: 0;
   margin: 0;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .m-table header span {
+  min-width: 0;
   font-size: 13px;
   color: var(--m-ink-3);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+/* The desktop result views shown on a tab (normal forms, keys, dependencies…) keep their own cards, so the
+   tab adds no frame of its own; long names wrap instead of running off the screen. */
+.m-panel {
+  overflow-wrap: anywhere;
+}
+.m-panel .flex > * {
+  min-width: 0;
+}
+.m-panel .p-6 {
+  padding: 12px;
+}
+.m-panel .rounded-lg {
+  border-radius: 12px;
 }
 
 /* ---- Settings, switches, toast ---------------------------------------------------------------- */
@@ -742,7 +799,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--m-safe-bottom) + 60px);
+  bottom: calc(var(--m-safe-bottom) + 80px);
   z-index: 30;
   padding: 12px 16px;
   background: var(--m-surface);
