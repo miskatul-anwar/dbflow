@@ -6,7 +6,8 @@
  *  - Browser: the WebAssembly build runs in a Web Worker so the window stays responsive;
  *    `cancel()` terminates the worker. Without workers it runs on the main thread.
  */
-import { invoke, Channel, isTauri } from '@tauri-apps/api/core';
+import { invoke, Channel, isTauri, type InvokeArgs } from '@tauri-apps/api/core';
+import { isTauriMobile } from '../../utils/platform';
 import DatabaseService, {
   askNamer,
   engineOptions,
@@ -28,6 +29,31 @@ function nativeAvailable(): boolean {
   } catch {
     return false;
   }
+}
+
+/** Base64 text of the bytes, built in slices so large files do not overflow the call stack. */
+export function toBase64(bytes: Uint8Array): string {
+  const slice = 3 * 0x4000; // a multiple of 3, so the pieces join without padding in between
+  const parts: string[] = [];
+  for (let i = 0; i < bytes.length; i += slice) {
+    parts.push(btoa(String.fromCharCode(...bytes.subarray(i, i + slice))));
+  }
+  return parts.join('');
+}
+
+/**
+ * The body of an `engine_upload` call. Android's WebView cannot pass a request body to the app, so Tauri sends the
+ * call as JSON there; base64 text is far smaller than the byte array JSON would otherwise carry.
+ */
+function uploadBody(bytes: Uint8Array): InvokeArgs {
+  return isTauriMobile() ? (toBase64(bytes) as unknown as InvokeArgs) : bytes;
+}
+
+/** Tauri rejects a failed command with its error text (a string), not an Error. */
+function asError(e: unknown): Error {
+  if (e instanceof Error) return e;
+  const text = typeof e === 'string' ? e : (e as { message?: unknown } | null)?.message;
+  return new Error(typeof text === 'string' && text ? text : 'the app engine stopped without a message');
 }
 
 function runNative(
@@ -52,7 +78,7 @@ function runNative(
       for (const f of prepared.files) {
         if (cancelled) throw new Error('Processing was cancelled.');
         uploads.push(
-          await invoke<number>('engine_upload', f.bytes, { headers: { 'x-file-name': encodeURIComponent(f.name), 'x-run-id': runId } }),
+          await invoke<number>('engine_upload', uploadBody(f.bytes), { headers: { 'x-file-name': encodeURIComponent(f.name), 'x-run-id': runId } }),
         );
       }
       const run = await invoke<{ session: number; naming: Array<{ key: string; columns: string[] }> }>('engine_prepare', {
@@ -65,7 +91,7 @@ function runNative(
       if (cancelled) throw new Error('Processing was cancelled.');
       const { answers, error } = await askNamer(namer, run.naming, onProgress);
       return invoke<ProcessingResult>('engine_finish', { session: run.session, answers, namerError: error, onProgress: channel });
-    })().then(resolve, reject);
+    })().then(resolve, e => reject(asError(e)));
   });
   return {
     promise,

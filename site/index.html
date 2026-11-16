@@ -4,140 +4,63 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f7f9f8" />
-    <meta name="description" content="Download DBFlow for Windows, macOS, Linux or Android. Turn CSV and spreadsheet files into database schemas, diagrams, and SQL on your computer." />
+    <meta name="description" content="Download DBFlow for Windows, macOS, Linux or Android." />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src https://api.github.com; base-uri 'none'; form-action 'none'" />
-    <title>Download DBFlow for Windows, macOS, Linux, and Android</title>
+    <title>Download DBFlow</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
     <script type="module" src="app.js"></script>
   </head>
   <body>
-    <a class="skip-link" href="#downloads">Skip to downloads</a>
-    <header class="site-header">
-      <div class="container header-inner">
-        <a class="brand" href="./" aria-label="DBFlow home">
-          <img src="assets/icon.webp" width="34" height="34" alt="" />
-          <span>DBFlow</span>
-        </a>
-        <nav aria-label="Main navigation">
-          <a href="#downloads">Download</a>
-          <a href="#about">About</a>
-          <a href="#install">Install help</a>
-          <a href="https://github.com/miskatul-anwar/dbflow">GitHub</a>
-        </nav>
-      </div>
-    </header>
+    <main class="page">
+      <header class="intro">
+        <img src="assets/icon.webp" width="56" height="56" alt="" />
+        <h1>DBFlow</h1>
+        <p>Turns CSV and spreadsheet files into database schemas. Free and open source; your files stay on your device.</p>
+      </header>
 
-    <main>
-      <section class="hero container" id="downloads" aria-labelledby="downloads-title">
-        <div class="hero-copy">
-          <p class="eyebrow">Free, open-source app for desktop and Android</p>
-          <h1 id="downloads-title">Download DBFlow</h1>
-          <p>Turn CSV and spreadsheet files into database schemas, ER diagrams, and SQL. Your data stays on your computer.</p>
+      <section class="release-panel" id="downloads" aria-labelledby="release-version" aria-live="polite">
+        <div class="release-header">
+          <h2 id="release-version">Latest version</h2>
+          <p><span id="release-status">Checking GitHub Releases</span><span id="release-date">One moment…</span></p>
         </div>
-
-        <div class="release-panel" aria-live="polite">
-          <div class="release-header">
-            <div>
-              <p class="release-status" id="release-status">Checking GitHub Releases</p>
-              <h2 id="release-version">Latest version</h2>
-              <p class="release-date" id="release-date">One moment…</p>
-            </div>
-            <svg class="release-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3" /></svg>
-          </div>
-          <p id="loading-state" class="loading-state" role="status">Looking up available installers…</p>
-          <div id="release-content" hidden>
-            <p class="field-label">Choose your system</p>
-            <div class="system-tabs" id="system-tabs" role="group" aria-label="Choose operating system"></div>
-            <div id="installer-list"></div>
-            <a class="all-files-link" href="#all-downloads">All installers and checksums</a>
-          </div>
-          <div class="release-footer">
-            <a id="release-link" href="https://github.com/miskatul-anwar/dbflow/releases/latest">View release on GitHub</a>
-            <button id="refresh-release" type="button" aria-label="Refresh release information">Refresh</button>
-          </div>
-          <noscript><p class="noscript-note">JavaScript is needed to list installers here. Use the GitHub release link above to download.</p></noscript>
+        <p id="loading-state" class="loading-state" role="status">Looking up available installers…</p>
+        <div id="release-content" hidden>
+          <div class="system-tabs" id="system-tabs" role="group" aria-label="Choose operating system"></div>
+          <div id="installer-list"></div>
+        </div>
+        <noscript><p class="loading-state">JavaScript is needed to list installers here. Use the GitHub release link below.</p></noscript>
+        <div class="release-footer">
+          <a id="release-link" href="https://github.com/miskatul-anwar/dbflow/releases/latest">Release on GitHub</a>
+          <button id="refresh-release" type="button" aria-label="Refresh release information">Refresh</button>
         </div>
       </section>
 
-      <section class="about-section" id="about" aria-labelledby="about-title">
-        <div class="container about-layout">
-          <div class="about-copy">
-            <h2 id="about-title">From files to a clear schema</h2>
-            <p>Bring in one or more CSV or spreadsheet files. DBFlow finds relationships, helps normalize your tables, and generates outputs you can inspect or export.</p>
-            <div class="feature-list">
-              <div class="feature">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M9 9v12M9 15h11"/></svg>
-                <span>Open CSV and spreadsheet files</span>
-              </div>
-              <div class="feature">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="7" height="6" rx="1"/><rect x="15" y="3" width="7" height="6" rx="1"/><rect x="8.5" y="15" width="7" height="6" rx="1"/><path d="M5.5 9v3h13V9M12 12v3"/></svg>
-                <span>Explore keys and relationships</span>
-              </div>
-              <div class="feature">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-5-5h-3M16 4v5h5M7 14h10M7 18h7"/></svg>
-                <span>Export ER diagrams, SQL, and reports</span>
-              </div>
-            </div>
-          </div>
-          <figure class="product-preview">
-            <img src="assets/shot-erd.webp" width="1600" height="1091" loading="lazy" alt="DBFlow results screen showing an ER diagram, related tables, and export controls." />
-            <figcaption>Preview of DBFlow's results screen</figcaption>
-          </figure>
-        </div>
+      <section class="install-help" id="install" aria-labelledby="install-title">
+        <h2 id="install-title">Installing on <span id="install-system">Windows</span></h2>
+        <p data-install="windows">Run the EXE installer (the MSI is for managed installs). If SmartScreen warns that the installer is not signed, choose <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
+        <p data-install="macos" hidden>Open the DMG and drag DBFlow into Applications: Apple Silicon for an M1 or newer Mac, Intel for older ones. The app is not notarized: the first time, right-click DBFlow and choose <strong>Open</strong>.</p>
+        <p data-install="linux" hidden>Make the AppImage executable and run it, or install the DEB (Debian, Ubuntu) or RPM (Fedora, openSUSE) package.</p>
+        <p data-install="android" hidden>Open the APK and allow your browser or file manager to install apps when asked. Needs Android 7 or newer on a 64-bit ARM phone or tablet.</p>
       </section>
 
-      <section class="install-section" id="install" aria-labelledby="install-title">
-        <div class="container install-layout">
-          <div>
-            <h2 id="install-title">Install help</h2>
-            <p>Choose your system above to see the matching instructions here.</p>
-          </div>
-          <div class="install-help">
-            <h3>Installing on <span id="install-system">Windows</span></h3>
-            <div data-install="windows">
-              <p>Run the EXE installer. The MSI is available for managed Windows installs.</p>
-              <p>Windows may show a SmartScreen warning because the installer is not signed. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
-            </div>
-            <div data-install="macos" hidden>
-              <p>Open the DMG and drag DBFlow into Applications. Pick Apple Silicon for an M1 or newer Mac, or Intel for an older one.</p>
-              <p>The app is not notarized. On first launch, right-click DBFlow and choose <strong>Open</strong>.</p>
-            </div>
-            <div data-install="linux" hidden>
-              <p>For AppImage, make the file executable and run it. On Debian or Ubuntu, install the DEB package. On Fedora, RHEL or openSUSE, use the RPM package.</p>
-              <p>Check the architecture shown next to each installer before installing on your device.</p>
-            </div>
-            <a href="https://github.com/miskatul-anwar/dbflow/issues">Need help? Open an issue</a>
-          </div>
-        </div>
-      </section>
-
-      <section class="container all-downloads-section" id="all-downloads" aria-labelledby="all-downloads-title">
-        <div class="section-heading">
-          <div>
-            <h2 id="all-downloads-title">All release files</h2>
-            <p>Every available installer, with its size and SHA-256 checksum.</p>
-          </div>
-        </div>
+      <details class="all-files">
+        <summary>All files and SHA-256 checksums</summary>
         <div class="table-scroll">
           <table>
             <thead><tr><th scope="col">System</th><th scope="col">Format</th><th scope="col">File</th><th scope="col">Size</th><th scope="col">SHA-256</th></tr></thead>
             <tbody id="all-files"><tr><td colspan="5">Loading release files…</td></tr></tbody>
           </table>
         </div>
-        <p class="checksum-help">To verify a file, run <code>sha256sum FILE</code> on Linux, <code>shasum -a 256 FILE</code> on macOS, or <code>Get-FileHash FILE</code> in PowerShell.</p>
-      </section>
+        <p class="checksum-help">Verify a file with <code>sha256sum FILE</code> (Linux), <code>shasum -a 256 FILE</code> (macOS) or <code>Get-FileHash FILE</code> (PowerShell).</p>
+      </details>
     </main>
 
     <footer class="site-footer">
-      <div class="container footer-inner">
-        <span>DBFlow is open source. Your files stay local.</span>
-        <div class="footer-links">
-          <a href="https://github.com/miskatul-anwar/dbflow/releases">All releases</a>
-          <a href="https://github.com/miskatul-anwar/dbflow">Source code</a>
-          <a href="https://github.com/miskatul-anwar/dbflow/blob/main/LICENSE">MIT license</a>
-        </div>
-      </div>
+      <a href="https://github.com/miskatul-anwar/dbflow">Source code</a>
+      <a href="https://github.com/miskatul-anwar/dbflow/releases">All releases</a>
+      <a href="https://github.com/miskatul-anwar/dbflow/issues">Report a problem</a>
+      <a href="https://github.com/miskatul-anwar/dbflow/blob/main/LICENSE">MIT license</a>
     </footer>
   </body>
 </html>
