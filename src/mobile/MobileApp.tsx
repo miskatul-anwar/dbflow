@@ -21,12 +21,15 @@ type Dialog =
   | { kind: 'new' }
   | { kind: 'edit'; id: string }
   | { kind: 'close'; id: string }
-  | { kind: 'reset' };
+  | { kind: 'reset' }
+  // As on the desktop: the first workspace is named on launch, and closing the last one names its replacement.
+  | { kind: 'first' }
+  | { kind: 'replace-last'; id: string };
 
 export default function MobileApp() {
   const { tabs, activeId, nextDefaultName, status, addTab, closeTab, renameTab, setTabColor, suggestTitle, selectTab, setStatus } =
     useWorkspaceTabs();
-  const [dialog, setDialog] = useState<Dialog | null>(null);
+  const [dialog, setDialog] = useState<Dialog | null>({ kind: 'first' });
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [aiNames, setAiNames] = useModelNaming();
   const { theme, toggle: toggleTheme } = useTheme();
@@ -40,13 +43,21 @@ export default function MobileApp() {
 
   const onStatus = useCallback((id: string, s: TabStatus) => setStatus(id, s), [setStatus]);
 
-  const close = useCallback(
-    (id: string) => {
+  const finishClose = useCallback(
+    (id: string, replacementName?: string) => {
       setDialog(null);
-      closeTab(id);
+      closeTab(id, replacementName);
       clearCachedResult(id);
     },
     [closeTab],
+  );
+  // Closing the last workspace asks for the name of the one that replaces it.
+  const close = useCallback(
+    (id: string) => {
+      if (tabs.length === 1 && tabs[0].id === id) setDialog({ kind: 'replace-last', id });
+      else finishClose(id);
+    },
+    [finishClose, tabs],
   );
 
   const editing = dialog?.kind === 'edit' ? tabs.find(t => t.id === dialog.id) : undefined;
@@ -84,6 +95,29 @@ export default function MobileApp() {
             if (s?.running || (s?.operations ?? 0) > 0) setDialog({ kind: 'close', id });
             else close(id);
           }}
+          onDismiss={done}
+        />
+      )}
+      {dialog?.kind === 'first' && tabs[0] && (
+        <WorkspaceForm
+          title="Name your workspace"
+          initialName={tabs[0].title}
+          withColor={false}
+          confirmLabel="Start"
+          onConfirm={name => {
+            renameTab(tabs[0].id, name);
+            done();
+          }}
+        />
+      )}
+      {dialog?.kind === 'replace-last' && (
+        <WorkspaceForm
+          title="Name the new workspace"
+          note="This was the last workspace, so a new one replaces it."
+          initialName={nextDefaultName()}
+          withColor={false}
+          confirmLabel="Close and start"
+          onConfirm={name => finishClose(dialog.id, name)}
           onDismiss={done}
         />
       )}

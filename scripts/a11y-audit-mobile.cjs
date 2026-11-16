@@ -67,6 +67,8 @@ fs.writeFileSync(files[1], ['course,title', 'DB,Databases', 'OS,Operating system
       );
       for (const t of targets) small.set(`${t.label} (${t.w}×${t.h})`, { ...t, where: name });
     };
+    await scan('name your workspace');
+    await page.getByRole('button', { name: 'Start' }).click(); // the launch sheet asks for a workspace name
     await scan('data, empty');
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /Add/ }).first().click();

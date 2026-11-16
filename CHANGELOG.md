@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Android: squeezed names in *Column meaning*.** A long file name squeezed the table name to one letter per line; the detail now wraps below the name. Long names in the result views wrap instead of running off the screen.
 - **Android accessibility** (found by the new `bun run audit:a11y:mobile`): secondary text, key badges and error colours now meet WCAG 2.1 AA contrast in both themes (127 failures before); switches and the result views' buttons are at least 48 dp.
 
+- **Android asks for workspace names as the desktop app does**: on launch (*Name your workspace* → *Start*), and when the last workspace is closed (*Name the new workspace*). Before, it only asked when *New workspace* was tapped.
+
 ### Changed
 - **Android looks like an Android app** (Material 3): the system font, a one-line app bar, a navigation bar with a pill behind the active screen, sentence-case section headers, Material switches, press feedback as a tint, no scrollbars, and result views without a frame inside a frame.
 

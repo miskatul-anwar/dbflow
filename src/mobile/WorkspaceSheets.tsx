@@ -31,7 +31,7 @@ export function WorkspacesSheet({
           const s = status[t.id];
           return (
             <div key={t.id} className="m-row m-ws-row" aria-current={t.id === activeId}>
-              <button className="m-row-text" style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, textAlign: 'left' }} onClick={() => onSelect(t.id)}>
+              <button className="m-row-text" style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 48, textAlign: 'left' }} onClick={() => onSelect(t.id)}>
                 <span className="m-ws-dot" style={{ background: t.color ?? 'var(--m-ink-3)' }} aria-hidden />
                 <span>
                   <strong>{t.title}</strong>
@@ -64,16 +64,20 @@ export function WorkspaceForm({
   initialColor,
   withColor,
   confirmLabel,
+  note,
   onConfirm,
   onDismiss,
 }: {
   title: string;
+  /** A line above the name field, when the sheet needs to say why it asks. */
+  note?: string;
   initialName: string;
   initialColor?: string | null;
   withColor: boolean;
   confirmLabel: string;
   onConfirm: (name: string, color: string | null) => void;
-  onDismiss: () => void;
+  /** Without it the sheet cannot be dismissed: a name must be given (the first workspace, on launch). */
+  onDismiss?: () => void;
 }) {
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState<string | null>(initialColor ?? null);
@@ -87,6 +91,7 @@ export function WorkspaceForm({
           if (clean) onConfirm(clean, color);
         }}
       >
+        {note && <p className="m-hint" style={{ margin: 0 }}>{note}</p>}
         <input className="m-input" value={name} onChange={e => setName(e.target.value)} aria-label="Workspace name" maxLength={40} autoFocus />
         {withColor && (
           <>
