@@ -2,6 +2,8 @@
  * Names the user typed and the on-device naming switch, remembered on this machine (localStorage) by relation signature,
  * i.e. table + columns + key. The same set of columns is found again on the next run and keeps the user's name.
  */
+import { isTauriMobile } from '../../utils/platform';
+
 const NAMES_KEY = 'dbflow.relationNames';
 const MODEL_KEY = 'dbflow.modelNaming';
 
@@ -37,8 +39,17 @@ export function subscribeModelNaming(listener: () => void): () => void {
   };
 }
 
+/**
+ * Whether this build can run the naming model. Not in the phone app: the model (about 390 MB) needs more memory than
+ * Android gives an app's WebView, which Android then kills, closing the app; the Android package leaves it out.
+ */
+export function modelNamingAvailable(): boolean {
+  return !isTauriMobile();
+}
+
 /** True when the on-device model names new relations; false when names are built from the key columns. */
 export function modelNamingEnabled(): boolean {
+  if (!modelNamingAvailable()) return false;
   try {
     return localStorage.getItem(MODEL_KEY) !== 'off';
   } catch {

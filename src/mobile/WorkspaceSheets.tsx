@@ -135,7 +135,7 @@ export function ConfirmSheet({
         <button className="m-btn m-btn-outline" onClick={onDismiss}>
           Keep
         </button>
-        <button className="m-btn m-btn-primary" style={{ background: 'var(--m-danger)', color: '#fff' }} onClick={onConfirm}>
+        <button className="m-btn m-btn-primary" style={{ background: 'var(--m-danger)', color: 'var(--m-on-danger)' }} onClick={onConfirm}>
           {confirmLabel}
         </button>
       </div>

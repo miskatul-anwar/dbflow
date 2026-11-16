@@ -10,7 +10,7 @@
   --m-muted: #f0f2f5;
   --m-ink: #15191f;
   --m-ink-2: #4a5260;
-  --m-ink-3: #7b8491;
+  --m-ink-3: #5f6773; /* 4.5:1 or better on every light surface, the pill included */
   --m-line: #dfe3e8;
   --m-accent: #0f766e;
   --m-accent-soft: #e2f1ef;
@@ -20,6 +20,9 @@
   --m-normal: #7c3aed;
   --m-output: #d97706;
   --m-danger: #c62828;
+  --m-on-danger: #ffffff;
+  --m-pk-text: #a14a07;
+  --m-fk-text: #0369a1;
   --m-nav-bg: #eceff2;
   --m-pill: #cdeae6;
   --m-press: rgba(21, 25, 31, 0.1);
@@ -44,12 +47,15 @@
   --m-muted: #1e232a;
   --m-ink: #e9edf2;
   --m-ink-2: #b2bac5;
-  --m-ink-3: #7d8794;
+  --m-ink-3: #939cab;
   --m-line: #2a3039;
   --m-accent: #2dd4bf;
   --m-accent-soft: #15302d;
   --m-on-accent: #04201d;
-  --m-danger: #ef5350;
+  --m-danger: #ff8a80;
+  --m-on-danger: #3b0907;
+  --m-pk-text: #f59e0b;
+  --m-fk-text: #38bdf8;
   --m-nav-bg: #1b2027;
   --m-pill: #1f4a45;
   --m-press: rgba(233, 237, 242, 0.12);
@@ -132,6 +138,7 @@
   flex-shrink: 0;
 }
 .m-icon-btn {
+  flex-shrink: 0;
   margin-left: auto;
   width: 48px;
   height: 48px;
@@ -590,10 +597,10 @@
   margin-right: 4px;
 }
 .m-col.m-pk b {
-  color: var(--m-output);
+  color: var(--m-pk-text);
 }
 .m-col.m-fk b {
-  color: var(--m-analyze);
+  color: var(--m-fk-text);
 }
 .m-table {
   padding: 10px 12px;
@@ -638,33 +645,69 @@
 .m-panel .rounded-lg {
   border-radius: 12px;
 }
+/* Touch: the desktop views' controls get a finger-sized target (Android's 48dp; at least WCAG 2.5.8's 24px). */
+.m-panel button,
+.m-panel select,
+.m-panel input:not([type='checkbox']):not([type='radio']) {
+  min-height: 48px;
+}
+/* (Also beats `.m-panel .flex > *` above, which would otherwise let a row squeeze its buttons.) */
+.m-panel button,
+.m-panel .flex > button {
+  min-width: 48px;
+}
+.m-panel input[type='checkbox'],
+.m-panel input[type='radio'] {
+  width: 24px;
+  height: 24px;
+}
+:root[data-theme='dark'] .m-panel .text-blue-600 {
+  color: #60a5fa;
+}
 
 /* ---- Settings, switches, toast ---------------------------------------------------------------- */
 .m-switch {
+  /* A Material 3 switch: a 52 × 32 track inside a 52 × 48 touch target. */
+  position: relative;
   margin-left: auto;
   flex-shrink: 0;
-  width: 44px;
-  height: 26px;
-  border-radius: 13px;
-  background: var(--m-line);
-  position: relative;
+  width: 52px;
+  height: 48px;
+  cursor: pointer;
+}
+.m-switch::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 48px;
+  height: 28px;
+  border-radius: 16px;
+  border: 2px solid var(--m-ink-3);
+  background: var(--m-muted);
 }
 .m-switch::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
+  top: 16px;
+  left: 8px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #fff;
-  transition: transform 0.15s ease;
+  background: var(--m-ink-3);
+  transition: transform 0.15s ease, width 0.15s ease, height 0.15s ease, top 0.15s ease, left 0.15s ease;
 }
-.m-switch[aria-checked='true'] {
+.m-switch[aria-checked='true']::before {
+  border-color: var(--m-accent);
   background: var(--m-accent);
 }
 .m-switch[aria-checked='true']::after {
-  transform: translateX(18px);
+  top: 12px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  background: var(--m-on-accent);
+  transform: translateX(20px);
 }
 .m-toast {
   position: fixed;
@@ -680,7 +723,7 @@
 }
 .m-toast.m-error {
   background: var(--m-danger);
-  color: #fff;
+  color: var(--m-on-danger);
 }
 
 @media (prefers-reduced-motion: reduce) {

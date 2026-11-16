@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './mobile.css';
 import { useWorkspaceTabs, type TabStatus } from '../hooks/useWorkspaceTabs';
 import { useModelNaming } from '../hooks/useModelNaming';
+import { modelNamingAvailable } from '../services/naming/userNames';
 import { useTheme } from '../theme/theme';
 import { setWorkspaceNameResolver } from '../services/notify';
 import { clearCachedResult } from '../utils/resultCache';
@@ -130,13 +131,25 @@ export default function MobileApp() {
       {dialog?.kind === 'settings' && (
         <Sheet title="Settings" onClose={done}>
           <div className="m-group">
-            <div className="m-row">
-              <span className="m-row-text">
-                <strong>AI table names</strong>
-                <small>An on-device model names new tables. Off: names come from key columns (faster).</small>
-              </span>
-              <Switch on={aiNames} onChange={setAiNames} label="AI table names" />
-            </div>
+            {modelNamingAvailable() ? (
+              <div className="m-row">
+                <span className="m-row-text">
+                  <strong>AI table names</strong>
+                  <small>An on-device model names new tables. Off: names come from key columns (faster).</small>
+                </span>
+                <Switch on={aiNames} onChange={setAiNames} label="AI table names" />
+              </div>
+            ) : (
+              <div className="m-row">
+                <span className="m-row-text">
+                  <strong>Table names</strong>
+                  <small>
+                    Built from each table's key columns; rename any table in the results. AI names are in the desktop
+                    app: the model needs more memory than a phone gives the app.
+                  </small>
+                </span>
+              </div>
+            )}
             <div className="m-row">
               <span className="m-row-text">
                 <strong>Dark theme</strong>
