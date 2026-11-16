@@ -79,7 +79,7 @@ export const useNormalization = (): UseNormalizationReturn => {
 
       return result;
     } catch (err) {
-      const errorMessage = (err as Error).message;
+      const errorMessage = err instanceof Error ? err.message : String(err ?? 'unknown error');
       setError(errorMessage);
 
       const failedResult: ProcessingResult = {
