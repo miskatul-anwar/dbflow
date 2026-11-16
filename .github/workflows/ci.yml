@@ -37,6 +37,19 @@ jobs:
       - name: Versions agree
         run: node scripts/check-version.mjs --changelog
 
+      # `tauri icon` writes the Android launcher icons to src-tauri/icons/android; the Android project must use them.
+      - name: Android launcher icons are the app's
+        run: |
+          status=0
+          for icon in src-tauri/icons/android/mipmap-*/*.png; do
+            used="src-tauri/gen/android/app/src/main/res/${icon#src-tauri/icons/android/}"
+            if ! cmp -s "$icon" "$used"; then
+              echo "::error file=$used::Differs from $icon. Run: bunx tauri icon src-tauri/icons/icon.png"
+              status=1
+            fi
+          done
+          exit $status
+
       # The engine is Rust; the frontend tests and the web build use its WebAssembly build.
       - name: Build the Rust engine (WebAssembly)
         run: bun run build:engine

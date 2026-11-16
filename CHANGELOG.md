@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.6.1] - 2026-11-16
+
+### Fixed
+- **Android app icon.** The Android app showed Tauri's default icon; it now uses the DBFlow logo at every screen density. CI now fails if the Android project's launcher icons differ from the ones generated in `src-tauri/icons/android`.
+- **Release workflow.** The release's CI check now receives the Android signing secrets, the draft release is addressed by id (a draft has no tag yet), and the tag is created on the commit that was built.
+
 ## [6.6.0] - 2026-11-15
 
 ### Added
