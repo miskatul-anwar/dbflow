@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.6.7] - 2026-11-16
+## [6.6.7] - 2026-11-17
 
 ### Fixed
 - **Android: the app closed when AI table names ran on a large file.** The naming model (about 390 MB, more in memory) ran inside Android's WebView, which Android kills when it runs out of memory, closing the app. AI table names are now unavailable on phones: Settings explains that names come from key columns (and can be renamed), and the model is left out of the Android package, which shrinks by about 390 MB.
