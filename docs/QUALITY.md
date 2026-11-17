@@ -11,7 +11,7 @@ a process, not a pass mark, and no accredited body has evaluated DBFlow. Say "ev
 (SQuaRE)", not "ISO certified" or "compliant with ISO/IEC 25000".
 
 `bun run quality` runs the automated gates (typecheck, lint, tests, production-dependency audit).
-`bun run audit:a11y` runs the accessibility audit, `bun run audit:ui` the full layout and accessibility pass over 144 views, and `bun run audit:design` the design-consistency check (type, buttons, cards, radii) (all three need `bun run build` and `vite preview`).
+`bun run audit:a11y` runs the accessibility audit (`bun run audit:a11y:mobile` the same for the phone interface), `bun run audit:ui` the full layout and accessibility pass over 144 views, and `bun run audit:design` the design-consistency check (type, buttons, cards, radii) (all three need `bun run build` and `vite preview`).
 
 ## How the SQuaRE divisions are covered
 
@@ -35,6 +35,22 @@ a process, not a pass mark, and no accredited body has evaluated DBFlow. Say "ev
 | **Flexibility** (adaptability, installability, replaceability, scalability) | Installs from one installer; adapts to the system. | Tauri installers for Windows, macOS and Linux built by CI on a tag; the maintainer installed and ran the desktop application on **Windows, Linux and macOS** and reports that it works as intended; theme follows the OS; layouts checked at 900, 1300 and 1700 px. | The cross-platform install check is manual and has no recorded test matrix (OS versions, hardware). The automated checks above run on one platform. |
 | **Safety** (added in the 2023 edition) | Nothing in the app can harm people or property. | The app only reads the files you give it and writes files you choose. | Not applicable beyond that. |
 
+## Android app (phones and tablets)
+
+The Android app runs the same Rust engine natively and the same web code in Android's WebView, with its own touch
+interface (`src/mobile`). Every characteristic above applies; this table records what is different on Android, as
+evaluated for this revision. It was added after a crash found on a phone, which the desktop evaluation could not catch.
+
+| ISO/IEC 25010 characteristic | Requirement on Android | Evidence | Not covered |
+|---|---|---|---|
+| **Functional suitability** | Every desktop function is available on a phone: workspaces, files, goals and steps, the natural-language bar, every result view, saving outputs, undo/redo. | Same engine and the same result views as the desktop (`useResultViews`); mobile screen tests (`src/mobile/screens.test.tsx`) cover adding files, goals, running, every Results tab and the workspace sheet. Saving uses Android's *Save as* picker (the WebView cannot follow download links). | **AI table names are not available on phones** (see *Reliability*): names come from key columns and can be renamed. |
+| **Performance efficiency** | The app fits a phone's memory and storage. | The relation-naming model (about 390 MB, and more in memory) is left out of the Android package: the web part shrinks from about 440 MB to 53 MB (`TAURI_ENV_PLATFORM=android vite build`). The engine's memory budget is read from `/proc/meminfo`, which Android provides. | No measurement on a low-memory phone; the largest file a given phone can analyse is not known. |
+| **Compatibility** | Opens the same files as the desktop and writes the same outputs. | Android 7 (API 24) or newer, 64-bit ARM. Files are read through Android's file picker; the engine reads files by content, not by extension (so a `.csv` that Android hands over with another name still works). | 32-bit ARM and x86 devices are not built for. |
+| **Interaction capability** | WCAG 2.1 AA in both themes; touch targets of at least 24 × 24 px (WCAG 2.2 SC 2.5.8) and 48 dp where Android's guideline asks; Android's own conventions (Material 3: system font, one-line app bar, navigation bar, sheets, switches). | `bun run audit:a11y:mobile` on a Pixel 7 screen, light and dark, over Data, Pipeline, every Results tab and both sheets: **0 axe violations, 0 targets under 24 × 24**, one 24 × 24 checkbox under 48 (its label is also clickable). This revision fixed 127 contrast failures (secondary text, key badges and error colours) and switches and toolbar buttons smaller than 48 dp, all found by that audit. Android's back button walks back through the screens. | No TalkBack (screen reader) pass by a person. |
+| **Reliability** | No action closes the app. | A WebView that runs out of memory is killed by Android and takes the app with it. That happened with AI table names on a large file: running the naming model inside the WebView is now impossible on a phone (the switch is replaced by an explanation, and the model is not in the package). File uploads reach the engine as base64 on Android (its WebView cannot pass a binary request body), tested in Rust and TypeScript; engine errors now show their own message. | No recovery if the WebView is killed for another reason (Android then closes the app; work since the last run is cached per workspace). Tested by the maintainer on one phone; no device lab. |
+| **Security** | As on the desktop: data stays on the device. | Same CSP and engine; no network requests. The APK is signed (APK Signature Scheme v2) with the project's release key, checked in CI on every release (`apksigner`, certificate fingerprint recorded in the job). The keystore is never in the repository. | The manifest still declares the `INTERNET` permission from Tauri's template, although the app makes no network requests. Not on Google Play, so no Play Protect review. |
+| **Flexibility** (installability) | One file to install; updates install over the previous version. | One signed APK per release; the version name and code come from the app version, so each release installs as an update. | Installed by sideloading only. |
+
 ## Data quality (ISO/IEC 25012)
 
 What the tool reports about **your** data, and how its own outputs are made trustworthy:
@@ -51,8 +67,11 @@ What the tool reports about **your** data, and how its own outputs are made trus
 
 | Measure | Value | How to reproduce |
 |---|---|---|
-| Automated tests | 682 frontend + 29 Rust, all passing | `bun run test`, `cargo test --workspace` |
+| Automated tests | 713 frontend + 48 Rust, all passing | `bun run test`, `cargo test --workspace` |
 | Accessibility violations (axe, WCAG 2.1 AA + best practice) | 0 (pages, all Output tabs and every dialog, both themes) | `bun run audit:a11y` |
+| Accessibility violations, phone interface | 0 (every screen, Results tab and sheet, both themes) | `bun run audit:a11y:mobile` |
+| Touch targets under 24 × 24 px, phone interface | 0 (1 under 48 × 48) | `bun run audit:a11y:mobile` |
+| Android package, web part | about 53 MB (naming model left out) | `TAURI_ENV_PLATFORM=android bunx vite build` |
 | Design-rule deviations | 0 | `bun run audit:design` |
 | High / critical advisories in shipped dependencies | 0 (395 packages) | `bun audit --prod` |
 | Lint errors | 0 (175 warnings, capped) | `bun run lint`, `cargo clippy --workspace --all-targets -- -D warnings` |
@@ -69,9 +88,14 @@ Xvfb, through `tauri-driver`): a new workspace opens in about 0.2 s while a thre
 results open without resetting the other workspaces. The full-page layout audit (`bun run audit:ui`) was not re-run,
 because it runs the naming model in every scenario and takes very long.
 
+For the Android app (6.6.7): `bun run audit:a11y:mobile` (0 violations, both themes, no target under 24 × 24),
+713 frontend and 48 Rust tests, and the Android web build without the naming model (53 MB). On the maintainer's phone,
+6.6.6 processed a CSV and a workbook together; AI table names on a large file closed the app, which this revision
+prevents.
+
 ## Reviewing a release
 
 1. `bun run quality`
-2. `bun run build`, then `bunx vite preview --port 4311`, `bun run audit:a11y` and `bun run audit:design`
+2. `bun run build`, then `bunx vite preview --port 4311`, `bun run audit:a11y`, `bun run audit:a11y:mobile` and `bun run audit:design`
 3. Run the throughput measure (see *Measurement*) and compare it with the previous revision.
 4. Read the CHANGELOG entry and the limits above; update this page if a characteristic changed, and record the run under *Checked on this revision*.

@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path"; // <-- Import path module
+import { rmSync } from "fs";
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -20,8 +21,28 @@ const dropUnusedOrtWasm = {
   },
 };
 
+/**
+ * The phone app does not run the relation-naming model (see modelNamingAvailable): leave its ~390 MB out of the
+ * Android and iOS packages. Tauri sets TAURI_ENV_PLATFORM while it runs the build for a platform.
+ */
+const mobileBuild = /^(android|ios)$/.test(process.env.TAURI_ENV_PLATFORM ?? '');
+let outDir = path.resolve(__dirname, 'dist');
+const dropNamingModelOnMobile = {
+  name: 'drop-naming-model-on-mobile',
+  apply: 'build' as const,
+  configResolved(config: { root: string; build: { outDir: string } }) {
+    outDir = path.resolve(config.root, config.build.outDir);
+  },
+  closeBundle() {
+    if (!mobileBuild) return;
+    const dir = path.join(outDir, 'models/HuggingFaceTB');
+    rmSync(dir, { recursive: true, force: true });
+    console.log(`[mobile] left the naming model out of the package (${dir})`);
+  },
+};
+
 export default defineConfig(async () => ({
-  plugins: [react(), tailwindcss(), dropUnusedOrtWasm],
+  plugins: [react(), tailwindcss(), dropUnusedOrtWasm, dropNamingModelOnMobile],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'), // <-- This enables @/ alias

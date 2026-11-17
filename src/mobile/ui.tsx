@@ -26,7 +26,7 @@ export function TopBar({
         <span className="m-ws-dot" style={{ background: color ?? 'var(--m-ink-3)' }} aria-hidden />
         <span className="m-title-text">
           <span className="m-title-name">
-            {title}
+            <span>{title}</span>
             <ChevronDown size={16} aria-hidden />
           </span>
           <small>

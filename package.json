@@ -17,7 +17,7 @@
   ],
   "license": "MIT",
   "private": true,
-  "version": "6.6.6",
+  "version": "6.6.7",
   "type": "module",
   "repository": {
     "type": "git",
@@ -51,6 +51,7 @@
     "fmt:rust": "cargo fmt --all",
     "test:rust": "cargo test --workspace",
     "audit:a11y": "node scripts/a11y-audit.cjs",
+    "audit:a11y:mobile": "node scripts/a11y-audit-mobile.cjs",
     "quality": "bun run build:engine && bun run typecheck && bun run lint && vitest run && cargo test --workspace && bun audit --prod --audit-level=high",
     "audit:ui": "node scripts/ui-audit.cjs",
     "audit:design": "node scripts/consistency-audit.cjs"

@@ -20,8 +20,9 @@ type Tab = 'overview' | 'tables' | 'diagram' | 'sql' | 'keys' | 'links' | 'deps'
 
 const titleOf = (r: any): string => r.displayName ?? (r.nameSource === 'placeholder' ? 'Unnamed table' : r.name);
 
+/** A result view on a tab. The desktop views bring their own cards, so the tab adds no frame around them. */
 function Card({ children }: { children: ReactNode }) {
-  return <div className="m-group m-section">{children}</div>;
+  return <div className="m-panel">{children}</div>;
 }
 
 export function ResultsScreen({
