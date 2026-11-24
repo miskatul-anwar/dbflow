@@ -37,7 +37,7 @@ describe('InputChecksSection', () => {
     expect(screen.getByText('clients.csv')).toBeTruthy();
     expect(screen.getByText(/share 57 rows/)).toBeTruthy();
     expect(screen.getByText(/for example 5, 17, 33/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /merge overlapping files and run again/i }));
+    fireEvent.click(screen.getByRole('button', { name: /merge and run again/i }));
     expect(onMerge).toHaveBeenCalledTimes(1);
   });
 

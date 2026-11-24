@@ -39,7 +39,6 @@ export function DataScreen({
       <button className="m-btn m-btn-primary m-btn-block" onClick={() => input.current?.click()} disabled={busy}>
         <Plus /> Add files
       </button>
-      <p className="m-hint">CSV, Excel (.xlsx, .xls) or OpenDocument (.ods). Each sheet becomes a table.</p>
 
       <div className="m-label">Files</div>
       <div className="m-group">

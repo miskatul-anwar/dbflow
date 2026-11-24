@@ -82,7 +82,7 @@ describe('OutputPage workspace badge', () => {
     expect(screen.queryByTitle(/These results come from the workspace/)).toBeNull();
     expect(screen.queryByText('Complete Pipeline Executed')).toBeNull();
     expect(screen.queryByText(/Tables Processed/)).toBeNull();
-    expect(screen.getByText(/Analysis results/)).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Results/);
   });
 
   it('uses the same shell as the pipeline page: header card, palette-style sidebar, content panel', () => {
@@ -95,12 +95,13 @@ describe('OutputPage workspace badge', () => {
     expect(nav.textContent).toContain('Summary');
     expect(nav.textContent).toContain('Analysis');
     expect(nav.textContent).toContain('Generated');
-    expect(nav.textContent).toContain('DDL for your schema'); // row description, like the operations palette
+    expect(nav.textContent).not.toContain('DDL for your schema'); // the description is the row's tooltip
+    expect(nav.querySelector('[title="DDL for your schema"]')).toBeTruthy();
   });
 
   it('still renders for a tab that no longer exists', () => {
     render(at('gone'));
-    expect(screen.getByText(/Analysis results/)).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Results/);
   });
 
   it('never shows one tab\'s fresh results under another tab', () => {
@@ -111,7 +112,7 @@ describe('OutputPage workspace badge', () => {
         <OutputPage tabId="t1" tabs={tabs} />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/No results yet for “Workspace 1”/)).toBeTruthy();
+    expect(screen.getByText("No results yet")).toBeTruthy();
     expect(screen.queryByText('SELECT 1;')).toBeNull();
   });
 });

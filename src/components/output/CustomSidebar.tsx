@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { PHASE_ACCENTS } from '../../config/operationVisuals';
 
 /** Which section of the sidebar an item belongs to (same grouping style as the operations palette). */
@@ -28,8 +29,9 @@ const GROUPS: Array<{ id: SidebarGroup; label: string; accent: keyof typeof PHAS
 ];
 
 /**
- * Results navigation. Mirrors the operations palette on the pipeline page: a titled header,
- * grouped sections with a coloured dot, and rows with a tinted icon tile, name and one-line description.
+ * Results navigation. Mirrors the operations palette on the pipeline page: a titled header, grouped sections with
+ * a coloured dot, and rows with an icon and a name (the description is the tooltip). The active row's highlight
+ * glides between rows.
  */
 export function CustomSidebar({ items, activeTab, onTabChange }: CustomSidebarProps) {
   const available = items.filter(i => i.hasData).length;
@@ -50,7 +52,7 @@ export function CustomSidebar({ items, activeTab, onTabChange }: CustomSidebarPr
           const meta = PHASE_ACCENTS[group.accent];
           return (
             <section key={group.id} aria-label={group.label} className="mt-2 first:mt-0">
-              <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-slate-50 px-1 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-[var(--nf-surface)] px-1.5 pb-1 pt-2 text-xs font-medium text-gray-500">
                 <span className="size-2 rounded-full" style={{ backgroundColor: meta.accent }} aria-hidden />
                 {group.label}
               </h3>
@@ -65,31 +67,27 @@ export function CustomSidebar({ items, activeTab, onTabChange }: CustomSidebarPr
                         onClick={() => onTabChange(item.id)}
                         disabled={!enabled}
                         aria-current={active ? 'page' : undefined}
+                        title={enabled ? item.description : 'No data'}
                         className={[
-                          'group relative flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600',
-                          active ? 'bg-teal-50 ring-1 ring-teal-300' : enabled ? 'hover:bg-gray-100' : 'cursor-not-allowed opacity-50',
+                          'group relative flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400',
+                          active ? '' : enabled ? 'hover:bg-gray-100' : 'cursor-not-allowed opacity-40',
                         ].join(' ')}
                       >
-                        <span
-                          className="flex size-8 shrink-0 items-center justify-center rounded-md [&_svg]:size-4"
-                          style={{ backgroundColor: meta.soft, color: meta.ink }}
-                          aria-hidden
-                        >
+                        {active && (
+                          <motion.span
+                            layoutId="nf-results-active"
+                            className="absolute inset-0 rounded-lg bg-gray-100"
+                            transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                            aria-hidden
+                          />
+                        )}
+                        <span className={`relative flex size-5 shrink-0 items-center justify-center [&_svg]:size-4 ${active ? 'text-gray-900' : 'text-gray-500'}`} aria-hidden>
                           {item.icon}
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className={`block truncate text-sm font-medium ${active ? 'text-teal-800' : 'text-gray-900'}`}>{item.label}</span>
-                          <span className="block truncate text-xs text-gray-500">{enabled ? item.description : 'No data'}</span>
-                        </span>
+                        <span className={`relative min-w-0 flex-1 truncate text-sm ${active ? 'font-medium text-gray-900' : 'text-gray-700'}`}>{item.label}</span>
                         {enabled && item.count !== undefined && (
-                          <span
-                            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${
-                              active ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-600'
-                            }`}
-                          >
-                            {item.count}
-                          </span>
+                          <span className="relative shrink-0 text-xs tabular-nums text-gray-500">{item.count}</span>
                         )}
                       </button>
                     </li>

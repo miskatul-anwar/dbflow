@@ -21,7 +21,6 @@ export function GeneratedFilesSection({ outputFiles }: GeneratedFilesSectionProp
       <div className="text-center py-12 text-gray-500">
         <Files className="w-12 h-12 mx-auto mb-4 text-gray-300" />
         <p>No output files generated</p>
-        <p className="text-sm text-gray-500 mt-2">Files are created during the normalization process</p>
       </div>
     );
   }

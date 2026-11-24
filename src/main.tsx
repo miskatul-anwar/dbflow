@@ -5,6 +5,7 @@ import '@fontsource/inter/700.css';
 import '@xyflow/react/dist/style.css';
 
 import React, { lazy, Suspense } from 'react';
+import { MotionConfig } from 'framer-motion';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { wantsMobileUi } from './utils/platform';
@@ -26,13 +27,16 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
 const render = () =>
   root.render(
     <React.StrictMode>
-      {mobile ? (
-        <Suspense fallback={null}>
-          <MobileApp />
-        </Suspense>
-      ) : (
-        <App />
-      )}
+      {/* Every animation follows the system's reduce-motion setting. */}
+      <MotionConfig reducedMotion="user">
+        {mobile ? (
+          <Suspense fallback={null}>
+            <MobileApp />
+          </Suspense>
+        ) : (
+          <App />
+        )}
+      </MotionConfig>
     </React.StrictMode>
   );
 

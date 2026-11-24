@@ -5,16 +5,17 @@
  * foreign keys, errors). Everything is scoped under .m-app, so the desktop interface is untouched.
  */
 .m-app {
-  --m-bg: #f4f5f7;
+  /* Ink on paper (shadcn's zinc), as on the desktop. */
+  --m-bg: #fafafa;
   --m-surface: #ffffff;
-  --m-muted: #f0f2f5;
-  --m-ink: #15191f;
-  --m-ink-2: #4a5260;
-  --m-ink-3: #5f6773; /* 4.5:1 or better on every light surface, the pill included */
-  --m-line: #dfe3e8;
-  --m-accent: #0f766e;
-  --m-accent-soft: #e2f1ef;
-  --m-on-accent: #ffffff;
+  --m-muted: #f4f4f5;
+  --m-ink: #09090b;
+  --m-ink-2: #3f3f46;
+  --m-ink-3: #52525b; /* 4.5:1 or better on every light surface, the pill included */
+  --m-line: #e4e4e7;
+  --m-accent: #18181b;
+  --m-accent-soft: #f4f4f5;
+  --m-on-accent: #fafafa;
   --m-prep: #0d9488;
   --m-analyze: #0284c7;
   --m-normal: #7c3aed;
@@ -23,9 +24,9 @@
   --m-on-danger: #ffffff;
   --m-pk-text: #a14a07;
   --m-fk-text: #0369a1;
-  --m-nav-bg: #eceff2;
-  --m-pill: #cdeae6;
-  --m-press: rgba(21, 25, 31, 0.1);
+  --m-nav-bg: #ffffff;
+  --m-pill: #e4e4e7;
+  --m-press: rgba(9, 9, 11, 0.06);
   --m-safe-top: env(safe-area-inset-top, 0px);
   --m-safe-bottom: env(safe-area-inset-bottom, 0px);
 
@@ -35,30 +36,31 @@
   flex-direction: column;
   background: var(--m-bg);
   color: var(--m-ink);
-  font-family: Roboto, system-ui, sans-serif;
+  font-family: Inter, Roboto, system-ui, sans-serif;
   font-size: 15px;
+  letter-spacing: -0.005em;
   line-height: 1.4;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }
 :root[data-theme='dark'] .m-app {
-  --m-bg: #0f1216;
-  --m-surface: #171b21;
-  --m-muted: #1e232a;
-  --m-ink: #e9edf2;
-  --m-ink-2: #b2bac5;
-  --m-ink-3: #939cab;
-  --m-line: #2a3039;
-  --m-accent: #2dd4bf;
-  --m-accent-soft: #15302d;
-  --m-on-accent: #04201d;
+  --m-bg: #09090b;
+  --m-surface: #111113;
+  --m-muted: #1c1c1f;
+  --m-ink: #fafafa;
+  --m-ink-2: #d4d4d8;
+  --m-ink-3: #a1a1aa;
+  --m-line: #27272a;
+  --m-accent: #fafafa;
+  --m-accent-soft: #1c1c1f;
+  --m-on-accent: #09090b;
   --m-danger: #ff8a80;
   --m-on-danger: #3b0907;
   --m-pk-text: #f59e0b;
   --m-fk-text: #38bdf8;
-  --m-nav-bg: #1b2027;
-  --m-pill: #1f4a45;
-  --m-press: rgba(233, 237, 242, 0.12);
+  --m-nav-bg: #09090b;
+  --m-pill: #27272a;
+  --m-press: rgba(250, 250, 250, 0.08);
 }
 
 /* Zero specificity, so every component's own background and colour win. */
@@ -157,9 +159,9 @@
   padding-bottom: calc(var(--m-safe-bottom) + 164px);
 }
 .m-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--m-accent);
+  color: var(--m-ink-3);
   margin: 20px 4px 8px;
 }
 .m-label:first-child {
@@ -219,6 +221,7 @@
   height: calc(var(--m-safe-bottom) + 80px);
   padding-bottom: var(--m-safe-bottom);
   background: var(--m-nav-bg);
+  border-top: 1px solid var(--m-line);
   z-index: 20;
 }
 .m-nav button {
@@ -317,9 +320,16 @@
   right: 0;
   bottom: calc(var(--m-safe-bottom) + 80px);
   padding: 8px 12px;
-  background: var(--m-surface);
-  border-top: 1px solid var(--m-line);
+  background: linear-gradient(to top, var(--m-bg) 70%, transparent);
   z-index: 19;
+}
+.m-cta-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--m-on-accent) 18%, transparent);
 }
 
 /* ---- Data ------------------------------------------------------------------------------------- */
@@ -460,20 +470,29 @@
   z-index: 40;
   display: flex;
   align-items: flex-end;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
 }
 .m-sheet {
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
-  padding: 16px 16px calc(var(--m-safe-bottom) + 16px);
+  padding: 8px 16px calc(var(--m-safe-bottom) + 16px);
   background: var(--m-surface);
-  border-radius: 14px 14px 0 0;
+  border-radius: 20px 20px 0 0;
+}
+.m-grabber {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 2px;
+  background: var(--m-line);
 }
 .m-sheet h2 {
   margin: 0 0 12px;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
 }
 .m-bar {
   height: 6px;

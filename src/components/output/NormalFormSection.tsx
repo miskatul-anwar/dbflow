@@ -36,7 +36,6 @@ export function NormalFormSection({ relations1NF, relations2NF, relations3NF, re
       <div className="text-center py-12 text-gray-500">
         <Table className="w-12 h-12 mx-auto mb-4 text-gray-300" />
         <p>No normalized relations generated</p>
-        <p className="text-sm text-gray-500 mt-2">Relations are created during normalization process</p>
       </div>
     );
   }

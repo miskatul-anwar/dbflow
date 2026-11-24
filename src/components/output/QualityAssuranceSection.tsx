@@ -44,7 +44,6 @@ export function QualityAssuranceSection({ losslessCheck, dependencyPreservation 
       <div className="text-center py-12 text-gray-500">
         <Shield className="w-12 h-12 mx-auto mb-4 text-gray-300" />
         <p>No quality assurance data available</p>
-        <p className="text-sm text-gray-500 mt-2">Quality checks require Lossless Check and Dependency Preservation operations</p>
       </div>
     );
   }
@@ -67,7 +66,6 @@ export function QualityAssuranceSection({ losslessCheck, dependencyPreservation 
               <h4 className="text-base font-semibold text-gray-900">
                 Lossless Join Property
               </h4>
-              <p className="text-sm text-gray-600">Decomposition preserves all original information</p>
             </div>
             <div className={`ml-auto px-3 py-1 rounded-full text-sm font-medium ${losslessCheck.isLossless ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
               {losslessCheck.isLossless ? 'LOSSLESS' : 'LOSSY'}
@@ -106,7 +104,6 @@ export function QualityAssuranceSection({ losslessCheck, dependencyPreservation 
               <h4 className="text-base font-semibold text-gray-900">
                 Dependency Preservation
               </h4>
-              <p className="text-sm text-gray-600">Functional dependencies maintained in decomposition</p>
             </div>
             <div className={`ml-auto px-3 py-1 rounded-full text-sm font-medium ${dependencyPreservation.isPreserved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
               {dependencyPreservation.isPreserved ? 'PRESERVED' : 'NOT PRESERVED'}

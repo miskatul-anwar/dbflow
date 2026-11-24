@@ -3,11 +3,10 @@ import { ArrowRight, Key, Shield, Link2, CheckCircle, AlertCircle, ChevronRight,
 import type { CrossTableRelationship } from '../../types';
 import { QualityAssuranceSection } from './QualityAssuranceSection';
 
-const Empty = ({ icon, title, hint }: { icon: React.ReactNode; title: string; hint: string }) => (
+const Empty = ({ icon, title }: { icon: React.ReactNode; title: string; hint?: string }) => (
   <div className="py-16 text-center text-gray-500">
     <div className="mx-auto mb-3 flex justify-center text-gray-300">{icon}</div>
     <p className="font-medium text-gray-700">{title}</p>
-    <p className="mt-1 text-sm text-gray-500">{hint}</p>
   </div>
 );
 

@@ -4,13 +4,14 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { Loader2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { WithTooltip } from './tooltip';
 
 /**
  * The one button of the app. Every clickable action uses it, so shape, height,
  * colour, focus ring and disabled state are identical everywhere.
  *
- *  - `primary`   solid teal: the single main action of a region (Run, Download, Apply)
- *  - `secondary` white with a border: every other action (Open, Save, Copy, Output …)
+ *  - `primary`   solid ink (near-black; near-white in dark): the single main action of a region (Run, Apply)
+ *  - `secondary` a hairline border: every other action (Open, Save, Copy, Output …)
  *  - `ghost`     no border: low-emphasis actions (Cancel, Show all, row actions, undo/redo)
  *
  * Labelling rule: actions show an icon AND a text label. Icon-only buttons
@@ -20,17 +21,17 @@ import { cn } from '@/lib/utils';
 export const buttonVariants = cva(
   [
     'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg',
-    'text-sm font-medium transition-colors select-none',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-1',
+    'text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 select-none active:scale-[0.97]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1',
     'disabled:cursor-not-allowed disabled:opacity-50',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
   ],
   {
     variants: {
       variant: {
-        // 5.5:1 against white text, so the main action meets WCAG AA; the same colour is used in both themes.
-        primary: 'bg-[#0f766e] text-white shadow-xs hover:bg-[#115e59]',
-        secondary: 'border border-gray-200 bg-white text-gray-800 shadow-xs hover:border-gray-300 hover:bg-gray-50',
+        // Ink on paper: near-black with white text (near-white with black text in dark, see theme.css).
+        primary: 'nf-btn-primary bg-[#18181b] text-white hover:bg-[#27272a]',
+        secondary: 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-100',
         ghost: 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
         // Destructive confirmations (6.2:1 against white text, WCAG AA); the same colour in both themes.
         danger: 'bg-[#b42318] text-white shadow-xs hover:bg-[#912018]',
@@ -76,10 +77,12 @@ export interface IconButtonProps extends Omit<ButtonProps, 'size' | 'children' |
   size?: 'icon' | 'icon-sm';
 }
 
-export function IconButton({ label, icon, size = 'icon', variant = 'secondary', title, ...props }: IconButtonProps) {
-  return (
-    <Button variant={variant} size={size} aria-label={label} title={title ?? label} {...props}>
+export function IconButton({ label, icon, size = 'icon', variant = 'ghost', title, ...props }: IconButtonProps) {
+  const button = (
+    // A disabled button gets no pointer events, so it keeps a native tooltip instead.
+    <Button variant={variant} size={size} aria-label={label} title={props.disabled ? (title ?? label) : undefined} {...props}>
       {icon}
     </Button>
   );
+  return props.disabled ? button : <WithTooltip content={title ?? label}>{button}</WithTooltip>;
 }

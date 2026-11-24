@@ -2,9 +2,9 @@
  * OperationPalette — the sidebar for building a pipeline.
  *
  * Two layouts chosen by width:
- *  - list (default): every operation with its name and one-line description,
- *    grouped by phase, with a filter box;
- *  - rail (narrow): icons only, with a tooltip.
+ *  - list (default): every operation by name, grouped by phase, with a filter box;
+ *  - rail (narrow): icons only.
+ * In both, a tooltip gives the description and what clicking will do.
  *
  * Each operation shows what clicking it will do:
  *  - added:  already on the canvas (check mark, not clickable);
@@ -187,7 +187,7 @@ export function OperationPalette({
           return (
             <section key={phase} aria-label={meta.label} className={list ? 'mt-2' : 'mt-2 border-t border-gray-200 pt-2 first:mt-0 first:border-0 first:pt-0'}>
               {list && (
-                <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-slate-50 px-1 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-[var(--nf-surface)] px-1.5 pb-1 pt-2 text-xs font-medium text-gray-500">
                   <span className="size-2 rounded-full" style={{ backgroundColor: meta.accent }} aria-hidden />
                   {meta.label}
                   <span className="ml-auto font-normal normal-case tabular-nums text-gray-500">
@@ -202,10 +202,7 @@ export function OperationPalette({
                   const Icon = visual.icon;
                   const hint = hintFor(label);
                   const tile = (
-                    <span
-                      className="relative flex size-8 shrink-0 items-center justify-center rounded-md"
-                      style={{ backgroundColor: meta.soft, color: meta.ink }}
-                    >
+                    <span className="relative flex size-7 shrink-0 items-center justify-center rounded-md text-gray-600">
                       {Icon ? <Icon className="size-4" strokeWidth={1.9} aria-hidden /> : <span className="text-[10px] font-bold leading-none">{visual.glyph ?? '•'}</span>}
                     </span>
                   );
@@ -217,17 +214,16 @@ export function OperationPalette({
                         data-state={state}
                         disabled={state === 'added'}
                         aria-label={`${label}. ${def.description}. ${hint}`}
-                        title={list ? `${def.description}. ${hint}` : undefined}
                         onClick={() => activate(label)}
-                        onMouseEnter={e => !list && showTooltip(e, label, def)}
+                        onMouseEnter={e => showTooltip(e, label, def)}
                         onMouseLeave={() => setTooltip(null)}
-                        onFocus={e => !list && showTooltip(e, label, def)}
+                        onFocus={e => showTooltip(e, label, def)}
                         onBlur={() => setTooltip(null)}
                         className={[
                           'group relative flex items-center rounded-lg text-left transition-colors',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600',
-                          list ? 'w-full gap-2.5 px-1.5 py-1.5' : 'size-10 justify-center border border-gray-200 bg-white shadow-xs',
-                          state === 'added' ? 'cursor-not-allowed bg-teal-50/70' : 'hover:bg-gray-100',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400',
+                          list ? 'w-full gap-2 px-1.5 py-1' : 'size-10 justify-center border border-gray-200 bg-white',
+                          state === 'added' ? 'cursor-not-allowed' : 'hover:bg-gray-100',
                           !list && state !== 'added' ? 'hover:border-gray-300' : '',
                           '',
                         ].join(' ')}
@@ -235,13 +231,12 @@ export function OperationPalette({
                         {tile}
                         {list && (
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium text-gray-900">{label}</span>
-                            <span className="block truncate text-xs text-gray-500">{def.description}</span>
+                            <span className={`block truncate text-sm ${state === 'locked' ? 'text-gray-500' : 'text-gray-900'}`}>{label}</span>
                           </span>
                         )}
                         {state === 'added' && (
                           <span
-                            className={list ? 'flex size-5 shrink-0 items-center justify-center rounded-full bg-teal-700 text-white' : 'absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-teal-700 text-white'}
+                            className={list ? 'flex size-4 shrink-0 items-center justify-center text-gray-900' : 'absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-gray-900 text-white nf-btn-primary'}
                             aria-hidden
                           >
                             <Check className={list ? 'size-3' : 'size-2.5'} strokeWidth={3.2} />
@@ -249,7 +244,7 @@ export function OperationPalette({
                         )}
                         {state === 'locked' && (
                           <Lock
-                            className={list ? 'size-3.5 shrink-0 text-gray-500' : 'absolute -right-1 -top-1 size-4 rounded-full bg-white p-0.5 text-gray-500 shadow-xs'}
+                            className={list ? 'size-3 shrink-0 text-gray-400' : 'absolute -right-1 -top-1 size-4 rounded-full bg-white p-0.5 text-gray-500'}
                             aria-hidden
                           />
                         )}
@@ -263,23 +258,15 @@ export function OperationPalette({
         })}
       </div>
 
-      {list && (
-        <p className="shrink-0 border-t border-gray-200 px-3 py-2 text-xs leading-snug text-gray-500">
-          <Lock className="mr-1 inline size-3 align-[-1px]" aria-hidden />
-          Steps with a lock need earlier steps. Clicking one adds them too.
-        </p>
-      )}
-
       {tooltip &&
         createPortal(
           <div
             role="tooltip"
-            className="pointer-events-none fixed z-50 max-w-64 -translate-y-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-100 shadow-lg"
+            className="nf-tooltip pointer-events-none fixed z-50 max-w-64 -translate-y-1/2 rounded-md bg-zinc-900 px-2.5 py-1.5 text-xs leading-snug text-zinc-50 shadow-md"
             style={{ left: tooltip.x, top: tooltip.y }}
           >
-            <div className="text-sm font-semibold text-white">{tooltip.name}</div>
-            <div className="mt-0.5 text-slate-300">{tooltip.description}</div>
-            <div className="mt-1 text-teal-300">{tooltip.hint}</div>
+            <div className="font-medium">{tooltip.description}</div>
+            <div className="mt-0.5 opacity-70">{tooltip.hint}</div>
           </div>,
           document.body,
         )}

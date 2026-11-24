@@ -43,9 +43,9 @@ export function ResultsScreen({
   if (!results) {
     return (
       <div className="m-group m-empty-note">
-        <p style={{ marginTop: 0 }}>No results yet. Add files, choose a goal, then run.</p>
+        <p style={{ marginTop: 0 }}>No results yet</p>
         <button className="m-btn m-btn-outline" onClick={onGoData}>
-          Go to Data
+          Data
         </button>
       </div>
     );
@@ -94,9 +94,6 @@ export function ResultsScreen({
           <span>rows</span>
         </div>
       </div>
-      <p className="m-hint">
-        {v.isMultiTable ? `${v.multiTables.length} files analysed` : '1 file analysed'}
-      </p>
 
       <div className="m-tabs" role="tablist" aria-label="Result sections">
         {tabs

@@ -9,15 +9,13 @@ describe('upload button badge', () => {
   it('shows no count before anything is uploaded', () => {
     render(<Heading uploadedFileCount={0} />);
     const btn = screen.getByRole('button', { name: 'Upload Datasets' });
-    expect(btn.textContent).toBe('Upload'); // the label only, no count
-    expect(btn.getAttribute('title')).toBe('Upload CSV or spreadsheet files to analyse');
+    expect(btn.textContent).toBe(''); // an icon, no count
   });
 
   it('counts only files the user uploaded', () => {
     render(<Heading uploadedFileCount={2} />);
     const btn = screen.getByRole('button', { name: 'Upload Datasets' });
-    expect(btn.textContent).toBe('Upload2');
-    expect(btn.getAttribute('title')).toMatch(/2 files loaded/);
+    expect(btn.textContent).toBe('2');
   });
 });
 

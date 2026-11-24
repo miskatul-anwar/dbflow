@@ -1,4 +1,33 @@
 /*
+ * Neutrals: Tailwind's cool gray and slate are replaced by zinc (shadcn's neutral), in both themes, so every
+ * `bg-gray-*` / `text-slate-*` in the app reads as one quiet ink-on-paper palette.
+ */
+:root {
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-400: #a1a1aa;
+  --color-gray-500: #71717a;
+  --color-gray-600: #52525b;
+  --color-gray-700: #3f3f46;
+  --color-gray-800: #27272a;
+  --color-gray-900: #18181b;
+  --color-gray-950: #09090b;
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f4f4f5;
+  --color-slate-200: #e4e4e7;
+  --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1aa;
+  --color-slate-500: #71717a;
+  --color-slate-600: #52525b;
+  --color-slate-700: #3f3f46;
+  --color-slate-800: #27272a;
+  --color-slate-900: #18181b;
+  --color-slate-950: #09090b;
+}
+
+/*
  * Dark theme for Tailwind's utility palette.
  *
  * Tailwind v4 exposes every colour as a CSS variable, so remapping the variables themes every
@@ -10,28 +39,39 @@
  * `white` is deliberately not remapped (it stays white for text on solid buttons); `.bg-white` is.
  */
 :root[data-theme='dark'] {
-  --nf-base: #12161c;
-  --color-gray-50: #171c23;
-  --color-gray-100: #1d232b;
-  --color-gray-200: #262d37;
-  --color-gray-300: #343d49;
-  --color-gray-400: #6b7685;
-  --color-gray-500: #8a95a3;
-  --color-gray-600: #aab3bf;
-  --color-gray-700: #c5ccd6;
-  --color-gray-800: #dde2e9;
-  --color-gray-900: #eef1f5;
-  --color-gray-950: #f8fafc;
-  --color-slate-50: #171c23;
-  --color-slate-100: #1d232b;
-  --color-slate-200: #262d37;
-  --color-slate-300: #343d49;
-  --color-slate-400: #6b7685;
-  --color-slate-500: #8a95a3;
-  --color-slate-600: #aab3bf;
-  --color-slate-700: #c5ccd6;
-  --color-slate-800: #dde2e9;
-  --color-slate-900: #eef1f5;
+  --nf-base: #0f0f11;
+  --color-zinc-50: #141416;
+  --color-zinc-100: #1c1c1f;
+  --color-zinc-200: #27272a;
+  --color-zinc-300: #3f3f46;
+  --color-zinc-400: #71717a;
+  --color-zinc-500: #a1a1aa;
+  --color-zinc-600: #b4b4bc;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-900: #f4f4f5;
+  --color-zinc-950: #fafafa;
+  --color-gray-50: #141416;
+  --color-gray-100: #1c1c1f;
+  --color-gray-200: #27272a;
+  --color-gray-300: #3f3f46;
+  --color-gray-400: #71717a;
+  --color-gray-500: #a1a1aa;
+  --color-gray-600: #b4b4bc;
+  --color-gray-700: #d4d4d8;
+  --color-gray-800: #e4e4e7;
+  --color-gray-900: #f4f4f5;
+  --color-gray-950: #fafafa;
+  --color-slate-50: #141416;
+  --color-slate-100: #1c1c1f;
+  --color-slate-200: #27272a;
+  --color-slate-300: #3f3f46;
+  --color-slate-400: #71717a;
+  --color-slate-500: #a1a1aa;
+  --color-slate-600: #b4b4bc;
+  --color-slate-700: #d4d4d8;
+  --color-slate-800: #e4e4e7;
+  --color-slate-900: #f4f4f5;
   --color-teal-50: color-mix(in oklab, var(--color-teal-500) 12%, var(--nf-base));
   --color-teal-100: color-mix(in oklab, var(--color-teal-500) 20%, var(--nf-base));
   --color-teal-200: color-mix(in oklab, var(--color-teal-500) 32%, var(--nf-base));
@@ -126,4 +166,13 @@
 }
 :root[data-theme='dark'] .hover\:bg-teal-800:hover {
   background-color: #115e59;
+}
+
+/* The primary button is ink on paper: near-white with near-black text in dark. */
+:root[data-theme='dark'] .nf-btn-primary {
+  background-color: #fafafa;
+  color: #09090b;
+}
+:root[data-theme='dark'] .nf-btn-primary:hover {
+  background-color: #e4e4e7;
 }

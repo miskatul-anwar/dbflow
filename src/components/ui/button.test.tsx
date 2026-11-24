@@ -44,11 +44,12 @@ describe('Button', () => {
 });
 
 describe('IconButton', () => {
-  it('gives the icon-only button an accessible name and tooltip from its label', () => {
+  it('gives the icon-only button an accessible name and tooltip from its label', async () => {
     const onClick = vi.fn();
     render(<IconButton label="Undo" icon={<svg data-testid="i" />} onClick={onClick} />);
     const b = screen.getByRole('button', { name: 'Undo' });
-    expect(b.getAttribute('title')).toBe('Undo');
+    fireEvent.focus(b);
+    expect(await screen.findByRole('tooltip')).toHaveProperty('textContent', 'Undo');
     fireEvent.click(b);
     expect(onClick).toHaveBeenCalled();
   });

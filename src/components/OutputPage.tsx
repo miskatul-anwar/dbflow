@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   ArrowLeft, Check, Copy, Download, Layers, GitBranch,
   Code, Activity, Database, FileText, BarChart3, Shield, Key, Cpu
@@ -37,21 +38,6 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
   /** The workspace these results came from, so several open tabs cannot be confused. */
   const sourceTab = tabs.find(t => t.id === tabId) ?? null;
 
-  const currentDateTime = useMemo(() => {
-    const now = new Date();
-    return {
-      formatted: now.toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }),
-      utc: now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC'
-    };
-  }, []);
 
   const safeResults = useMemo(() => {
     const isUsable = (r: any) =>
@@ -161,47 +147,45 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
 
   if (!safeResults) {
     return (
-      <div className="nf-output-page flex items-center justify-center p-4" style={{ background: "#e5e7eb" }}>
-        <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-md w-full text-center shadow-sm">
-          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 mx-auto mb-4">
-            <Activity className="w-6 h-6" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            {sourceTab ? `No results yet for “${sourceTab.title}”` : 'No Output Available'}
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Run this workspace's pipeline to see its results here. Use the tabs above to switch to another workspace.
-          </p>
-          <Button variant="primary" className="w-full" onClick={() => navigate('/')}>
+      <div className="nf-output-page flex items-center justify-center p-4" style={{ background: "var(--nf-bg)" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          className="flex w-full max-w-xs flex-col items-center gap-4 text-center"
+        >
+          <Activity className="size-6 text-gray-400" aria-hidden />
+          <h3 className="text-sm font-medium text-gray-900">No results yet</h3>
+          <Button onClick={() => navigate('/')}>
             <ArrowLeft />
-            Back to workflow
+            Back
           </Button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
     // Same shell as the pipeline page: header card, sidebar card, content panel.
-    <div
+    <motion.div
       className="nf-shell nf-output-page"
-      style={{ ['--nf-palette-width' as string]: '300px' }}
+      style={{ ['--nf-palette-width' as string]: '224px' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
     >
       <header className="nf-header">
         <div className="flex w-full items-center justify-between gap-3 px-3 py-1.5">
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/icon.png" alt="DBFlow" title="DBFlow" className="h-9 w-9 shrink-0 object-contain drop-shadow-xs" />
-            <Button onClick={() => navigate('/')} title="Return to the workflow canvas" aria-label="Back to the workflow canvas" className="shrink-0">
+            <img src="/icon.png" alt="DBFlow" className="h-7 w-7 shrink-0 object-contain" />
+            <Button variant="ghost" onClick={() => navigate('/')} aria-label="Back to the workflow canvas" className="shrink-0">
               <ArrowLeft />
-              <span className="hidden sm:inline">Back to workflow</span>
+              <span className="hidden sm:inline">Back</span>
             </Button>
           </div>
-          <div className="min-w-0 text-right leading-tight">
-            <h1 className="truncate text-sm font-semibold text-gray-900">
-              Analysis results{isMultiTable ? ` · ${multiTables.length} tables` : ''}
-            </h1>
-            <p className="truncate text-xs tabular-nums text-gray-500">Opened {currentDateTime.utc}</p>
-          </div>
+          <h1 className="min-w-0 truncate text-sm font-medium text-gray-900">
+            Results{isMultiTable ? ` · ${multiTables.length} tables` : ''}
+          </h1>
         </div>
       </header>
 
@@ -210,7 +194,16 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
       </aside>
 
       <main className="nf-canvas-panel">
-        <div key={activeTab} className="nf-fade-in min-h-0 flex-1 overflow-y-auto p-6" role="region" aria-label="Result details" tabIndex={0}>
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          className="min-h-0 flex-1 overflow-y-auto p-6"
+          role="region"
+          aria-label="Result details"
+          tabIndex={0}
+        >
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <InputChecksSection
@@ -252,7 +245,6 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
                   <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-5 py-3">
                     <Cpu className="size-4 text-teal-600" aria-hidden />
                     <h3 className="text-sm font-semibold text-gray-900">Column classification</h3>
-                    <span className="text-xs text-gray-500">entity type detected for every column</span>
                   </div>
                   <div className="space-y-3 p-4">
                     {multiTables.map((t: any) => (
@@ -363,8 +355,8 @@ export default function OutputPage({ tabId, tabs = [] }: { tabId: string; tabs?:
           {activeTab === 'files' && safeResults?.outputFiles && (
             <GeneratedFilesSection outputFiles={safeResults.outputFiles} />
           )}
-        </div>
+        </motion.div>
       </main>
-    </div>
+    </motion.div>
   );
 }

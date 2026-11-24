@@ -74,16 +74,14 @@ export function PipelineScreen({ pipeline, nl }: { pipeline: PipelineControls; n
               <span className="m-radio" aria-hidden />
               <span className="m-row-text">
                 <strong>{g.title}</strong>
-                <small>{g.blurb}</small>
               </span>
-              <span className="m-row-end">{plan.length} steps</span>
+              <span className="m-row-end">{plan.length}</span>
             </button>
           );
         })}
       </div>
-      {!current && steps.length > 0 && <p className="m-hint">Custom selection: {steps.length} steps.</p>}
 
-      <div className="m-label">Or describe it</div>
+      <div className="m-label">Describe</div>
       <NLPanel nl={nl} />
 
       <div className="m-label">
@@ -113,10 +111,7 @@ export function PipelineScreen({ pipeline, nl }: { pipeline: PipelineControls; n
                   </span>
                   <span className="m-row-text">
                     <strong>{op}</strong>
-                    <small>
-                      {OPERATIONS[op].description}
-                      {!steps.includes(op) && missing.length > 0 ? ` · adds ${missing.join(', ')}` : ''}
-                    </small>
+                    {!steps.includes(op) && missing.length > 0 && <small>+ {missing.join(', ')}</small>}
                   </span>
                 </button>
               );

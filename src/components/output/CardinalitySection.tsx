@@ -11,7 +11,6 @@ export function CardinalitySection({ cardinalityAnalysis }: CardinalitySectionPr
       <div className="text-center py-12 text-gray-500">
         <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
         <p>No cardinality analysis available</p>
-        <p className="text-sm text-gray-500 mt-2">Cardinality analysis requires the Cardinality Analyzer operation</p>
       </div>
     );
   }
@@ -68,9 +67,6 @@ export function CardinalitySection({ cardinalityAnalysis }: CardinalitySectionPr
           <BarChart3 className="w-5 h-5" />
           Attribute Cardinality Analysis
         </h4>
-        <p className="text-gray-600 mb-4">
-          Analysis of attribute value distributions and relationships to determine optimal cardinality mappings.
-        </p>
 
         <div className="overflow-x-auto">
           <table className="w-full">

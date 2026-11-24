@@ -16,14 +16,12 @@ function resolveVisual(data: Record<string, unknown>): OperationVisual {
 export function StartNode({ data, isConnectable }: NodeProps) {
   const label = String(data?.label || 'Start');
   return (
-    <div className="nf-node nf-node--start">
-      
+    <div className="nf-node nf-node--start" title="Start">
       <span className="nf-node__chip nf-node__chip--start" aria-hidden>
         <Play strokeWidth={2.6} fill="currentColor" />
       </span>
       <span className="nf-node__body">
         <span className="nf-node__label">{label}</span>
-        <span className="nf-node__desc">dataset enters the pipeline</span>
       </span>
       <Handle
         type="source"
@@ -46,6 +44,7 @@ export function TealNode({ data, isConnectable }: NodeProps) {
   return (
     <div
       className="nf-node"
+      title={description}
       data-phase={phase}
       style={{ '--nf-accent': meta.accent, '--nf-accent-soft': meta.soft } as React.CSSProperties}
     >
@@ -61,7 +60,6 @@ export function TealNode({ data, isConnectable }: NodeProps) {
       </span>
       <span className="nf-node__body">
         <span className="nf-node__label">{label}</span>
-        <span className="nf-node__desc">{description}</span>
       </span>
       <Handle
         type="source"
