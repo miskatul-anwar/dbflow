@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.7.0] - 2026-11-24
+
 ### Changed
 - **Minimalist redesign, desktop and Android.** One quiet ink-on-paper palette (shadcn's zinc neutrals) in both themes, with a near-black main action.
   - No tutorial text, guides or subtitles on screen: operation, result and goal descriptions are tooltips; secondary toolbar actions are icons with tooltips (shadcn/Radix); helper lines and empty-state hints are gone.
