@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.6.8] - 2026-11-24
+
+### Changed
+- **Every save asks where to put the file**, in the system's file dialog: the ER diagram (SVG, PNG, DOT), the report PDF, SQL, generated data files and saved pipelines. In the desktop app the dialog opens in Downloads with the file's name and type filled in; before, files went to Downloads without asking. Android already asked. In a browser, Chrome and Edge show their save picker; Firefox and Safari keep downloading as the browser is set to.
+
+### Fixed
+- In a browser, a save that fails part-way (for example, a full disk) leaves the chosen file as it was instead of half-written.
+
 ## [6.6.7] - 2026-11-17
 
 ### Fixed
