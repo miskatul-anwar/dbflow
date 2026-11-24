@@ -37,6 +37,7 @@ fs.writeFileSync(files[1], ['course,title', 'DB,Databases', 'OS,Operating system
   const runs = ['Pixel 7', 'Galaxy Tab S9', 'Galaxy Tab S9 landscape'].flatMap(device => ['light', 'dark'].map(theme => [device, theme]));
   for (const [device, themeName] of runs) {
     const theme = `${device} ${themeName}`;
+    if (!devices[device]) throw new Error(`Playwright has no device named "${device}"`);
     const ctx = await browser.newContext({ ...devices[device] });
     const page = await ctx.newPage();
     await page.addInitScript(t => {
@@ -67,7 +68,7 @@ fs.writeFileSync(files[1], ['course,title', 'DB,Databases', 'OS,Operating system
           })
           .filter(t => t.visible && (t.w < 48 || t.h < 48)),
       );
-      for (const t of targets) small.set(`${t.label} (${t.w}×${t.h})`, { ...t, where: name });
+      for (const t of targets) small.set(`${t.label} (${t.w}×${t.h})`, { ...t, where: `${theme} / ${name}` });
     };
     await scan('name your workspace');
     await page.getByRole('button', { name: 'Start' }).click(); // the launch sheet asks for a workspace name
