@@ -32,7 +32,6 @@ export function InputChecksSection({ checks, onMerge }: { checks?: InputChecks |
       <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-5 py-3">
         <AlertTriangle className="size-4 text-amber-600" aria-hidden />
         <h3 id="input-checks-title" className="text-sm font-semibold text-gray-900">Input checks</h3>
-        <span className="text-xs text-gray-600">found before the analysis started</span>
       </div>
       <div className="space-y-4 px-5 py-4">
         {skipped.length > 0 && (
@@ -80,11 +79,10 @@ export function InputChecksSection({ checks, onMerge }: { checks?: InputChecks |
         )}
         {overlaps.length > 0 && merged.length === 0 && onMerge && (
           <div className="flex flex-wrap items-center gap-3 border-t border-amber-200 pt-3">
-            <Button onClick={onMerge} title="Combine overlapping files into one table and run the pipeline again">
+            <Button onClick={onMerge} title="Rows that repeat are kept once; where records conflict, the first file's version is kept">
               <GitMerge />
-              <span>Merge overlapping files and run again</span>
+              <span>Merge and run again</span>
             </Button>
-            <span className="text-xs text-gray-600">Rows that repeat are kept once. Where records conflict, the first file's version is kept.</span>
           </div>
         )}
       </div>

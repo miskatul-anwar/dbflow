@@ -27,7 +27,6 @@ export function WorkspaceNameDialog({ title, suggestion, existing = [], confirmL
   const [name, setName] = useState(suggestion);
   const inputRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
-  const hintId = useId();
 
   const clean = name.trim().slice(0, MAX_WORKSPACE_NAME);
   const taken = existing.some(e => e.toLowerCase() === clean.toLowerCase());
@@ -36,7 +35,7 @@ export function WorkspaceNameDialog({ title, suggestion, existing = [], confirmL
   };
 
   return (
-    <Modal labelledBy={titleId} describedBy={hintId} onCancel={onCancel} initialFocus={inputRef}>
+    <Modal labelledBy={titleId} onCancel={onCancel} initialFocus={inputRef}>
       <form
         onSubmit={e => {
           e.preventDefault();
@@ -47,9 +46,6 @@ export function WorkspaceNameDialog({ title, suggestion, existing = [], confirmL
           {title}
         </h2>
         {warning && <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{warning}</p>}
-        <p id={hintId} className="mt-1 text-sm text-gray-600">
-          Each workspace keeps its own files, pipeline and results. You can rename it later.
-        </p>
         <label className="mt-4 block text-xs font-medium text-gray-600" htmlFor={`${titleId}-name`}>
           Workspace name
         </label>

@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -62,19 +63,28 @@ export function Modal({ labelledBy, describedBy, onCancel, initialFocus, role = 
   };
 
   return createPortal(
-    <div className="nf-modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onCancel?.()}>
-      <div
+    <motion.div
+      className="nf-modal-backdrop"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      onMouseDown={e => e.target === e.currentTarget && onCancel?.()}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97, y: 6 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         ref={boxRef}
         role={role}
         aria-modal="true"
         aria-labelledby={labelledBy}
         aria-describedby={describedBy}
-        className="nf-modal nf-fade-in"
+        className="nf-modal"
         onKeyDown={onKeyDown}
       >
         {children}
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>,
     document.body,
   );
 }

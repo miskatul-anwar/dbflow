@@ -96,7 +96,6 @@ export function FunctionalDependenciesSection({
       <div className="text-center py-12 text-gray-500">
         <GitBranch className="w-12 h-12 mx-auto mb-4 text-gray-300" />
         <p>No functional dependencies discovered</p>
-        <p className="text-sm text-gray-500 mt-2">This could indicate data is already normalized or lacks patterns</p>
       </div>
     );
   }

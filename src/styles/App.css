@@ -12,37 +12,37 @@
    tokens (or Tailwind's gray/teal scale, which theme.css remaps), never raw hex. */
 :root {
   color-scheme: light;
-  --nf-bg: #e5e7eb;
+  --nf-bg: #fafafa;
   --nf-surface: #ffffff;
-  --nf-surface-2: #f8fafc;
-  --nf-hover: rgba(15, 23, 42, 0.08);
-  --nf-hover-solid: #f1f5f9;
-  --nf-border: #e2e8f0;
-  --nf-border-strong: #cbd5e1;
-  --nf-text: #0f172a;
-  --nf-text-2: #475569;
-  --nf-text-3: #64748b;
+  --nf-surface-2: #fafafa;
+  --nf-hover: rgba(9, 9, 11, 0.05);
+  --nf-hover-solid: #f4f4f5;
+  --nf-border: #e4e4e7;
+  --nf-border-strong: #d4d4d8;
+  --nf-text: #09090b;
+  --nf-text-2: #52525b;
+  --nf-text-3: #71717a;
   --nf-accent: #0d9488;
   --nf-accent-soft: #f0fdfa;
-  --nf-chrome-base: #f8fafc;
-  --nf-shadow: 15, 23, 42;
+  --nf-chrome-base: #fafafa;
+  --nf-shadow: 9, 9, 11;
   --nf-ink-mix: #000000;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --nf-bg: #0b0e12;
-  --nf-surface: #12161c;
-  --nf-surface-2: #171c23;
-  --nf-hover: rgba(255, 255, 255, 0.08);
-  --nf-hover-solid: #1d232b;
-  --nf-border: #262d37;
-  --nf-border-strong: #343d49;
-  --nf-text: #e6eaf0;
-  --nf-text-2: #aab3bf;
-  --nf-text-3: #8a95a3;
+  --nf-bg: #09090b;
+  --nf-surface: #0f0f11;
+  --nf-surface-2: #141416;
+  --nf-hover: rgba(255, 255, 255, 0.06);
+  --nf-hover-solid: #1c1c1f;
+  --nf-border: #27272a;
+  --nf-border-strong: #3f3f46;
+  --nf-text: #fafafa;
+  --nf-text-2: #a1a1aa;
+  --nf-text-3: #8e8e97;
   --nf-accent: #2dd4bf;
   --nf-accent-soft: #10302f;
-  --nf-chrome-base: #171c23;
+  --nf-chrome-base: #141416;
   --nf-shadow: 0, 0, 0;
   --nf-ink-mix: #ffffff;
 }
@@ -98,16 +98,16 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
 .react-flow {
   --xy-edge-stroke-default: #94a3b8;
   --xy-edge-stroke-width-default: 2.5;
-  --xy-edge-stroke-selected-default: #0d9488;
-  --xy-connectionline-stroke-default: #0d9488;
+  --xy-edge-stroke-selected-default: var(--nf-text);
+  --xy-connectionline-stroke-default: var(--nf-text-2);
   --xy-connectionline-stroke-width-default: 2.5;
   --xy-minimap-background-color-default: var(--nf-surface);
   --xy-background-pattern-dots-color-default: var(--nf-border-strong);
   --xy-node-background-color-default: var(--nf-surface);
   --xy-node-border-default: 1px solid var(--nf-border);
-  --xy-node-boxshadow-hover-default: 0 10px 24px -6px rgba(13, 148, 136, 0.25);
-  --xy-node-boxshadow-selected-default: 0 0 0 2px rgba(13, 148, 136, 0.55);
-  --xy-handle-background-color-default: #0d9488;
+  --xy-node-boxshadow-hover-default: 0 2px 8px -4px rgba(var(--nf-shadow), 0.2);
+  --xy-node-boxshadow-selected-default: 0 0 0 1px var(--nf-text);
+  --xy-handle-background-color-default: var(--nf-text-3);
   --xy-handle-border-color-default: var(--nf-surface);
   --xy-controls-button-background-color-default: var(--nf-surface);
   --xy-controls-button-background-color-hover-default: var(--nf-accent-soft);
@@ -228,9 +228,9 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   grid-template-areas:
     "header header"
     "palette canvas";
-  gap: 0.75rem;
+  gap: 0.5rem;
   height: 100vh;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem 0.75rem;
   background-color: var(--nf-bg);
   overflow: hidden;
   position: relative;
@@ -250,24 +250,21 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   grid-area: header;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--nf-border-strong);
-  border-radius: 0.85rem;
-  background: color-mix(in srgb, var(--nf-surface) 94%, transparent);
-  backdrop-filter: blur(12px);
-  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--nf-border);
+  border-radius: 12px;
+  background: var(--nf-surface);
+  padding: 0.25rem 0.5rem;
   min-width: 0;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 .nf-palette {
   grid-area: palette;
-  border-radius: 0.85rem;
-  background: var(--nf-surface-2);
+  border-radius: 12px;
+  background: var(--nf-surface);
   border: 1px solid var(--nf-border);
   overflow: visible;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
   position: relative;
   min-width: 0;
   height: 100%;
@@ -312,7 +309,7 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
 
 .nf-palette-resizer:hover::after,
 .nf-palette-resizer.is-active::after {
-  background: #0d9488;
+  background: var(--nf-border-strong);
   width: 3px;
 }
 
@@ -341,10 +338,10 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
 
 .nf-palette-expand-tab:hover {
   background: var(--nf-surface);
-  border-color: #0d9488;
-  color: #0d9488;
+  border-color: var(--nf-border-strong);
+  color: var(--nf-text);
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px -4px rgba(13, 148, 136, 0.25);
+  box-shadow: 0 2px 8px -4px rgba(var(--nf-shadow), 0.2);
 }
 
 .nf-palette-expand-tab:active {
@@ -359,47 +356,58 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  min-width: 172px;
-  max-width: 230px;
-  padding: 0.5rem 0.85rem 0.5rem 0.55rem;
+  gap: 0.5rem;
+  min-width: 132px;
+  max-width: 200px;
+  padding: 0.4rem 0.75rem 0.4rem 0.45rem;
   background: var(--nf-surface);
   border: 1px solid var(--nf-border);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(var(--nf-shadow), 0.06);
+  border-radius: 10px;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .nf-node:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--nf-accent, #0d9488) 50%, var(--nf-border));
-  box-shadow: 0 4px 10px -4px rgba(var(--nf-shadow), 0.18);
+  border-color: var(--nf-border-strong);
+  box-shadow: 0 2px 8px -4px rgba(var(--nf-shadow), 0.2);
 }
 
 .react-flow__node.selected .nf-node {
-  border-color: var(--nf-accent, #0d9488);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nf-accent, #0d9488) 30%, transparent);
+  border-color: var(--nf-text);
+  box-shadow: 0 0 0 1px var(--nf-text);
 }
 
+/* The chip: the step's icon in ink, with its phase as a small dot. */
 .nf-node__chip {
+  position: relative;
   flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: color-mix(in srgb, var(--nf-accent, #0d9488) 70%, var(--nf-ink-mix));
-  background: color-mix(in srgb, var(--nf-accent, #0d9488) 14%, var(--nf-surface));
+  color: var(--nf-text-2);
+  background: var(--nf-hover-solid);
+}
+.nf-node__chip::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--nf-surface);
+  background: var(--nf-accent, #0d9488);
 }
 
 .nf-node__chip svg {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
 }
 
 .nf-node__glyph {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -408,7 +416,6 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.05rem;
 }
 
 .nf-node__label {
@@ -421,22 +428,13 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   text-overflow: ellipsis;
 }
 
-.nf-node__desc {
-  font-size: 11px;
-  line-height: 1.3;
-  color: var(--nf-text-3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Start: the same card, with a solid accent chip, so it reads as the first step and nothing louder. */
-.nf-node--start {
-  --nf-accent: #0d9488;
-}
+/* Start: the same card with an ink chip, so it reads as the first step and nothing louder. */
 .nf-node--start .nf-node__chip {
-  color: #ffffff;
-  background: var(--nf-accent);
+  color: var(--nf-surface);
+  background: var(--nf-text);
+}
+.nf-node--start .nf-node__chip::after {
+  display: none;
 }
 
 .nf-canvas-panel {
@@ -515,8 +513,8 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   align-items: center;
   /* Floating pills on the page background. The space around the strip equals the shell's own gap, so the tabs sit the
      same distance from the window edge and from the header below. */
-  gap: 0.5rem;
-  padding: 0.75rem 0.75rem 0.75rem;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
   overflow-x: auto;
   flex: none;
 }
@@ -532,29 +530,30 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   gap: 6px;
   max-width: 200px;
   min-width: 96px;
-  padding: 7px 8px 7px 14px;
+  padding: 6px 8px 6px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--nf-text-2);
-  background: var(--tab-bg, color-mix(in srgb, var(--nf-surface) 94%, transparent));
-  border: 1px solid var(--nf-border-strong);
-  border-radius: 0.85rem; /* the header's radius: every floating piece is rounded the same */
+  color: var(--nf-text-3);
+  background: var(--tab-bg, transparent);
+  border: 1px solid transparent;
+  border-radius: 8px;
   /* A coloured tab shows its colour as a bar along the top edge, inside the rounded shape. */
-  box-shadow: inset 0 3px 0 var(--tab-accent, transparent), 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 2px 0 var(--tab-accent, transparent);
   cursor: pointer;
   user-select: none;
 }
 .nf-tab:hover {
-  background: var(--tab-bg, var(--nf-surface));
+  color: var(--nf-text);
+  background: var(--tab-bg, var(--nf-hover));
 }
 .nf-tab.is-active {
   color: var(--nf-text);
   background: var(--tab-bg, var(--nf-surface));
-  border-color: #0d9488;
-  box-shadow: inset 0 3px 0 var(--tab-accent, transparent), 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--nf-border);
+  box-shadow: inset 0 2px 0 var(--tab-accent, transparent), 0 1px 2px rgba(var(--nf-shadow), 0.06);
 }
 .nf-tab:focus-visible {
-  outline: 2px solid #0d9488;
+  outline: 2px solid var(--nf-text-3);
   outline-offset: -2px;
 }
 .nf-tab-title {
@@ -575,7 +574,7 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   flex: 1;
   min-width: 0;
   font: inherit;
-  border: 1px solid #0d9488;
+  border: 1px solid var(--nf-border-strong);
   border-radius: 4px;
   padding: 0 4px;
   background: var(--nf-surface);
@@ -611,7 +610,7 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
 }
 .nf-tab-spinner {
   animation: nf-spin 1s linear infinite;
-  color: #0d9488;
+  color: var(--nf-text-2);
 }
 @keyframes nf-spin {
   to {
@@ -758,7 +757,7 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   box-shadow: 0 0 0 2px #0f172a;
 }
 .nf-swatch:focus-visible {
-  outline: 2px solid #0d9488;
+  outline: 2px solid var(--nf-text-3);
   outline-offset: 2px;
 }
 .nf-tab-picker-row {
@@ -824,13 +823,14 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(var(--nf-shadow), 0.45);
+  background: rgba(var(--nf-shadow), 0.35);
+  backdrop-filter: blur(2px);
 }
 .nf-modal {
   width: min(420px, 100%);
   padding: 1.25rem;
   background: var(--nf-surface);
   border: 1px solid var(--nf-border);
-  border-radius: 12px;
-  box-shadow: 0 20px 50px -12px rgba(var(--nf-shadow), 0.35);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px -12px rgba(var(--nf-shadow), 0.3);
 }

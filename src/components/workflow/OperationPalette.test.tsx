@@ -14,10 +14,13 @@ const setup = (props: Partial<React.ComponentProps<typeof OperationPalette>> = {
 const item = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}\\.`) });
 
 describe('OperationPalette (list)', () => {
-  it('shows every operation with its name and description', () => {
+  it('shows every operation by name, with its description in the tooltip and accessible name', () => {
     setup();
     expect(screen.getAllByRole('listitem').length).toBe(ALL_OPERATION_NAMES.length);
-    expect(within(item('1NF')).getByText('Enforces First Normal Form')).toBeTruthy();
+    expect(within(item('1NF')).queryByText('Enforces First Normal Form')).toBeNull();
+    expect(item('1NF').getAttribute('aria-label')).toMatch(/Enforces First Normal Form/);
+    fireEvent.mouseEnter(item('1NF'));
+    expect(screen.getByRole('tooltip').textContent).toMatch(/Enforces First Normal Form/);
   });
 
   it('marks added, ready and locked steps, and says why in words', () => {
