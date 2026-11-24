@@ -18,6 +18,8 @@ export function CountUp({ value, duration = 0.7 }: { value: string; duration?: n
       el.textContent = value;
       return;
     }
+    // Start from 0 before the first paint, so the final figure never flashes ahead of the count.
+    el.textContent = '0';
     const state = { n: 0 };
     const tween = gsap.to(state, {
       n: target,
