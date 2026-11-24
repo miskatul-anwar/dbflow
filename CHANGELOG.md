@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Android tablets get a tablet layout** (Material 3 window size classes). From 600dp wide: a navigation rail on the left instead of the bottom bar, wider content, the Run button and dialogs floating as cards. From 840dp (a tablet in landscape): the Pipeline screen in two columns, the plan beside its steps.
+
+### Fixed
+- On tablets the bottom bar's active pill floated above the label instead of behind the icon.
+
 ## [6.7.0] - 2026-11-24
 
 ### Changed

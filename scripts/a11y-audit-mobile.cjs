@@ -3,7 +3,7 @@
  * Accessibility audit of the phone interface (ISO/IEC 25010 interaction capability / WCAG 2.1 AA), the
  * counterpart of a11y-audit.cjs for the Android app.
  *
- * On a Pixel 7-sized screen with touch, in light and dark: runs axe-core on Data, Pipeline, every Results tab and
+ * On a phone (Pixel 7) and a tablet (Galaxy Tab S9, portrait and landscape), with touch, in light and dark: runs axe-core on Data, Pipeline, every Results tab and
  * the Settings and Workspaces sheets, and measures every control's touch target. Exits non-zero on any axe
  * violation or any target under 24 × 24 CSS px (WCAG 2.2 SC 2.5.8). Targets under 48 × 48 (Material and
  * Android's guideline) are listed as advice.
@@ -34,12 +34,14 @@ fs.writeFileSync(files[1], ['course,title', 'DB,Databases', 'OS,Operating system
   const browser = await chromium.launch();
   const violations = [];
   const small = new Map();
-  for (const theme of ['light', 'dark']) {
-    const ctx = await browser.newContext({ ...devices['Pixel 7'] });
+  const runs = ['Pixel 7', 'Galaxy Tab S9', 'Galaxy Tab S9 landscape'].flatMap(device => ['light', 'dark'].map(theme => [device, theme]));
+  for (const [device, themeName] of runs) {
+    const theme = `${device} ${themeName}`;
+    const ctx = await browser.newContext({ ...devices[device] });
     const page = await ctx.newPage();
     await page.addInitScript(t => {
       try {
-        localStorage.setItem('dbflow.theme', t);
+        localStorage.setItem('dbflow.theme', t.endsWith('dark') ? 'dark' : 'light');
       } catch {
         /* storage blocked */
       }
