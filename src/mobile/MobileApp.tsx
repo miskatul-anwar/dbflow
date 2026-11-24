@@ -169,19 +169,15 @@ export default function MobileApp() {
               <div className="m-row">
                 <span className="m-row-text">
                   <strong>AI table names</strong>
-                  <small>An on-device model names new tables. Off: names come from key columns (faster).</small>
                 </span>
                 <Switch on={aiNames} onChange={setAiNames} label="AI table names" />
               </div>
             ) : (
               <div className="m-row">
                 <span className="m-row-text">
-                  <strong>Table names</strong>
-                  <small>
-                    Built from each table's key columns; rename any table in the results. AI names are in the desktop
-                    app: the model needs more memory than a phone gives the app.
-                  </small>
+                  <strong>AI table names</strong>
                 </span>
+                <span className="m-row-end">Desktop only</span>
               </div>
             )}
             <div className="m-row">
@@ -193,7 +189,6 @@ export default function MobileApp() {
             <button className="m-row" onClick={() => setDialog({ kind: 'reset' })}>
               <span className="m-row-text">
                 <strong className="m-danger">Reset everything</strong>
-                <small>Reload the app and clear every workspace.</small>
               </span>
             </button>
           </div>

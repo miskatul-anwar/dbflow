@@ -146,7 +146,7 @@ describe('phone screens', () => {
   it('results: points to Data when there is nothing yet', () => {
     const onGo = vi.fn();
     render(<ResultsScreen results={null} onGoData={onGo} onMerge={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Go to Data' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Data' }));
     expect(onGo).toHaveBeenCalled();
   });
 

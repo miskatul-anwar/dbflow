@@ -5,6 +5,7 @@
  * run continues in the background when another workspace is on screen.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- engine results are untyped (see useResultViews) */
+import { motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Play } from 'lucide-react';
 import { useNormalization } from '../hooks/useNormalization';
@@ -197,20 +198,24 @@ export function MobileWorkspace({
       <TopBar title={tab.title} color={tab.color} running={isProcessing} detail={detail} onTitle={onWorkspaces} onSettings={onSettings} />
 
       <main className={`m-screen${screen === 'pipeline' ? ' m-with-cta' : ''}`}>
-        {screen === 'data' && (
-          <DataScreen files={files} busy={isProcessing} onAdd={addFiles} onRemove={i => setFiles(prev => prev.filter((_, j) => j !== i))} />
-        )}
-        {screen === 'pipeline' && <PipelineScreen pipeline={pipeline} nl={nl} />}
-        {screen === 'results' && (
-          <ResultsScreen results={results} onGoData={() => setScreen('data')} onMerge={() => void run({ mergeOverlappingFiles: true })} />
-        )}
+        {/* Screens fade and rise in; the system's reduce-motion setting turns this off (MotionConfig). */}
+        <motion.div key={screen} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}>
+          {screen === 'data' && (
+            <DataScreen files={files} busy={isProcessing} onAdd={addFiles} onRemove={i => setFiles(prev => prev.filter((_, j) => j !== i))} />
+          )}
+          {screen === 'pipeline' && <PipelineScreen pipeline={pipeline} nl={nl} />}
+          {screen === 'results' && (
+            <ResultsScreen results={results} onGoData={() => setScreen('data')} onMerge={() => void run({ mergeOverlappingFiles: true })} />
+          )}
+        </motion.div>
       </main>
 
       {screen === 'pipeline' && (
         <div className="m-cta">
           <button className="m-btn m-btn-primary m-btn-block" onClick={() => void run()} disabled={isProcessing || !steps.length || !files.length}>
             <Play />
-            {files.length ? `Run ${steps.length} steps on ${files.length} ${files.length === 1 ? 'file' : 'files'}` : 'Add files first'}
+            Run
+            <span className="m-cta-count">{steps.length}</span>
           </button>
         </div>
       )}
