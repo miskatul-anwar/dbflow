@@ -63,7 +63,9 @@ interface SavePickerWindow {
   showSaveFilePicker?: (options: {
     suggestedName: string;
     types?: Array<{ description: string; accept: Record<string, string[]> }>;
-  }) => Promise<{ createWritable: () => Promise<{ write: (data: Blob) => Promise<void>; close: () => Promise<void> }> }>;
+  }) => Promise<{
+    createWritable: () => Promise<{ write: (data: Blob) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> }>;
+  }>;
 }
 
 /** The browser's save picker; `null` when the browser has none. */
@@ -83,8 +85,14 @@ async function saveWithPicker(blob: Blob, name: string): Promise<boolean | null>
     return null; // not allowed here (e.g. no user gesture left): fall back to a download
   }
   const writable = await handle.createWritable();
-  await writable.write(blob);
-  await writable.close();
+  try {
+    await writable.write(blob);
+    await writable.close();
+  } catch (err) {
+    // Leave the chosen file as it was: an unfinished write is discarded, not kept half-written.
+    await writable.abort?.().catch(() => undefined);
+    throw err;
+  }
   return true;
 }
 

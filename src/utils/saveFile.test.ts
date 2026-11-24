@@ -52,6 +52,16 @@ describe('saveFile', () => {
     expect(click).not.toHaveBeenCalled();
   });
 
+  it('discards an unfinished write and reports the failure', async () => {
+    const abort = vi.fn(async () => {});
+    const write = vi.fn(async () => Promise.reject(new Error('disk full')));
+    (window as unknown as Record<string, unknown>).showSaveFilePicker = vi.fn(async () => ({
+      createWritable: async () => ({ write, close: vi.fn(), abort }),
+    }));
+    await expect(saveFile('data.csv', 'a,b')).rejects.toThrow('disk full');
+    expect(abort).toHaveBeenCalledTimes(1);
+  });
+
   it('saves nothing when the browser save picker is cancelled', async () => {
     const abort = Object.assign(new Error('cancelled'), { name: 'AbortError' });
     (window as unknown as Record<string, unknown>).showSaveFilePicker = vi.fn(async () => Promise.reject(abort));
