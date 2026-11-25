@@ -54,11 +54,11 @@ export function MobileWorkspace({
   const [fresh, setFresh] = useState(false);
   const { isProcessing, progress, processFiles, cancelProcessing } = useNormalization();
 
-  // Messages for the user: errors are shown, and success and failure also go to the system notifications.
+  // Errors are shown in the app and as a system notification; warnings and routine confirmations stay in the log.
   const log = useCallback(
     (level: 'info' | 'success' | 'warning' | 'error', message: string) => {
       if (level === 'error') say(message, true);
-      if (level !== 'info') notify(level, message, tabId);
+      if (level === 'error') notify(level, message, tabId); // warnings and routine confirmations stay in the log
     },
     [say, tabId],
   );

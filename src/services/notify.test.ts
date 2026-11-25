@@ -76,9 +76,37 @@ describe('desktop (Tauri) delivery', () => {
     sendNotification.mockImplementation(() => {
       throw new Error('boom');
     });
-    expect(() => notify('warning', 'careful')).not.toThrow();
+    expect(() => notify('error', 'careful')).not.toThrow();
     await flush();
     expect(sendNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps warnings in the console, and drops repeats and bursts', async () => {
+    (window as any).__TAURI_INTERNALS__ = {};
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const { notify, BURST_WINDOW_MS, REPEAT_WINDOW_MS } = await load();
+      // a pipeline built from a request: one advisory warning per step, then the run's result
+      for (let i = 0; i < 12; i++) notify('warning', `Step ${i} is usually run after another step`, 'w1');
+      notify('success', 'Pipeline completed for 2 table(s)', 'w1');
+      notify('success', 'Pipeline completed for 2 table(s)', 'w1'); // repeat
+      notify('success', 'Workflow saved (4 operations)', 'w1'); // same burst, same level
+      notify('error', 'Processing failed: disk full', 'w1'); // an error is never hidden behind a success
+      notify('error', 'Processing failed: disk full', 'w1'); // repeat
+      await flush();
+      expect(sendNotification.mock.calls.map(c => c[0].body)).toEqual(['Pipeline completed for 2 table(s)', 'Processing failed: disk full']);
+      // after the burst a new success shows; the same one waits out the repeat window
+      vi.setSystemTime(Date.now() + BURST_WINDOW_MS + 1);
+      notify('success', 'Pipeline completed for 2 table(s)', 'w1');
+      await flush();
+      expect(sendNotification).toHaveBeenCalledTimes(2);
+      vi.setSystemTime(Date.now() + REPEAT_WINDOW_MS + 1);
+      notify('success', 'Pipeline completed for 2 table(s)', 'w1');
+      await flush();
+      expect(sendNotification).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

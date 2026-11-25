@@ -270,6 +270,37 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   height: 100%;
 }
 
+/* The left column: Files above Operations, two cards in the same style. The column itself has no frame. */
+.nf-palette--stack {
+  background: transparent;
+  border: 0;
+  gap: 0.5rem;
+}
+.nf-side-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 12px;
+  background: var(--nf-surface);
+  border: 1px solid var(--nf-border);
+  overflow: hidden;
+}
+.nf-side-card--files {
+  flex: 0 1 auto;
+  max-height: 38%;
+}
+.nf-side-card--files > section {
+  max-height: 100%;
+}
+.nf-side-card--grow {
+  flex: 1 1 0;
+}
+.nf-drop-target {
+  outline: 2px dashed var(--nf-text-3);
+  outline-offset: -4px;
+  background: var(--nf-hover);
+}
+
 .nf-palette.is-collapsed {
   width: 0 !important;
   min-width: 0 !important;

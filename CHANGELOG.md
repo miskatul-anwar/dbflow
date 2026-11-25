@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Files sidebar (desktop).** The left column has a *Files* card above *Operations*, in the same style, listing the workspace's files.
+  - Add one file at a time or many at once, with the + button, the header's upload button or by dropping files on the card. Files are added to the list (before, each upload replaced it); a file already in the list is skipped.
+  - Each file has a menu: *Rename* (also double-click or F2; the extension is kept and names must be unique), *Replace…*, *Save a copy*, *Move up* / *Move down* (the merge of overlapping files keeps the first file's version of a conflicting record), and *Remove*. The trash icon removes every file.
+  - The list is read-only during a run.
+
 ### Changed
+- **Far fewer notifications.** Only a run's result and errors that stopped an action reach the system notification centre. Warnings (for example one per step when a pipeline is built from a request) and routine confirmations (files added, workflow saved) stay in the log. The notifier also drops a repeat of the same message within 5 s and any further message of the same level within 1.5 s.
 - **Android tablets get a tablet layout** (Material 3 window size classes). From 600dp wide: a navigation rail on the left instead of the bottom bar, wider content, the Run button and dialogs floating as cards. From 840dp (a tablet in landscape): the Pipeline screen in two columns, the plan beside its steps.
 
 ### Fixed

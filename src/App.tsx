@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { Node } from '@xyflow/react';
@@ -7,6 +7,7 @@ import { PanelLeftOpen } from 'lucide-react';
 import Heading from './components/heading';
 const OutputPage = lazy(() => import('./components/OutputPage'));
 import { OperationPalette } from './components/workflow/OperationPalette';
+import { FilesPanel } from './components/workflow/FilesPanel';
 import { FlowCanvas } from './components/workflow/FlowCanvas';
 import { useNormalization } from './hooks/useNormalization';
 import type { ProcessingOptions, SQLDialect } from './services/api/databaseService';
@@ -19,7 +20,7 @@ import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { useModelNaming } from './hooks/useModelNaming';
 import { activeSurface } from './utils/tabColors';
 import { prerequisitesToAdd } from './services/nlp/workflow/planner';
-import { usePaletteResize } from './hooks/usePaletteResize';
+import { isListMode, usePaletteResize } from './hooks/usePaletteResize';
 import { useWorkflowGraph, type WorkflowSnapshot, buildChainEdges, nodePosition } from './hooks/useWorkflowGraph';
 import { Logger } from './services/utils/logger';
 import { notify, setWorkspaceNameResolver } from './services/notify';
@@ -29,6 +30,7 @@ import { clearCachedResult, loadCachedResult, saveCachedResult } from './utils/r
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { isSupportedInputName } from './services/processors/spreadsheetProcessor';
 import { saveFileInBackground } from './utils/saveFile';
+import { addFiles, baseNameOf, moveFile, removeFile, renameFile, replaceFile } from './utils/fileList';
 import './styles/App.css';
 
 const logger = new Logger();
@@ -69,7 +71,10 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
     else if (level === 'error') logger.error(message, undefined, category);
     else logger.info(level === 'warning' ? `[WARNING] ${message}` : message, undefined, category);
 
-    if (level === 'success' || level === 'error' || level === 'warning') notify(level, message, tabId);
+    // The system notification centre gets what the user needs to know: a run's result and errors that stopped an
+    // action. Warnings and routine confirmations (files added, workflow saved, steps added by a request) stay in the
+    // log; the Files panel and the canvas already show them.
+    if (level === 'error' || (level === 'success' && category === 'EXECUTION')) notify(level, message, tabId);
   }, [tabId]);
 
   // ----- workflow graph ------------------------------------------------------
@@ -78,20 +83,54 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
 
   // ----- file handling -------------------------------------------------------
 
+  // Files are added to the list (one at a time or many at once); the Files panel renames, replaces, reorders and
+  // removes them. A file already in the list is skipped.
+  const filesRef = useRef(uploadedFiles);
+  filesRef.current = uploadedFiles;
+  const setFiles = useCallback((files: File[]) => {
+    filesRef.current = files;
+    setUploadedFiles(files);
+  }, []);
+
   const handleFileUpload = useCallback(
     (files: File[]) => {
-      const valid = files.filter(
-        f => isSupportedInputName(f.name, f.type),
-      );
-      if (valid.length > 0) {
-        setUploadedFiles(valid);
-        onSuggestTitle(tabId, valid[0].name.replace(/\.[^.]+$/, ''));
-        logMessage('success', `Loaded ${valid.length} dataset file(s): ${valid.map(f => f.name).join(', ')}`, 'FILE');
-      } else {
-        logMessage('error', `No CSV or spreadsheet files among: ${files.map(f => f.name).join(', ')}`, 'FILE');
+      const r = addFiles(filesRef.current, files);
+      if (r.added.length) {
+        if (filesRef.current.length === 0) onSuggestTitle(tabId, baseNameOf(r.added[0].name));
+        setFiles(r.files);
+        logMessage('success', `Added ${r.added.length} file${r.added.length === 1 ? '' : 's'}: ${r.added.map(f => f.name).join(', ')}`, 'FILE');
       }
+      if (r.duplicates.length) logMessage('warning', `Already added: ${r.duplicates.map(f => f.name).join(', ')}`, 'FILE');
+      if (r.unsupported.length) logMessage('error', `Not a CSV or spreadsheet: ${r.unsupported.map(f => f.name).join(', ')}`, 'FILE');
     },
-    [logMessage, onSuggestTitle, tabId],
+    [logMessage, onSuggestTitle, setFiles, tabId],
+  );
+
+  const fileActions = useMemo(
+    () => ({
+      onAdd: handleFileUpload,
+      onRename: (i: number, name: string) => {
+        const r = renameFile(filesRef.current, i, name);
+        if (r.error !== undefined) return r.error;
+        setFiles(r.files);
+        return undefined;
+      },
+      onReplace: (i: number, file: File) => {
+        if (!isSupportedInputName(file.name, file.type)) {
+          logMessage('error', `Not a CSV or spreadsheet: ${file.name}`, 'FILE');
+          return;
+        }
+        setFiles(replaceFile(filesRef.current, i, file));
+      },
+      onMove: (i: number, by: -1 | 1) => setFiles(moveFile(filesRef.current, i, by)),
+      onRemove: (i: number) => setFiles(removeFile(filesRef.current, i)),
+      onClear: () => setFiles([]),
+      onDownload: (i: number) => {
+        const f = filesRef.current[i];
+        if (f) saveFileInBackground(f.name, f, f.type || 'application/octet-stream');
+      },
+    }),
+    [handleFileUpload, logMessage, setFiles],
   );
 
   // ----- output navigation ---------------------------------------------------
@@ -332,14 +371,18 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
             setAiNaming(!aiNaming);
             logMessage('info', aiNaming ? 'AI naming off: new tables are named from their key columns.' : 'AI naming on: the on-device model suggests names for new tables.', 'NAMING');
           }}
-          onNotice={message => logMessage('warning', message, 'FILE')}
+          onNotice={message => logMessage('error', message, 'FILE')}
         />
       </header>
 
       <aside
-        className={`nf-palette${palette.isCollapsed ? ' is-collapsed' : ''}`}
-        aria-label="Operation palette"
+        className={`nf-palette nf-palette--stack${palette.isCollapsed ? ' is-collapsed' : ''}`}
+        aria-label="Files and operations"
       >
+        <div className="nf-side-card nf-side-card--files">
+          <FilesPanel files={uploadedFiles} compact={!isListMode(palette.width)} busy={isProcessing} {...fileActions} />
+        </div>
+        <div className="nf-side-card nf-side-card--grow" aria-label="Operation palette">
         <OperationPalette
           activeOperations={graph.placedOperationLabels}
           onAdd={graph.tryAddOperation}
@@ -348,6 +391,7 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
           onCollapse={palette.toggleCollapse}
           onResetWidth={palette.resetWidth}
         />
+        </div>
         <div
           className={`nf-palette-resizer${palette.isDragging ? ' is-active' : ''}`}
           onMouseDown={palette.handleResizeStart}
