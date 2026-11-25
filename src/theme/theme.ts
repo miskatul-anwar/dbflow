@@ -2,8 +2,13 @@
  * Light / dark theme. The choice is stored locally; with no stored choice the app follows the
  * operating system. The theme is applied as `data-theme` on <html>, which switches the design tokens
  * in `styles/App.css` and the palette remap in `styles/theme.css`.
+ *
+ * In the desktop app the window's own title bar follows too: Tauri's `Window.setTheme` (Windows; on macOS and Linux
+ * the theme is app-wide). `null` hands the title bar back to the system while the user has not chosen.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
+import { isTauriMobile } from '../utils/platform';
 
 export type Theme = 'light' | 'dark';
 const KEY = 'dbflow.theme';
@@ -29,8 +34,24 @@ export function currentTheme(): Theme {
   return read() ?? systemTheme();
 }
 
+/** Sets the native window theme (title bar). Desktop app only; a failure leaves the page theme as it is. */
+export function syncWindowTheme(theme: Theme | null): void {
+  let desktopApp = false;
+  try {
+    desktopApp = isTauri() && !isTauriMobile();
+  } catch {
+    return;
+  }
+  if (!desktopApp) return;
+  import('@tauri-apps/api/window')
+    .then(({ getCurrentWindow }) => getCurrentWindow().setTheme(theme))
+    .catch(err => console.warn('Could not set the window theme:', err));
+}
+
 export function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme;
+  // An explicit choice also sets the title bar; with none, the system decides it (as it decides the page).
+  syncWindowTheme(read() ?? null);
 }
 
 /** Apply the stored (or system) theme before the first paint. */

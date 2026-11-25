@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - On tablets the bottom bar's active pill floated above the label instead of behind the icon.
+- **Desktop: the window's title bar now follows the app's theme.** It was fixed to light (`theme: "Light"` in the window config). It now follows the system, and an explicit light/dark choice in the app sets it too (Tauri `Window.setTheme`, with the `core:window:allow-set-theme` permission).
+- **Tooltips match the app.** Every `title` hint (graph nodes, workspace tabs, diagram zoom, the request bar…) now shows as the app's own tooltip, ink on paper in light and paper on ink in dark, instead of the system's white box.
+- **Dark mode: the workspace tab's colour dot and the colour picker's swatch outlines** were drawn in a fixed dark navy and disappeared; they now use the theme's colours.
 
 ## [6.7.0] - 2026-11-24
 

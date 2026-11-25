@@ -724,7 +724,8 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   width: 10px;
   height: 10px;
   border-radius: 9999px;
-  border: 1.5px solid rgba(15, 23, 42, 0.35);
+  /* The theme's secondary ink, so the empty dot shows on light and dark tabs alike. */
+  border: 1.5px solid var(--nf-text-3);
   box-sizing: border-box;
 }
 .nf-tab-picker {
@@ -747,14 +748,14 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   height: 26px;
   border-radius: 9999px;
   border: 2px solid var(--nf-surface);
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 0 0 1px var(--nf-border-strong);
   cursor: pointer;
 }
 .nf-swatch:hover {
   transform: scale(1.1);
 }
 .nf-swatch[aria-pressed='true'] {
-  box-shadow: 0 0 0 2px #0f172a;
+  box-shadow: 0 0 0 2px var(--nf-text);
 }
 .nf-swatch:focus-visible {
   outline: 2px solid var(--nf-text-3);
