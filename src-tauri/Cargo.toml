@@ -1,6 +1,6 @@
 [package]
 name = "dbflow"
-version = "6.7.0"
+version = "6.7.1"
 description = "DBFlow — turn raw CSVs into normalized database schemas"
 authors = ["Miskatul Anwar <miskatul.anwar.csecu@gmail.com>"]
 license = "MIT"

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.7.1] - 2026-11-25
+
+### Added
+- **Files sidebar (desktop).** The left column has a *Files* card above *Operations*, in the same style, listing the workspace's files.
+  - Add one file at a time or many at once, with the + button, the header's upload button or by dropping files on the card. Files are added to the list (before, each upload replaced it); a file already in the list is skipped.
+  - Each file has a menu: *Rename* (also double-click or F2; the extension is kept and names must be unique), *Replace…*, *Save a copy*, *Move up* / *Move down* (the merge of overlapping files keeps the first file's version of a conflicting record), and *Remove*. The trash icon removes every file.
+  - The list is read-only during a run.
+
+### Changed
+- **Far fewer notifications.** Only a run's result and errors that stopped an action reach the system notification centre. Warnings (for example one per step when a pipeline is built from a request) and routine confirmations (files added, workflow saved) stay in the log. The notifier also drops a repeat of the same message within 5 s and any further message of the same level within 1.5 s.
+- **Android tablets get a tablet layout** (Material 3 window size classes). From 600dp wide: a navigation rail on the left instead of the bottom bar, wider content, the Run button and dialogs floating as cards. From 840dp (a tablet in landscape): the Pipeline screen in two columns, the plan beside its steps.
+
+### Fixed
+- On tablets the bottom bar's active pill floated above the label instead of behind the icon.
+- **Desktop: the window's title bar now follows the app's theme.** It was fixed to light (`theme: "Light"` in the window config). It now follows the system, and an explicit light/dark choice in the app sets it too (Tauri `Window.setTheme`, with the `core:window:allow-set-theme` permission).
+- **Tooltips match the app.** Every `title` hint (graph nodes, workspace tabs, diagram zoom, the request bar…) now shows as the app's own tooltip, ink on paper in light and paper on ink in dark, instead of the system's white box.
+- **Dark mode: the workspace tab's colour dot and the colour picker's swatch outlines** were drawn in a fixed dark navy and disappeared; they now use the theme's colours.
+
 ## [6.7.0] - 2026-11-24
 
 ### Changed

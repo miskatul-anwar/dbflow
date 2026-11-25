@@ -38,7 +38,9 @@ export function PipelineScreen({ pipeline, nl }: { pipeline: PipelineControls; n
   const matches = (op: string) => !q || op.toLowerCase().includes(q) || OPERATIONS[op].description.toLowerCase().includes(q);
 
   return (
-    <>
+    // Two columns on a wide tablet (the plan beside its steps), one on a phone.
+    <div className="m-pipe">
+      <div className="m-pipe-plan">
       <div className="m-group m-toolbar" role="toolbar" aria-label="Pipeline">
         <button onClick={pipeline.undo} disabled={!pipeline.canUndo}>
           <Undo2 size={20} /> Undo
@@ -83,7 +85,9 @@ export function PipelineScreen({ pipeline, nl }: { pipeline: PipelineControls; n
 
       <div className="m-label">Describe</div>
       <NLPanel nl={nl} />
+      </div>
 
+      <div className="m-pipe-steps">
       <div className="m-label">
         Steps · {steps.length} of {all.length}
       </div>
@@ -120,6 +124,7 @@ export function PipelineScreen({ pipeline, nl }: { pipeline: PipelineControls; n
         );
       })}
       {q && !all.some(matches) && <p className="m-hint">No step matches “{filter}”.</p>}
-    </>
+      </div>
+    </div>
   );
 }

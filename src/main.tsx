@@ -6,6 +6,7 @@ import '@xyflow/react/dist/style.css';
 
 import React, { lazy, Suspense } from 'react';
 import { MotionConfig } from 'framer-motion';
+import { TitleTooltips } from './components/ui/TitleTooltips';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { wantsMobileUi } from './utils/platform';
@@ -36,6 +37,8 @@ const render = () =>
         ) : (
           <App />
         )}
+        {/* Every `title` shows as the app's own tooltip, not the system's. */}
+        <TitleTooltips />
       </MotionConfig>
     </React.StrictMode>
   );

@@ -873,39 +873,89 @@
 }
 
 /* ---- Tablets ---------------------------------------------------------------------------------- */
-@media (min-width: 720px) {
+/* ---- Tablets (Material 3 window size classes) -------------------------------------------------------------------
+   Medium and expanded widths (600dp and up): a navigation rail on the left instead of the bottom bar, and content that
+   uses the width. Expanded (840dp and up, e.g. a tablet in landscape): the Pipeline screen in two columns. */
+@media (min-width: 600px) {
+  .m-app {
+    --m-rail: 80px;
+  }
+  .m-ws {
+    padding-left: var(--m-rail);
+  }
+  .m-nav {
+    top: 0;
+    right: auto;
+    width: var(--m-rail);
+    height: auto;
+    grid-template-columns: none;
+    grid-template-rows: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: calc(var(--m-safe-top) + 72px) 0 var(--m-safe-bottom);
+    border-top: 0;
+    border-right: 1px solid var(--m-line);
+  }
+  .m-nav button {
+    flex: 0 0 auto;
+    height: 56px;
+    padding-top: 4px;
+    justify-content: flex-start;
+  }
+  .m-nav button::before {
+    top: 4px;
+  }
+  .m-count {
+    top: 0;
+  }
+  .m-screen {
+    padding-bottom: calc(var(--m-safe-bottom) + 24px);
+  }
+  .m-screen.m-with-cta {
+    padding-bottom: calc(var(--m-safe-bottom) + 96px);
+  }
   .m-screen > * {
-    max-width: 760px;
+    max-width: 1040px;
     margin-left: auto;
     margin-right: auto;
   }
   .m-screen .m-tabs {
     max-width: none;
-    margin-left: -12px;
-    margin-right: -12px;
-    padding-left: max(4px, calc((100% - 760px) / 2 + 16px));
   }
   .m-cta,
   .m-runpanel,
   .m-toast {
-    left: max(12px, calc(50% - 392px));
-    right: max(12px, calc(50% - 392px));
+    left: calc(var(--m-rail) + max(12px, (100% - var(--m-rail) - 1040px) / 2));
+    right: max(12px, calc((100% - var(--m-rail) - 1040px) / 2));
+    bottom: calc(var(--m-safe-bottom) + 16px);
     border: 1px solid var(--m-line);
-    border-radius: 12px;
-    bottom: calc(var(--m-safe-bottom) + 72px);
+    border-radius: 14px;
+  }
+  .m-cta {
+    background: var(--m-surface);
   }
   .m-sheet {
-    max-width: 640px;
+    max-width: 560px;
     margin: 0 auto;
-    border-radius: 14px;
+    border-radius: 20px;
     margin-bottom: 24px;
   }
   .m-overlay {
     align-items: center;
   }
-  .m-nav button {
-    flex-direction: row;
-    gap: 8px;
-    font-size: 14px;
+}
+@media (min-width: 840px) {
+  .m-pipe {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  /* The plan stays in view while the step list scrolls. */
+  .m-pipe-plan {
+    position: sticky;
+    top: 0;
   }
 }

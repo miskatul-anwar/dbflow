@@ -75,14 +75,36 @@ async function show({ title, body }: NotificationContent, level: NotifyLevel): P
   new Notification(title, { body, icon: `${import.meta.env.BASE_URL}icon.png`, tag: `${level}:${body}` });
 }
 
+/** The same message is not shown again within this time, and no workspace raises more than one per burst. */
+export const REPEAT_WINDOW_MS = 5000;
+export const BURST_WINDOW_MS = 1500;
+const lastShown = new Map<string, number>(); // message key -> time
+const lastBurst = new Map<string, number>(); // workspace and level -> time
+
+/** Forget the rate-limit state (tests). */
+export function resetNotifyLimits(): void {
+  lastShown.clear();
+  lastBurst.clear();
+}
+
 /**
  * Show a system notification for a workspace. Never throws and never blocks the caller.
- * `info` messages are logged only: they confirm routine clicks and would just be noise.
+ * Only `success` and `error` reach the system: `info` and `warning` are advisory and go to the console, where a
+ * pipeline built in one go would otherwise raise a notification per step. The same message within a few seconds, and
+ * any further message of the same level in a burst, is dropped as well; the console keeps every message.
  */
 export function notify(level: NotifyLevel, message: string, workspaceId?: string): void {
   if (!message || !message.trim()) return;
   const content = composeNotification(message, workspaceId ? resolveWorkspaceName(workspaceId) : undefined);
   console.log(`[${level}] ${content.title}: ${content.body}`);
-  if (level === 'info') return;
+  if (level === 'info' || level === 'warning') return;
+  const now = Date.now();
+  const key = `${content.title}\u0000${content.body}`;
+  // Bursts are counted per level, so an error is never hidden behind the success just before it.
+  const scope = `${workspaceId ?? ''}\u0000${level}`;
+  if (now - (lastShown.get(key) ?? -Infinity) < REPEAT_WINDOW_MS) return;
+  if (now - (lastBurst.get(scope) ?? -Infinity) < BURST_WINDOW_MS) return;
+  lastShown.set(key, now);
+  lastBurst.set(scope, now);
   void show(content, level).catch(() => {});
 }
