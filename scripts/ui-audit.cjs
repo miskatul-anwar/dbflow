@@ -94,7 +94,7 @@ const overflowProbe = () => {
         await check('workspace naming dialog');
         await page.getByRole('button', { name: 'Start' }).click();
         await check('pipeline, empty');
-        await page.setInputFiles('input[type=file]', files);
+        await page.setInputFiles('[data-testid=files-add-input]', files);
         await page.fill('input[aria-label^="Describe"]', REQUEST);
         await page.keyboard.press('Enter');
         await page.waitForTimeout(600);

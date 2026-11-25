@@ -56,7 +56,7 @@ const probe = () => {
     await page.addInitScript(t => localStorage.setItem('dbflow.theme', t), theme);
     await page.goto(URL);
     await page.getByRole('button', { name: 'Start' }).click(); // the launch dialog asks for a workspace name
-    await page.setInputFiles('input[type=file]', FILES);
+    await page.setInputFiles('[data-testid=files-add-input]', FILES);
     await page.fill('input[aria-label^="Describe"]', REQUEST);
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: /apply & run/i }).click();

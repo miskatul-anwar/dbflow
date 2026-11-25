@@ -1,8 +1,6 @@
 import { useRef } from "react";
-import { FileOutput, FolderOpen, Play, Redo2, RotateCcw, Save, Sparkles, Undo2, Upload } from "lucide-react";
+import { FileOutput, FolderOpen, Play, Redo2, RotateCcw, Save, Sparkles, Undo2 } from "lucide-react";
 import { Button, IconButton } from "@/components/ui/button";
-import { WithTooltip } from "@/components/ui/tooltip";
-import { INPUT_ACCEPT } from "@/services/processors/spreadsheetProcessor";
 import { isTauriMobile } from "@/utils/platform";
 
 interface HeadingProps {
@@ -11,9 +9,6 @@ interface HeadingProps {
   canUndo?: boolean;
   canRedo?: boolean;
   onRun?: () => void;
-  onFileUpload?: (files: File[]) => void;
-  /** Number of data files the user has uploaded. */
-  uploadedFileCount?: number;
   onViewOutput?: () => void;
   onSaveState?: () => void;
   onLoadState?: (file: File) => void;
@@ -32,8 +27,6 @@ export default function Heading({
   canUndo,
   canRedo,
   onRun,
-  onFileUpload,
-  uploadedFileCount = 0,
   onViewOutput,
   onSaveState,
   onLoadState,
@@ -43,23 +36,10 @@ export default function Heading({
   onToggleAiNaming,
   onNotice,
 }: HeadingProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const loadStateInputRef = useRef<HTMLInputElement>(null);
-
-  const handleUploadClick = () => {
-    inputRef.current?.click();
-  };
 
   const handleLoadStateClick = () => {
     loadStateInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    if (files.length > 0) {
-      onFileUpload?.(files);
-    }
-    e.target.value = "";
   };
 
   const handleLoadStateFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,11 +59,11 @@ export default function Heading({
     window.location.reload();
   };
 
-  const activeFiles = uploadedFileCount;
   const mobile = isTauriMobile();
 
   return (
-    // Three zones: history on the left, files in the centre, run and results on the right. Secondary actions are
+    // Three zones: history on the left, the workflow file in the centre, run and results on the right. Files are added in
+    // the Files card of the Menu sidebar. Secondary actions are
     // icons with a tooltip; only Run and Output carry a word. On a phone the zones wrap onto two rows.
     <div className="relative z-30 flex h-full w-full flex-wrap items-center justify-center gap-2 px-1 py-1.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:px-3">
       <div className="flex shrink-0 items-center gap-1 sm:min-w-0">
@@ -94,24 +74,10 @@ export default function Heading({
       </div>
 
       <div className="flex items-center justify-center gap-1">
-        {/* Android's picker filters by MIME type, and phones label CSV files inconsistently (text/csv,
-            text/comma-separated-values, application/octet-stream), so the mobile app offers every file and the
-            engine's input checks decide what each one really is. */}
-        <input ref={inputRef} type="file" multiple accept={mobile ? undefined : INPUT_ACCEPT} className="hidden" onChange={handleFileChange} />
         <input ref={loadStateInputRef} type="file" accept={mobile ? undefined : ".json"} className="hidden" onChange={handleLoadStateFileChange} />
 
         <IconButton label="Open workflow" title="Open" icon={<FolderOpen />} onClick={handleLoadStateClick} disabled={isRunning} />
         <IconButton label="Save workflow" title="Save" icon={<Save />} onClick={onSaveState} disabled={isRunning} />
-        <WithTooltip content={activeFiles === 0 ? "Add files" : `${activeFiles} file${activeFiles === 1 ? "" : "s"}`}>
-          <Button variant="ghost" size="icon" onClick={handleUploadClick} disabled={isRunning} aria-label="Upload Datasets" className="relative">
-            <Upload />
-            {activeFiles > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gray-900 px-1 text-[10px] font-semibold leading-none text-white nf-btn-primary">
-                {activeFiles}
-              </span>
-            )}
-          </Button>
-        </WithTooltip>
       </div>
 
       <div className="flex items-center justify-end gap-1.5">

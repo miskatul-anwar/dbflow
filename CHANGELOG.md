@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.7.2] - 2026-11-25
+
+### Changed
+- **Menu sidebar (desktop).** Files and Operations sit together under one sidebar titled *Menu*, which holds the collapse (and reset-width) button. Collapsed, the pill reads *Menu*.
+- **The header has no upload button**: files are added in the Files card (button or drag and drop).
+- **Coloured workspace tabs** show their colour as a tint only; the bar along the tab's top edge is gone.
+
 ## [6.7.1] - 2026-11-25
 
 ### Added
