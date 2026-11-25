@@ -85,7 +85,6 @@ export function WorkspaceTabBar({ tabs, activeId, status, onSelect, onAdd, onClo
             className={`nf-tab${active ? ' is-active' : ''}${tab.color ? ' has-color' : ''}`}
             style={
               {
-                '--tab-accent': tab.color ?? 'transparent',
                 '--tab-bg': active ? activeSurface(tab.color) : inactiveSurface(tab.color),
               } as React.CSSProperties
             }

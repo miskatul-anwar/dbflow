@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { Node } from '@xyflow/react';
 
-import { PanelLeftOpen } from 'lucide-react';
+import { ChevronsLeft, PanelLeftOpen, RotateCcw } from 'lucide-react';
 import Heading from './components/heading';
 const OutputPage = lazy(() => import('./components/OutputPage'));
 import { OperationPalette } from './components/workflow/OperationPalette';
@@ -20,7 +20,8 @@ import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { useModelNaming } from './hooks/useModelNaming';
 import { activeSurface } from './utils/tabColors';
 import { prerequisitesToAdd } from './services/nlp/workflow/planner';
-import { isListMode, usePaletteResize } from './hooks/usePaletteResize';
+import { DEFAULT_PALETTE_WIDTH, isListMode, usePaletteResize } from './hooks/usePaletteResize';
+import { IconButton } from './components/ui/button';
 import { useWorkflowGraph, type WorkflowSnapshot, buildChainEdges, nodePosition } from './hooks/useWorkflowGraph';
 import { Logger } from './services/utils/logger';
 import { notify, setWorkspaceNameResolver } from './services/notify';
@@ -359,8 +360,6 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
           canUndo={graph.canUndo}
           canRedo={graph.canRedo}
           onRun={handleRun}
-          onFileUpload={handleFileUpload}
-          uploadedFileCount={uploadedFiles.length}
           onViewOutput={() => void handleViewOutput()}
           onSaveState={handleSaveState}
           onLoadState={handleLoadState}
@@ -375,10 +374,20 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
         />
       </header>
 
+      {/* Menu: the left sidebar holding Files and Operations. It is collapsed, expanded and resized as one. */}
       <aside
         className={`nf-palette nf-palette--stack${palette.isCollapsed ? ' is-collapsed' : ''}`}
-        aria-label="Files and operations"
+        aria-label="Menu"
       >
+        <div className={`nf-menu-head${isListMode(palette.width) ? '' : ' is-rail'}`}>
+          {isListMode(palette.width) && <h2 className="text-sm font-semibold text-gray-900">Menu</h2>}
+          <div className="flex items-center gap-0.5">
+            {isListMode(palette.width) && Math.abs(palette.width - DEFAULT_PALETTE_WIDTH) > 2 && (
+              <IconButton size="icon-sm" label="Reset sidebar width" icon={<RotateCcw />} onClick={palette.resetWidth} />
+            )}
+            <IconButton size="icon-sm" label="Collapse menu" icon={<ChevronsLeft />} onClick={palette.toggleCollapse} />
+          </div>
+        </div>
         <div className="nf-side-card nf-side-card--files">
           <FilesPanel files={uploadedFiles} compact={!isListMode(palette.width)} busy={isProcessing} {...fileActions} />
         </div>
@@ -388,8 +397,6 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
           onAdd={graph.tryAddOperation}
           onAddWithPrerequisites={addWithPrerequisites}
           width={palette.width}
-          onCollapse={palette.toggleCollapse}
-          onResetWidth={palette.resetWidth}
         />
         </div>
         <div
@@ -410,11 +417,11 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
             className="nf-palette-expand-tab"
             onClick={palette.toggleCollapse}
             onMouseDown={e => palette.handleResizeStart(e, true)}
-            title="Expand operations sidebar (click or drag to expand)"
-            aria-label="Expand operations sidebar"
+            title="Expand the menu (click or drag)"
+            aria-label="Expand menu"
           >
             <PanelLeftOpen size={15} />
-            <span>Operations</span>
+            <span>Menu</span>
           </button>
         )}
 

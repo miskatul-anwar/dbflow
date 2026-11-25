@@ -270,11 +270,25 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   height: 100%;
 }
 
-/* The left column: Files above Operations, two cards in the same style. The column itself has no frame. */
+/* The Menu sidebar: a framed column with its title and collapse button, holding the Files and Operations cards. */
 .nf-palette--stack {
-  background: transparent;
-  border: 0;
-  gap: 0.5rem;
+  background: var(--nf-surface-2);
+  border: 1px solid var(--nf-border);
+  border-radius: 14px;
+  padding: 0 6px 6px;
+  gap: 6px;
+}
+.nf-menu-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 0 2px 0 6px;
+}
+.nf-menu-head.is-rail {
+  justify-content: center;
+  padding: 0;
 }
 .nf-side-card {
   display: flex;
@@ -568,8 +582,7 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   background: var(--tab-bg, transparent);
   border: 1px solid transparent;
   border-radius: 8px;
-  /* A coloured tab shows its colour as a bar along the top edge, inside the rounded shape. */
-  box-shadow: inset 0 2px 0 var(--tab-accent, transparent);
+  /* A coloured tab is shown by its tint alone (--tab-bg), with no bar along its edge. */
   cursor: pointer;
   user-select: none;
 }
@@ -581,7 +594,7 @@ code, pre, kbd, samp, .font-mono, pre *, code * {
   color: var(--nf-text);
   background: var(--tab-bg, var(--nf-surface));
   border-color: var(--nf-border);
-  box-shadow: inset 0 2px 0 var(--tab-accent, transparent), 0 1px 2px rgba(var(--nf-shadow), 0.06);
+  box-shadow: 0 1px 2px rgba(var(--nf-shadow), 0.06);
 }
 .nf-tab:focus-visible {
   outline: 2px solid var(--nf-text-3);
