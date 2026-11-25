@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.7.1] - 2026-11-25
+
 ### Added
 - **Files sidebar (desktop).** The left column has a *Files* card above *Operations*, in the same style, listing the workspace's files.
   - Add one file at a time or many at once, with the + button, the header's upload button or by dropping files on the card. Files are added to the list (before, each upload replaced it); a file already in the list is skipped.
