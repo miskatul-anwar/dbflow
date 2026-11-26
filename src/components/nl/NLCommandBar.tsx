@@ -49,8 +49,6 @@ export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWork
   );
 
   const canExtend = res && nl.hasNodes ? extensionFor(nl.placed, res.plan) !== null : false;
-  // Touch screens get full-size controls (48 px targets) and the Build label at every width.
-  const btn = inline ? 'md' : 'sm';
 
   return (
     <div
@@ -60,7 +58,8 @@ export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWork
       <form
         onSubmit={onSubmit}
         className={`flex items-center gap-2 border border-gray-200 bg-white focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 ${
-          inline ? 'rounded-2xl p-1.5 pl-1 shadow-md' : 'rounded-lg p-1.5 shadow-sm'
+          // Phones: a slim field with a compact send icon; corners match the Run button.
+          inline ? 'rounded-[14px] py-1 pl-3 pr-1 shadow-sm' : 'rounded-lg p-1.5 shadow-sm'
         }`}
       >
         <Sparkles className="ml-2 size-4 shrink-0 text-teal-600" aria-hidden />
@@ -74,23 +73,24 @@ export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWork
           autoComplete="off"
           spellCheck={false}
           enterKeyHint="go"
-          className={`min-w-0 flex-1 bg-transparent text-gray-900 placeholder:text-gray-500 focus:outline-none ${inline ? 'h-12 text-base' : 'h-9 text-sm'}`}
+          className={`min-w-0 flex-1 bg-transparent text-gray-900 placeholder:text-gray-500 focus:outline-none ${inline ? 'h-10 text-[15px]' : 'h-9 text-sm'}`}
         />
         <Button
           type="submit"
           variant="primary"
-          className={inline ? 'h-12 rounded-xl px-4' : undefined}
+          className={inline ? 'size-9 rounded-[10px] p-0' : undefined}
+          aria-label={inline ? 'Build' : undefined}
           disabled={nl.busy || !draft.trim()}
           title="Build the pipeline (Enter)"
         >
           <Send />
-          <span className={inline ? '' : 'hidden sm:inline'}>Build</span>
+          {!inline && <span className="hidden sm:inline">Build</span>}
         </Button>
       </form>
       <div aria-live="polite">
         {nl.canUndoBuild && !res && !nl.busy && (
           <div className="mt-1.5 flex justify-end">
-            <Button size={btn} onClick={nl.undoBuild} title="Restore the canvas as it was before the last build">
+            <Button size="sm" onClick={nl.undoBuild} title="Restore the canvas as it was before the last build">
               Undo last build
             </Button>
           </div>
@@ -131,11 +131,11 @@ export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWork
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {nl.hasNodes ? (
                     <>
-                      <Button variant="primary" size={btn} onClick={() => nl.apply(res, { run: false, mode: 'replace' })}>
+                      <Button variant="primary" size="sm" onClick={() => nl.apply(res, { run: false, mode: 'replace' })}>
                         Replace workflow
                       </Button>
                       <Button
-                        size={btn}
+                        size="sm"
                         disabled={!canExtend}
                         title={canExtend ? 'Append the missing steps' : 'The current workflow cannot simply be extended'}
                         onClick={() => nl.apply(res, { run: false, mode: 'extend' })}
@@ -144,19 +144,19 @@ export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWork
                       </Button>
                     </>
                   ) : (
-                    <Button variant="primary" size={btn} onClick={() => nl.apply(res, { run: false })}>
+                    <Button variant="primary" size="sm" onClick={() => nl.apply(res, { run: false })}>
                       Apply
                     </Button>
                   )}
                   <Button
-                    size={btn}
+                    size="sm"
                     disabled={!nl.hasFiles}
                     title={nl.hasFiles ? 'Build the pipeline and run it' : 'Upload a data file first'}
                     onClick={() => nl.apply(res, { run: true, mode: nl.hasNodes && canExtend ? 'extend' : 'replace' })}
                   >
                     Apply &amp; Run
                   </Button>
-                  <Button variant="ghost" size={btn} onClick={nl.dismiss}>
+                  <Button variant="ghost" size="sm" onClick={nl.dismiss}>
                     Cancel
                   </Button>
                 </div>
@@ -167,14 +167,14 @@ export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWork
                 {res.candidates.length > 0 && res.confidence === 'low' && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {res.candidates.map(c => (
-                      <Button key={c.operation} size={btn} onClick={() => void nl.pickCandidate(c.operation)}>
+                      <Button key={c.operation} size="sm" onClick={() => void nl.pickCandidate(c.operation)}>
                         {c.operation}
                       </Button>
                     ))}
                   </div>
                 )}
                 <div className="mt-3">
-                  <Button variant="ghost" size={btn} onClick={nl.dismiss}>
+                  <Button variant="ghost" size="sm" onClick={nl.dismiss}>
                     Close
                   </Button>
                 </div>

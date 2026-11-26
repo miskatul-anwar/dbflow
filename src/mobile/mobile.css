@@ -914,13 +914,14 @@
   }
 }
 
-/* The request bar (shared with the desktop) at the top of the Pipeline screen: full-size touch targets. */
+/* The request bar (shared with the desktop) at the top of the Pipeline screen: corners match the Run button. */
 .nl-inline {
   margin: 4px 0 8px;
 }
+.nl-inline section {
+  border-radius: 14px;
+}
 .nl-inline section button,
 .nl-inline > div > div button {
-  min-height: 48px;
-  padding-inline: 16px;
-  border-radius: 12px;
+  border-radius: 10px;
 }

@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Android: the Pipeline screen opens with the same request bar as the desktop app (type a sentence, Build, preview the
-  plan as chips, then Replace / Extend / Apply & Run / Cancel, and Undo last build), at the top of the screen with
-  full-size touch targets. The Goal list is gone; the step checklist below stays.
+  plan as chips, then Replace / Extend / Apply & Run / Cancel, and Undo last build), as a compact field at the top of
+  the screen with a send icon and corners that match the Run button. The Goal list is gone; the step checklist below
+  stays.
 
 ### Fixed
 
