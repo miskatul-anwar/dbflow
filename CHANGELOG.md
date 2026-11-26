@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.7.3] - 2026-11-26
+
 ### Changed
 
 - Android: the Pipeline screen opens with the same request bar as the desktop app (type a sentence, Build, preview the
