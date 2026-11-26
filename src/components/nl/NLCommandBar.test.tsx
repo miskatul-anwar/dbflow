@@ -6,7 +6,7 @@ import { useNLWorkflow } from '../../hooks/useNLWorkflow';
 import { NLCommandBar } from './NLCommandBar';
 import { FakeEmbeddingProvider } from '../../services/nlp/workflow';
 
-vi.mock('../../services/notify', () => ({ notify: vi.fn() }));
+vi.mock('../../services/notify', () => ({ notify: vi.fn(), toast: vi.fn() }));
 
 let latest: ReturnType<typeof useWorkflowGraph> | null = null;
 const run = vi.fn();

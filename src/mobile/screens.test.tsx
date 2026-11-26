@@ -6,6 +6,7 @@ import { DataScreen } from './DataScreen';
 import { ResultsScreen } from './ResultsScreen';
 import { WorkspacesSheet, WorkspaceForm } from './WorkspaceSheets';
 import { BottomNav } from './ui';
+import { RunSheet, formatElapsed, splitMessage } from './RunSheet';
 import { DEFAULT_GOAL, planForGoal } from './pipeline';
 import type { NLWorkflow } from '../hooks/useNLWorkflow';
 
@@ -98,6 +99,33 @@ describe('phone screens', () => {
     render(<PipelineScreen pipeline={controls(['Data Loader'])} nl={undo} />);
     fireEvent.click(screen.getByRole('button', { name: 'Undo last build' }));
     expect(undo.undoBuild).toHaveBeenCalled();
+  });
+
+  it('run progress: phase, percent, what is happening to which table, the phase tracker, and Cancel', () => {
+    const onCancel = vi.fn();
+    render(
+      <RunSheet
+        progress={{ progress: 42.4, phase: 'ANALYZE', message: 'combined_hospital_data: mining functional dependencies' } as never}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.getByText('Analyzing')).toBeTruthy();
+    expect(screen.getByRole('progressbar', { name: 'Progress' }).getAttribute('aria-valuenow')).toBe('42');
+    expect(screen.getByText('Mining functional dependencies')).toBeTruthy();
+    expect(screen.getByText('combined_hospital_data')).toBeTruthy();
+    const phases = screen.getByRole('list', { name: 'Phases' }).querySelectorAll('li');
+    expect([...phases].map(li => li.getAttribute('data-state'))).toEqual(['done', 'current', 'todo', 'todo']);
+    expect(phases[1].getAttribute('aria-current')).toBe('step');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCancel).toHaveBeenCalled();
+  });
+
+  it('run progress helpers: elapsed time and the engine message', () => {
+    expect(formatElapsed(0)).toBe('0:00');
+    expect(formatElapsed(83.7)).toBe('1:23');
+    expect(splitMessage(undefined)).toEqual({ action: 'Starting…' });
+    expect(splitMessage('Loading files')).toEqual({ action: 'Loading files' });
+    expect(splitMessage('orders: cleaning data...')).toEqual({ action: 'Cleaning data...', table: 'orders' });
   });
 
   it('workspaces: switch, edit, close and create', () => {

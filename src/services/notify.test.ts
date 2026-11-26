@@ -6,21 +6,113 @@ const isPermissionGranted = vi.fn();
 const requestPermission = vi.fn();
 vi.mock('@tauri-apps/plugin-notification', () => ({ sendNotification, isPermissionGranted, requestPermission }));
 
+const sonner = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn() });
+vi.mock('sonner', () => ({ toast: sonner }));
+
 async function load() {
   vi.resetModules();
   return import('./notify');
 }
 const flush = () => new Promise(r => setTimeout(r, 0));
 
+/** The user is in another app (desktop: another window has focus; phone: DBFlow is in the background). */
+const away = () => vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+const looking = () => vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+
 beforeEach(() => {
   sendNotification.mockReset();
   isPermissionGranted.mockReset().mockResolvedValue(true);
   requestPermission.mockReset().mockResolvedValue('granted');
+  sonner.mockReset();
+  sonner.success.mockReset();
+  sonner.error.mockReset();
+  sonner.warning.mockReset();
   vi.spyOn(console, 'log').mockImplementation(() => {});
+  away();
 });
 afterEach(() => {
   delete (window as any).__TAURI_INTERNALS__;
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe('toasts (in the app)', () => {
+  it('shows the message once: the same text replaces the toast on screen', async () => {
+    const { toast } = await load();
+    toast('success', 'Pipeline built: 11 steps');
+    toast('success', 'Pipeline built:  11 steps');
+    expect(sonner.success).toHaveBeenCalledTimes(2);
+    expect(sonner.success.mock.calls[0][1].id).toBe(sonner.success.mock.calls[1][1].id);
+  });
+
+  it('keeps errors longer and confirmations with an action longer than plain ones', async () => {
+    const { toastDuration } = await load();
+    expect(toastDuration('error', false)).toBeGreaterThan(toastDuration('success', true));
+    expect(toastDuration('success', true)).toBeGreaterThan(toastDuration('success', false));
+  });
+
+  it('passes an action (Undo, View results) and ignores empty text', async () => {
+    const { toast } = await load();
+    const onClick = vi.fn();
+    toast('success', 'Pipeline built: 3 steps', { action: { label: 'Undo', onClick } });
+    expect(sonner.success).toHaveBeenCalledWith('Pipeline built: 3 steps', expect.objectContaining({ action: { label: 'Undo', onClick } }));
+    toast('error', '   ');
+    expect(sonner.error).not.toHaveBeenCalled();
+  });
+
+  it('never throws', async () => {
+    sonner.error.mockImplementation(() => {
+      throw new Error('boom');
+    });
+    const { toast } = await load();
+    expect(() => toast('error', 'careful')).not.toThrow();
+  });
+});
+
+describe('routing a run outcome', () => {
+  beforeEach(() => {
+    (window as any).__TAURI_INTERNALS__ = {};
+  });
+
+  it('is a toast, not a system notification, while the user is looking at the app', async () => {
+    looking();
+    const { notify, setActiveWorkspace, setWorkspaceNameResolver } = await load();
+    setWorkspaceNameResolver(id => (id === 't1' ? 'Sales' : 'HR'));
+    setActiveWorkspace('t1');
+    notify('success', 'Pipeline completed for 2 table(s)', 't1');
+    await flush();
+    expect(sendNotification).not.toHaveBeenCalled();
+    expect(sonner.success).toHaveBeenCalledWith('Pipeline completed for 2 table(s)', expect.objectContaining({ description: undefined }));
+  });
+
+  it('names the workspace when the run belongs to one that is not on screen, and carries the action', async () => {
+    looking();
+    const { notify, setActiveWorkspace, setWorkspaceNameResolver } = await load();
+    setWorkspaceNameResolver(id => (id === 't1' ? 'Sales' : 'HR'));
+    setActiveWorkspace('t1');
+    const onClick = vi.fn();
+    notify('error', 'Processing failed: disk full', 't2', { action: { label: 'View', onClick } });
+    expect(sonner.error).toHaveBeenCalledWith('Processing failed: disk full', expect.objectContaining({ description: 'HR', action: { label: 'View', onClick } }));
+  });
+
+  it('is a system notification when the user is away', async () => {
+    const { notify, setWorkspaceNameResolver } = await load();
+    setWorkspaceNameResolver(() => 'Sales');
+    notify('success', 'Pipeline completed for 2 table(s)', 't1');
+    await flush();
+    expect(sonner.success).not.toHaveBeenCalled();
+    expect(sendNotification).toHaveBeenCalledWith({ title: 'Sales', body: 'Pipeline completed for 2 table(s)' });
+  });
+
+  it('names the logo icons on Android, where the system would otherwise show a generic one', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36');
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    const { notify, ANDROID_ICONS } = await load();
+    notify('error', 'Processing failed');
+    await flush();
+    expect(sendNotification).toHaveBeenCalledWith(expect.objectContaining({ body: 'Processing failed', ...ANDROID_ICONS }));
+    expect(ANDROID_ICONS.icon).toBe('ic_stat_dbflow');
+  });
 });
 
 describe('notification content', () => {

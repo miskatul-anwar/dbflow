@@ -37,6 +37,7 @@ export function MobileWorkspace({
   onSuggestTitle,
   onWorkspaces,
   onSettings,
+  onActivate,
 }: {
   tab: WorkspaceTab;
   active: boolean;
@@ -45,6 +46,8 @@ export function MobileWorkspace({
   onSuggestTitle: (id: string, title: string) => void;
   onWorkspaces: () => void;
   onSettings: () => void;
+  /** Bring this workspace on screen (a toast's "View" for a run that finished in the background). */
+  onActivate: () => void;
 }) {
   const tabId = tab.id;
   const [screen, setScreenState] = useState<Screen>('data');
@@ -54,14 +57,8 @@ export function MobileWorkspace({
   const [fresh, setFresh] = useState(false);
   const { isProcessing, progress, processFiles, cancelProcessing } = useNormalization();
 
-  // Errors are shown in the app and as a system notification; warnings and routine confirmations stay in the log.
-  const log = useCallback(
-    (level: 'info' | 'success' | 'warning' | 'error', message: string) => {
-      if (level === 'error') say(message, true);
-      if (level === 'error') notify(level, message, tabId); // warnings and routine confirmations stay in the log
-    },
-    [say, tabId],
-  );
+  // A run's outcome: a toast when the user is looking, a system notification (with the app's logo) when they are away.
+  // Warnings and routine confirmations stay in the log.
   // The graph's own notes (phase-order hints, "removed operation") are routine on a list-based pipeline, where
   // every step is placed in run order: only its errors reach the user.
   const graphLog = useCallback(
@@ -103,21 +100,22 @@ export function MobileWorkspace({
         say('Add at least one file first.', true);
         return setScreen('data');
       }
-      if (!steps.length) return say('Choose a goal or check at least one step.', true);
+      if (!steps.length) return say('Check at least one step, or describe a pipeline.', true);
       const check = validateSequence(graph.nodes, graph.edges);
       if (!check.isValid) return say(`The pipeline is not valid: ${check.errors.join('; ')}`, true);
       const result: any = await processFiles(files, graph.operationLabels, { sqlDialect: dialect, ...extra });
       if (result?.success) {
         setResults(result);
         saveCachedResult(result, tabId);
-        notify('success', `Pipeline completed for ${files.length} table(s)`, tabId);
+        // On screen, the results open by themselves; a run in another workspace offers to open them.
+        notify('success', `Pipeline completed for ${files.length} table(s)`, tabId, active ? {} : { action: { label: 'View', onClick: () => { onActivate(); setScreen('results'); } } });
         if (active) setScreen('results');
         else setFresh(true);
       } else if (result && !/cancel/i.test(result.error ?? '')) {
-        log('error', `Processing failed: ${result.error ?? 'unknown error'}`);
+        notify('error', `Processing failed: ${result.error ?? 'unknown error'}`, tabId);
       }
     },
-    [active, dialect, files, graph.edges, graph.nodes, graph.operationLabels, isProcessing, log, processFiles, say, setScreen, steps.length, tabId],
+    [active, dialect, files, graph.edges, graph.nodes, graph.operationLabels, isProcessing, onActivate, processFiles, say, setScreen, steps.length, tabId],
   );
 
   const nl = useNLWorkflow({

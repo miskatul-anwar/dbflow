@@ -176,3 +176,39 @@
 :root[data-theme='dark'] .nf-btn-primary:hover {
   background-color: #e4e4e7;
 }
+
+/* Toasts (Sonner): a light card in light mode, a dark one in dark mode, with an ink action button. */
+.nf-toast {
+  background: #ffffff !important;
+  color: #09090b !important;
+  border-color: #e4e4e7 !important;
+}
+.nf-toast-desc {
+  color: #52525b !important;
+}
+.nf-toast-action {
+  background: #18181b !important;
+  color: #fafafa !important;
+}
+.nf-toast-close {
+  background: #ffffff !important;
+  color: #52525b !important;
+  border-color: #e4e4e7 !important;
+}
+:root[data-theme='dark'] .nf-toast {
+  background: #18181b !important;
+  color: #fafafa !important;
+  border-color: #27272a !important;
+}
+:root[data-theme='dark'] .nf-toast-desc {
+  color: #a1a1aa !important;
+}
+:root[data-theme='dark'] .nf-toast-action {
+  background: #fafafa !important;
+  color: #09090b !important;
+}
+:root[data-theme='dark'] .nf-toast-close {
+  background: #18181b !important;
+  color: #a1a1aa !important;
+  border-color: #27272a !important;
+}

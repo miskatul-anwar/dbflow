@@ -102,30 +102,3 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (on: bo
   return <span className="m-switch" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} />;
 }
 
-export interface ToastMessage {
-  id: number;
-  text: string;
-  error?: boolean;
-}
-
-export function Toast({ toast, onDone }: { toast: ToastMessage | null; onDone: () => void }) {
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(onDone, toast.error ? 6000 : 3000);
-    return () => clearTimeout(t);
-  }, [toast, onDone]);
-  if (!toast) return null;
-  return (
-    <motion.div
-      key={toast.id}
-      className={`m-toast${toast.error ? ' m-error' : ''}`}
-      role="status"
-      onClick={onDone}
-      initial={{ opacity: 0, y: 12, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {toast.text}
-    </motion.div>
-  );
-}
