@@ -78,13 +78,12 @@ export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWork
         <Button
           type="submit"
           variant="primary"
-          className={inline ? 'size-9 rounded-[10px] p-0' : undefined}
-          aria-label={inline ? 'Build' : undefined}
+          className={inline ? 'h-9 rounded-[10px] px-3' : undefined}
           disabled={nl.busy || !draft.trim()}
           title="Build the pipeline (Enter)"
         >
           <Send />
-          {!inline && <span className="hidden sm:inline">Build</span>}
+          <span className={inline ? '' : 'hidden sm:inline'}>Build</span>
         </Button>
       </form>
       <div aria-live="polite">
