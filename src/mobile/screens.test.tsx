@@ -2,12 +2,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { PipelineScreen, type PipelineControls } from './PipelineScreen';
-import { NLPanel } from './NLPanel';
 import { DataScreen } from './DataScreen';
 import { ResultsScreen } from './ResultsScreen';
 import { WorkspacesSheet, WorkspaceForm } from './WorkspaceSheets';
 import { BottomNav } from './ui';
-import { GOALS, planForGoal } from './pipeline';
+import { DEFAULT_GOAL, planForGoal } from './pipeline';
 import type { NLWorkflow } from '../hooks/useNLWorkflow';
 
 const controls = (steps: string[], over: Partial<PipelineControls> = {}): PipelineControls => ({
@@ -44,17 +43,17 @@ const nlStub = (over: Partial<NLWorkflow> = {}): NLWorkflow =>
 describe('phone screens', () => {
   afterEach(cleanup);
 
-  it('pipeline: undo/redo/open/save, goals, filter and the step checklist', () => {
-    const c = controls(planForGoal(GOALS[0]));
+  it('pipeline: request bar first, undo/redo/open/save, filter and the step checklist (no goal list)', () => {
+    const c = controls(planForGoal(DEFAULT_GOAL));
     render(<PipelineScreen pipeline={c} nl={nlStub()} />);
     fireEvent.click(screen.getByRole('button', { name: /Undo/ }));
     expect(c.undo).toHaveBeenCalled();
     expect((screen.getByRole('button', { name: /Redo/ }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: /Save/ }));
     expect(c.save).toHaveBeenCalled();
-    expect(screen.getByRole('radio', { name: /3NF schema/ }).getAttribute('aria-checked')).toBe('true');
-    fireEvent.click(screen.getByRole('radio', { name: /All steps/ }));
-    expect(c.setSteps).toHaveBeenCalledWith(planForGoal(GOALS.find(g => g.id === 'all')!));
+    expect(screen.queryByRole('radiogroup', { name: 'Goal' })).toBeNull();
+    const bar = screen.getByRole('textbox', { name: 'Describe the pipeline you want' });
+    expect(bar.compareDocumentPosition(screen.getByRole('toolbar', { name: 'Pipeline' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const bcnf = screen.getByRole('checkbox', { name: /^BCNF/ });
     expect(bcnf.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(bcnf);
@@ -64,7 +63,7 @@ describe('phone screens', () => {
     expect(screen.queryByRole('checkbox', { name: /^BCNF/ })).toBeNull();
   });
 
-  it('request box: previews the plan and applies it with Replace, Extend or Apply & run', () => {
+  it('request bar (same as desktop): previews the plan and applies it with Replace, Extend or Apply & Run', () => {
     const resolution = {
       targets: ['BCNF'],
       excluded: [],
@@ -76,27 +75,27 @@ describe('phone screens', () => {
       source: 'lexical',
     };
     const nl = nlStub({ resolution: resolution as never, query: 'bcnf in mysql' });
-    render(<NLPanel nl={nl} />);
-    expect(screen.getByText('2 steps')).toBeTruthy();
+    render(<PipelineScreen pipeline={controls(['Data Loader'])} nl={nl} />);
+    expect(screen.getByText(/2 steps/)).toBeTruthy();
     expect(screen.getByText('SQL dialect: mysql')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Replace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Replace workflow' }));
     expect(nl.apply).toHaveBeenCalledWith(resolution, { run: false, mode: 'replace' });
-    fireEvent.click(screen.getByRole('button', { name: /Apply & run/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Apply & Run/ }));
     expect(nl.apply).toHaveBeenCalledTimes(2);
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(nl.dismiss).toHaveBeenCalled();
   });
 
-  it('request box: offers "did you mean" choices and the undo of the last build', () => {
+  it('request bar: offers "did you mean" choices and the undo of the last build', () => {
     const nl = nlStub({
-      resolution: { plan: [], candidates: [{ operation: '3NF', score: 0.4 }], message: 'Did you mean…', addedAsDependencies: [], targets: [], options: {} } as never,
+      resolution: { plan: [], candidates: [{ operation: '3NF', score: 0.4 }], confidence: 'low', message: 'Did you mean…', addedAsDependencies: [], targets: [], options: {} } as never,
     });
-    const { unmount } = render(<NLPanel nl={nl} />);
+    const { unmount } = render(<PipelineScreen pipeline={controls(['Data Loader'])} nl={nl} />);
     fireEvent.click(screen.getByRole('button', { name: '3NF' }));
     expect(nl.pickCandidate).toHaveBeenCalledWith('3NF');
     unmount();
     const undo = nlStub({ canUndoBuild: true });
-    render(<NLPanel nl={undo} />);
+    render(<PipelineScreen pipeline={controls(['Data Loader'])} nl={undo} />);
     fireEvent.click(screen.getByRole('button', { name: 'Undo last build' }));
     expect(undo.undoBuild).toHaveBeenCalled();
   });

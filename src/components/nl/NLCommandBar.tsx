@@ -5,12 +5,15 @@ import { dependencyClosure } from '../../services/nlp/workflow/planner';
 import { extensionFor, type NLWorkflow } from '../../hooks/useNLWorkflow';
 
 const PLACEHOLDER = 'Describe a pipeline, e.g. “Convert it to 1NF”';
+/** Narrow screens: short enough not to be cut off. */
+const PLACEHOLDER_SHORT = 'e.g. “Convert it to 1NF”';
 
 /**
  * Text box that turns a sentence into a pipeline: shows the plan as chips first,
  * then Apply / Apply & Run. Dimmed chips are dependencies added automatically.
+ * `inline` lays it out in the page flow (the Android Pipeline screen) instead of floating over the canvas.
  */
-export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: boolean }) {
+export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWorkflow; active?: boolean; inline?: boolean }) {
   // Each workspace tab has its own bar, so ids must be unique per instance.
   const inputId = `nl-command-input-${useId().replace(/:/g, '')}`;
   const [draft, setDraft] = useState('');
@@ -48,10 +51,16 @@ export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: b
   const canExtend = res && nl.hasNodes ? extensionFor(nl.placed, res.plan) !== null : false;
 
   return (
-    <div className="absolute left-1/2 top-3 z-20 w-[min(720px,calc(100%-2rem))] -translate-x-1/2" role="search">
+    <div
+      className={inline ? 'nl-inline relative w-full' : 'absolute left-1/2 top-3 z-20 w-[min(720px,calc(100%-2rem))] -translate-x-1/2'}
+      role="search"
+    >
       <form
         onSubmit={onSubmit}
-        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-1.5 shadow-sm focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30"
+        className={`flex items-center gap-2 border border-gray-200 bg-white focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 ${
+          // Phones: a slim field with a compact send icon; corners match the Run button.
+          inline ? 'rounded-[14px] py-1 pl-3 pr-1 shadow-sm' : 'rounded-lg p-1.5 shadow-sm'
+        }`}
       >
         <Sparkles className="ml-2 size-4 shrink-0 text-teal-600" aria-hidden />
         <input maxLength={1000}
@@ -59,15 +68,22 @@ export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: b
           type="text"
           value={draft}
           onChange={onChange}
-          placeholder={PLACEHOLDER}
-          aria-label="Describe the pipeline you want (Ctrl+K)"
+          placeholder={inline ? PLACEHOLDER_SHORT : PLACEHOLDER}
+          aria-label={inline ? 'Describe the pipeline you want' : 'Describe the pipeline you want (Ctrl+K)'}
           autoComplete="off"
           spellCheck={false}
-          className="h-9 min-w-0 flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none"
+          enterKeyHint="go"
+          className={`min-w-0 flex-1 bg-transparent text-gray-900 placeholder:text-gray-500 focus:outline-none ${inline ? 'h-10 text-[15px]' : 'h-9 text-sm'}`}
         />
-        <Button type="submit" variant="primary" disabled={nl.busy || !draft.trim()} title="Build the pipeline (Enter)">
+        <Button
+          type="submit"
+          variant="primary"
+          className={inline ? 'h-9 rounded-[10px] px-3' : undefined}
+          disabled={nl.busy || !draft.trim()}
+          title="Build the pipeline (Enter)"
+        >
           <Send />
-          <span className="hidden sm:inline">Build</span>
+          <span className={inline ? '' : 'hidden sm:inline'}>Build</span>
         </Button>
       </form>
       <div aria-live="polite">
