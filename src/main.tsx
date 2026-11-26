@@ -7,6 +7,7 @@ import '@xyflow/react/dist/style.css';
 import React, { lazy, Suspense } from 'react';
 import { MotionConfig } from 'framer-motion';
 import { TitleTooltips } from './components/ui/TitleTooltips';
+import { Toaster } from './components/ui/sonner';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { wantsMobileUi } from './utils/platform';
@@ -39,6 +40,8 @@ const render = () =>
         )}
         {/* Every `title` shows as the app's own tooltip, not the system's. */}
         <TitleTooltips />
+        {/* In-app feedback; system notifications are only for work that finishes while the user is away. */}
+        <Toaster mobile={mobile} />
       </MotionConfig>
     </React.StrictMode>
   );

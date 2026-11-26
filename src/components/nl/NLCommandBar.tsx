@@ -57,9 +57,12 @@ export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWork
     >
       <form
         onSubmit={onSubmit}
-        className={`flex items-center gap-2 border border-gray-200 bg-white focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 ${
-          // Phones: a slim field with a compact send icon; corners match the Run button.
-          inline ? 'rounded-[14px] py-1 pl-3 pr-1 shadow-sm' : 'rounded-lg p-1.5 shadow-sm'
+        className={`flex items-center gap-2 border border-gray-200 bg-white ${
+          // Phones: a slim field with a compact Build button; corners match the Run button, and focus is shadcn's
+          // quiet border and soft halo rather than a double teal ring.
+          inline
+            ? 'rounded-[14px] py-1 pl-3 pr-1 shadow-sm transition-[border-color,box-shadow] focus-within:border-gray-400 focus-within:ring-[3px] focus-within:ring-gray-400/25'
+            : 'rounded-lg p-1.5 shadow-sm focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30'
         }`}
       >
         <Sparkles className="ml-2 size-4 shrink-0 text-teal-600" aria-hidden />

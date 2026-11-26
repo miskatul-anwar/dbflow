@@ -9,11 +9,11 @@ import { useWorkspaceTabs, type TabStatus } from '../hooks/useWorkspaceTabs';
 import { useModelNaming } from '../hooks/useModelNaming';
 import { modelNamingAvailable } from '../services/naming/userNames';
 import { useTheme } from '../theme/theme';
-import { setWorkspaceNameResolver } from '../services/notify';
+import { setActiveWorkspace, setWorkspaceNameResolver, toast } from '../services/notify';
 import { clearCachedResult } from '../utils/resultCache';
 import { MobileWorkspace } from './MobileWorkspace';
 import { ConfirmSheet, WorkspaceForm, WorkspacesSheet } from './WorkspaceSheets';
-import { Sheet, Switch, Toast, type ToastMessage } from './ui';
+import { Sheet, Switch } from './ui';
 
 type Dialog =
   | { kind: 'workspaces' }
@@ -30,16 +30,17 @@ export default function MobileApp() {
   const { tabs, activeId, nextDefaultName, status, addTab, closeTab, renameTab, setTabColor, suggestTitle, selectTab, setStatus } =
     useWorkspaceTabs();
   const [dialog, setDialog] = useState<Dialog | null>({ kind: 'first' });
-  const [toast, setToast] = useState<ToastMessage | null>(null);
   const [aiNames, setAiNames] = useModelNaming();
   const { theme, toggle: toggleTheme } = useTheme();
-  const say = useCallback((text: string, error = false) => setToast({ id: Date.now(), text, error }), []);
+  // In-app feedback on what the user just did; run outcomes go through notify(), which picks toast or system notification.
+  const say = useCallback((text: string, error = false) => toast(error ? 'error' : 'info', text), []);
   const done = useCallback(() => setDialog(null), []);
 
   // System notifications name the workspace they are about.
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
   useEffect(() => setWorkspaceNameResolver(id => tabsRef.current.find(t => t.id === id)?.title), []);
+  useEffect(() => setActiveWorkspace(activeId), [activeId]);
 
   const onStatus = useCallback((id: string, s: TabStatus) => setStatus(id, s), [setStatus]);
 
@@ -75,6 +76,7 @@ export default function MobileApp() {
           onSuggestTitle={suggestTitle}
           onWorkspaces={() => setDialog({ kind: 'workspaces' })}
           onSettings={() => setDialog({ kind: 'settings' })}
+          onActivate={() => selectTab(tab.id)}
         />
       ))}
 
@@ -204,7 +206,6 @@ export default function MobileApp() {
         />
       )}
 
-      <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
 }

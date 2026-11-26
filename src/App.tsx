@@ -24,7 +24,7 @@ import { DEFAULT_PALETTE_WIDTH, isListMode, usePaletteResize } from './hooks/use
 import { IconButton } from './components/ui/button';
 import { useWorkflowGraph, type WorkflowSnapshot, buildChainEdges, nodePosition } from './hooks/useWorkflowGraph';
 import { Logger } from './services/utils/logger';
-import { notify, setWorkspaceNameResolver } from './services/notify';
+import { notify, setActiveWorkspace, setWorkspaceNameResolver, toast, type ToastAction } from './services/notify';
 import { OPERATIONS } from './config/operations';
 import { validateSequence } from './utils/workflowValidation';
 import { clearCachedResult, loadCachedResult, saveCachedResult } from './utils/resultCache';
@@ -72,10 +72,17 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
     else if (level === 'error') logger.error(message, undefined, category);
     else logger.info(level === 'warning' ? `[WARNING] ${message}` : message, undefined, category);
 
-    // The system notification centre gets what the user needs to know: a run's result and errors that stopped an
-    // action. Warnings and routine confirmations (files added, workflow saved, steps added by a request) stay in the
-    // log; the Files panel and the canvas already show them.
-    if (level === 'error' || (level === 'success' && category === 'EXECUTION')) notify(level, message, tabId);
+    // Errors that stopped what the user just did are toasts. Warnings and routine confirmations (files added,
+    // workflow saved, steps added by a request) stay in the log; the Files panel and the canvas already show them.
+    // A run's outcome goes through reportOutcome instead.
+    if (level === 'error') toast('error', message);
+  }, []);
+
+  // A run's outcome: a toast when the user is looking, a system notification when they are away.
+  const reportOutcome = useCallback((level: 'success' | 'error', message: string, action?: ToastAction) => {
+    if (level === 'success') logger.success(message, undefined, 'EXECUTION');
+    else logger.error(message, undefined, 'EXECUTION');
+    notify(level, message, tabId, { action });
   }, [tabId]);
 
   // ----- workflow graph ------------------------------------------------------
@@ -162,7 +169,13 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
         if (result?.success) {
           setProcessedResults(result);
           saveCachedResult(result, tabId);
-          logMessage('success', `Pipeline completed for ${files.length} table(s)`, 'EXECUTION');
+          const autoOpen = openOutputWhenDone.current && activeRef.current;
+          // When the results do not open by themselves, the toast offers to open them.
+          reportOutcome(
+            'success',
+            `Pipeline completed for ${files.length} table(s)`,
+            !autoOpen && activeRef.current ? { label: 'View results', onClick: () => navigateToOutput(result) } : undefined,
+          );
           if (openOutputWhenDone.current) {
             openOutputWhenDone.current = false;
             if (activeRef.current) navigateToOutput(result);
@@ -170,16 +183,17 @@ function Workspace({ tabId, active, onStatus, onSuggestTitle }: WorkspaceProps) 
           }
         } else {
           openOutputWhenDone.current = false;
-          logMessage('error', `Processing failed: ${result?.error ?? 'unknown error'}`, 'EXECUTION');
+          // A run the user cancelled needs no message.
+          if (!/cancel/i.test(result?.error ?? '')) reportOutcome('error', `Processing failed: ${result?.error ?? 'unknown error'}`);
         }
         return result;
       } catch (err) {
         openOutputWhenDone.current = false;
-        logMessage('error', `Execution error: ${(err as Error).message}`, 'EXECUTION');
+        reportOutcome('error', `Execution error: ${(err as Error).message}`);
         return null;
       }
     },
-    [logMessage, navigateToOutput, processFiles, sqlDialect, tabId],
+    [logMessage, navigateToOutput, processFiles, reportOutcome, sqlDialect, tabId],
   );
 
   const hasFiles = uploadedFiles.length > 0;
@@ -473,6 +487,7 @@ function AppShell() {
   useEffect(() => {
     setWorkspaceNameResolver(id => tabsRef.current.find(t => t.id === id)?.title);
   }, []);
+  useEffect(() => setActiveWorkspace(activeId), [activeId]);
 
   const finishClose = useCallback(
     (id: string, replacementName?: string) => {

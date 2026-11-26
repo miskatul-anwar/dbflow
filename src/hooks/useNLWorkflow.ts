@@ -6,7 +6,7 @@
  * node at a time.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { notify } from '../services/notify';
+import { toast } from '../services/notify';
 import { OPERATIONS } from '../config/operations';
 import { resolve, NullProvider, type EmbeddingProvider, type Resolution } from '../services/nlp/workflow';
 import { createAppProvider } from '../services/nlp/workflow/workerExtractor';
@@ -146,7 +146,7 @@ export function useNLWorkflow({ graph, run, hasFiles, workspaceId, onOptions, pr
       if (res.plan.length === 0) return;
       const known = res.plan.filter(p => OPERATIONS[p]);
       if (known.length !== res.plan.length || new Set(known).size !== known.length) {
-        notify('error', 'That request produced an invalid pipeline. Nothing was changed.', workspaceId);
+        toast('error', 'That request produced an invalid pipeline. Nothing was changed.');
         return;
       }
       const before = graph.serializeSnapshot();
@@ -155,7 +155,7 @@ export function useNLWorkflow({ graph, run, hasFiles, workspaceId, onOptions, pr
       if (mode === 'extend' && placed.length > 0) {
         const ext = extensionFor(placed, res.plan);
         if (ext === null) {
-          notify('error', 'This request cannot extend the current workflow. Use Replace.', workspaceId);
+          toast('error', 'This request cannot extend the current workflow. Use Replace.');
           return;
         }
         toAdd = ext;
@@ -164,10 +164,20 @@ export function useNLWorkflow({ graph, run, hasFiles, workspaceId, onOptions, pr
       }
       graph.addOperationsBatch(toAdd);
       if (res.options.dialect) onOptions?.(res.options);
-      // System notifications cannot carry an in-app button, so undo lives in the command bar.
+      // Undo is offered in the toast and stays in the command bar until the next build.
       setUndoSnapshot(before);
-      notify('success', `Pipeline built: ${res.plan.length} steps`, workspaceId);
       if (runAfter) pendingRun.current = res.plan.length;
+      // With Apply & Run the run's own outcome follows, so the build is not announced separately.
+      else
+        toast('success', `Pipeline built: ${res.plan.length} steps`, {
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              graph.replaceGraph(before.nodes, before.edges, before.nextId);
+              setUndoSnapshot(null);
+            },
+          },
+        });
       setResolution(null);
     },
     [graph, onOptions, workspaceId],
@@ -179,7 +189,7 @@ export function useNLWorkflow({ graph, run, hasFiles, workspaceId, onOptions, pr
     if (graph.placedOperationLabels.length >= pendingRun.current) {
       pendingRun.current = null;
       if (hasFiles) run();
-      else notify('error', 'Upload a data file to run the pipeline.', workspaceId);
+      else toast('error', 'Upload a data file to run the pipeline.');
     }
   }, [graph.nodes, graph.placedOperationLabels.length, hasFiles, run, workspaceId]);
 

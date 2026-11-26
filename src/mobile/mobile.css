@@ -453,50 +453,6 @@
   font-size: 17px;
   font-weight: 600;
 }
-.m-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--m-muted);
-  overflow: hidden;
-}
-.m-bar > i {
-  display: block;
-  height: 100%;
-  background: var(--m-accent);
-  transition: width 0.3s ease;
-}
-.m-progress-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-.m-progress-head b {
-  font-variant-numeric: tabular-nums;
-}
-.m-progress-msg {
-  font-size: 13px;
-  color: var(--m-ink-3);
-  margin: 8px 0 14px;
-  min-height: 36px;
-}
-.m-phase-list {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  margin-bottom: 16px;
-  font-size: 12px;
-  color: var(--m-ink-3);
-}
-.m-phase-list span {
-  border-top: 3px solid var(--m-line);
-  padding-top: 4px;
-}
-.m-phase-list .m-on {
-  border-top-color: var(--phase);
-  color: var(--m-ink);
-  font-weight: 600;
-}
 
 /* ---- Results ---------------------------------------------------------------------------------- */
 .m-summary {
@@ -687,22 +643,6 @@
   background: var(--m-on-accent);
   transform: translateX(20px);
 }
-.m-toast {
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(var(--m-safe-bottom) + 72px);
-  z-index: 50;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--m-ink);
-  color: var(--m-surface);
-  font-size: 14px;
-}
-.m-toast.m-error {
-  background: var(--m-danger);
-  color: var(--m-on-danger);
-}
 
 @media (prefers-reduced-motion: reduce) {
   .m-app * {
@@ -813,17 +753,149 @@
 }
 .m-runpanel {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(var(--m-safe-bottom) + 80px);
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--m-safe-bottom) + 88px);
   z-index: 30;
-  padding: 12px 16px;
+  padding: 14px 14px 12px;
   background: var(--m-surface);
-  border-top: 1px solid var(--m-line);
-  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--m-line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.06);
 }
-.m-runpanel .m-phase-list {
-  margin-bottom: 10px;
+.m-run-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.m-run-spin {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--phase);
+  background: color-mix(in srgb, var(--phase) 12%, transparent);
+}
+.m-run-spin svg {
+  animation: m-spin 0.9s linear infinite;
+}
+@keyframes m-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.m-run-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.m-run-title strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--m-ink);
+}
+.m-run-title span {
+  font-size: 12px;
+  color: var(--m-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.m-run-title b {
+  font-weight: 600;
+  color: var(--m-ink);
+}
+.m-app .m-run-cancel {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--m-line);
+  background: var(--m-surface);
+  color: var(--m-ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+.m-run-bar {
+  height: 4px;
+  margin: 12px 0 8px;
+  border-radius: 999px;
+  background: var(--m-muted);
+  overflow: hidden;
+}
+.m-run-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--phase);
+}
+.m-run-msg {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--m-ink);
+  white-space: nowrap;
+}
+.m-run-msg span {
+  flex-shrink: 0;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-run-msg small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--m-ink-3);
+}
+.m-run-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.m-run-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--m-ink-3);
+  white-space: nowrap;
+}
+.m-run-dot {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--m-line);
+  color: #fff;
+}
+.m-run-steps li[data-state='done'] .m-run-dot {
+  background: var(--phase);
+  border-color: var(--phase);
+}
+.m-run-steps li[data-state='current'] {
+  color: var(--m-ink);
+  font-weight: 600;
+}
+.m-run-steps li[data-state='current'] .m-run-dot {
+  border-color: var(--phase);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--phase) 22%, transparent);
+  background: radial-gradient(circle, var(--phase) 0 3px, transparent 3.5px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .m-run-spin svg {
+    animation: none;
+  }
 }
 
 /* ---- Tablets ---------------------------------------------------------------------------------- */
@@ -879,8 +951,7 @@
     max-width: none;
   }
   .m-cta,
-  .m-runpanel,
-  .m-toast {
+  .m-runpanel {
     left: calc(var(--m-rail) + max(12px, (100% - var(--m-rail) - 1040px) / 2));
     right: max(12px, calc((100% - var(--m-rail) - 1040px) / 2));
     bottom: calc(var(--m-safe-bottom) + 16px);
@@ -925,3 +996,9 @@
 .nl-inline > div > div button {
   border-radius: 10px;
 }
+/* The field draws its own focus ring (border and a soft halo), so its input does not add the phone's keyboard-focus
+   outline as well: that drew a second, black rectangle inside the field. */
+.nl-inline input:focus-visible {
+  outline: none;
+}
+

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.0] - 2026-11-26
+
+### Changed
+
+- Toasts and system notifications now have separate jobs. Toasts (shadcn's Sonner, on desktop and Android) answer
+  what you just did: a pipeline built from a request (with **Undo**), a file that could not be read, a check that
+  stopped a run. The same message replaces itself instead of stacking, and at most three show at once. System
+  notifications are only for a run that finishes or fails while you are away from DBFlow (another app, minimised,
+  phone in the background). A run that finishes while you are looking is a toast; one in another workspace names that
+  workspace and offers **View** (Android) or **View results** (desktop). Errors are no longer shown twice, and a run
+  you cancel raises nothing.
+- Android: the run progress is a floating card. It shows the phase with a spinner, the percent and elapsed time, a bar
+  in the phase's colour, what the engine is doing to which table, and a four-step phase tracker, with a compact
+  Cancel button.
+- Android: the request field uses a quiet focus style (darker border and a soft halo).
+
+### Fixed
+
+- Android: notifications show the DBFlow logo. The status-bar icon is a white silhouette of the logo and the
+  notification carries the full-colour logo; before, Android fell back to a generic "i" icon.
+- Android: focusing the request field no longer draws a black rectangle inside it.
+- Android: the "nothing to run" message no longer mentions goals, which were removed in 6.7.3.
+
 ## [6.7.3] - 2026-11-26
 
 ### Changed
