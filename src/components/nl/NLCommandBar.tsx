@@ -5,12 +5,15 @@ import { dependencyClosure } from '../../services/nlp/workflow/planner';
 import { extensionFor, type NLWorkflow } from '../../hooks/useNLWorkflow';
 
 const PLACEHOLDER = 'Describe a pipeline, e.g. “Convert it to 1NF”';
+/** Narrow screens: short enough not to be cut off. */
+const PLACEHOLDER_SHORT = 'e.g. “Convert it to 1NF”';
 
 /**
  * Text box that turns a sentence into a pipeline: shows the plan as chips first,
  * then Apply / Apply & Run. Dimmed chips are dependencies added automatically.
+ * `inline` lays it out in the page flow (the Android Pipeline screen) instead of floating over the canvas.
  */
-export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: boolean }) {
+export function NLCommandBar({ nl, active = true, inline = false }: { nl: NLWorkflow; active?: boolean; inline?: boolean }) {
   // Each workspace tab has its own bar, so ids must be unique per instance.
   const inputId = `nl-command-input-${useId().replace(/:/g, '')}`;
   const [draft, setDraft] = useState('');
@@ -46,12 +49,19 @@ export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: b
   );
 
   const canExtend = res && nl.hasNodes ? extensionFor(nl.placed, res.plan) !== null : false;
+  // Touch screens get full-size controls (48 px targets) and the Build label at every width.
+  const btn = inline ? 'md' : 'sm';
 
   return (
-    <div className="absolute left-1/2 top-3 z-20 w-[min(720px,calc(100%-2rem))] -translate-x-1/2" role="search">
+    <div
+      className={inline ? 'nl-inline relative w-full' : 'absolute left-1/2 top-3 z-20 w-[min(720px,calc(100%-2rem))] -translate-x-1/2'}
+      role="search"
+    >
       <form
         onSubmit={onSubmit}
-        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-1.5 shadow-sm focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30"
+        className={`flex items-center gap-2 border border-gray-200 bg-white focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 ${
+          inline ? 'rounded-2xl p-1.5 pl-1 shadow-md' : 'rounded-lg p-1.5 shadow-sm'
+        }`}
       >
         <Sparkles className="ml-2 size-4 shrink-0 text-teal-600" aria-hidden />
         <input maxLength={1000}
@@ -59,21 +69,28 @@ export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: b
           type="text"
           value={draft}
           onChange={onChange}
-          placeholder={PLACEHOLDER}
-          aria-label="Describe the pipeline you want (Ctrl+K)"
+          placeholder={inline ? PLACEHOLDER_SHORT : PLACEHOLDER}
+          aria-label={inline ? 'Describe the pipeline you want' : 'Describe the pipeline you want (Ctrl+K)'}
           autoComplete="off"
           spellCheck={false}
-          className="h-9 min-w-0 flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none"
+          enterKeyHint="go"
+          className={`min-w-0 flex-1 bg-transparent text-gray-900 placeholder:text-gray-500 focus:outline-none ${inline ? 'h-12 text-base' : 'h-9 text-sm'}`}
         />
-        <Button type="submit" variant="primary" disabled={nl.busy || !draft.trim()} title="Build the pipeline (Enter)">
+        <Button
+          type="submit"
+          variant="primary"
+          className={inline ? 'h-12 rounded-xl px-4' : undefined}
+          disabled={nl.busy || !draft.trim()}
+          title="Build the pipeline (Enter)"
+        >
           <Send />
-          <span className="hidden sm:inline">Build</span>
+          <span className={inline ? '' : 'hidden sm:inline'}>Build</span>
         </Button>
       </form>
       <div aria-live="polite">
         {nl.canUndoBuild && !res && !nl.busy && (
           <div className="mt-1.5 flex justify-end">
-            <Button size="sm" onClick={nl.undoBuild} title="Restore the canvas as it was before the last build">
+            <Button size={btn} onClick={nl.undoBuild} title="Restore the canvas as it was before the last build">
               Undo last build
             </Button>
           </div>
@@ -114,11 +131,11 @@ export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: b
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {nl.hasNodes ? (
                     <>
-                      <Button variant="primary" size="sm" onClick={() => nl.apply(res, { run: false, mode: 'replace' })}>
+                      <Button variant="primary" size={btn} onClick={() => nl.apply(res, { run: false, mode: 'replace' })}>
                         Replace workflow
                       </Button>
                       <Button
-                        size="sm"
+                        size={btn}
                         disabled={!canExtend}
                         title={canExtend ? 'Append the missing steps' : 'The current workflow cannot simply be extended'}
                         onClick={() => nl.apply(res, { run: false, mode: 'extend' })}
@@ -127,19 +144,19 @@ export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: b
                       </Button>
                     </>
                   ) : (
-                    <Button variant="primary" size="sm" onClick={() => nl.apply(res, { run: false })}>
+                    <Button variant="primary" size={btn} onClick={() => nl.apply(res, { run: false })}>
                       Apply
                     </Button>
                   )}
                   <Button
-                    size="sm"
+                    size={btn}
                     disabled={!nl.hasFiles}
                     title={nl.hasFiles ? 'Build the pipeline and run it' : 'Upload a data file first'}
                     onClick={() => nl.apply(res, { run: true, mode: nl.hasNodes && canExtend ? 'extend' : 'replace' })}
                   >
                     Apply &amp; Run
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={nl.dismiss}>
+                  <Button variant="ghost" size={btn} onClick={nl.dismiss}>
                     Cancel
                   </Button>
                 </div>
@@ -150,14 +167,14 @@ export function NLCommandBar({ nl, active = true }: { nl: NLWorkflow; active?: b
                 {res.candidates.length > 0 && res.confidence === 'low' && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {res.candidates.map(c => (
-                      <Button key={c.operation} size="sm" onClick={() => void nl.pickCandidate(c.operation)}>
+                      <Button key={c.operation} size={btn} onClick={() => void nl.pickCandidate(c.operation)}>
                         {c.operation}
                       </Button>
                     ))}
                   </div>
                 )}
                 <div className="mt-3">
-                  <Button variant="ghost" size="sm" onClick={nl.dismiss}>
+                  <Button variant="ghost" size={btn} onClick={nl.dismiss}>
                     Close
                   </Button>
                 </div>

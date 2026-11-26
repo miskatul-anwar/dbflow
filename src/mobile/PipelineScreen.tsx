@@ -2,8 +2,8 @@ import { useRef, useState } from 'react';
 import { Check, FolderOpen, Redo2, Save, Undo2 } from 'lucide-react';
 import { OPERATIONS } from '../config/operations';
 import type { NLWorkflow } from '../hooks/useNLWorkflow';
-import { GOALS, PHASES, goalOf, planForGoal, phaseOf, type Phase } from './pipeline';
-import { NLPanel } from './NLPanel';
+import { PHASES, phaseOf, type Phase } from './pipeline';
+import { NLCommandBar } from '../components/nl/NLCommandBar';
 import { isTauriMobile } from '../utils/platform';
 
 export const PHASE_COLOR: Record<Phase, string> = {
@@ -32,7 +32,6 @@ export function PipelineScreen({ pipeline, nl }: { pipeline: PipelineControls; n
   const [filter, setFilter] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
   const { steps } = pipeline;
-  const current = goalOf(steps);
   const all = Object.keys(OPERATIONS);
   const q = filter.trim().toLowerCase();
   const matches = (op: string) => !q || op.toLowerCase().includes(q) || OPERATIONS[op].description.toLowerCase().includes(q);
@@ -41,6 +40,7 @@ export function PipelineScreen({ pipeline, nl }: { pipeline: PipelineControls; n
     // Two columns on a wide tablet (the plan beside its steps), one on a phone.
     <div className="m-pipe">
       <div className="m-pipe-plan">
+      <NLCommandBar nl={nl} inline active={false} />
       <div className="m-group m-toolbar" role="toolbar" aria-label="Pipeline">
         <button onClick={pipeline.undo} disabled={!pipeline.canUndo}>
           <Undo2 size={20} /> Undo
@@ -67,24 +67,6 @@ export function PipelineScreen({ pipeline, nl }: { pipeline: PipelineControls; n
         }}
       />
 
-      <div className="m-label">Goal</div>
-      <div className="m-group" role="radiogroup" aria-label="Goal">
-        {GOALS.map(g => {
-          const plan = planForGoal(g);
-          return (
-            <button key={g.id} className="m-row" role="radio" aria-checked={current?.id === g.id} onClick={() => pipeline.setSteps(plan)}>
-              <span className="m-radio" aria-hidden />
-              <span className="m-row-text">
-                <strong>{g.title}</strong>
-              </span>
-              <span className="m-row-end">{plan.length}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="m-label">Describe</div>
-      <NLPanel nl={nl} />
       </div>
 
       <div className="m-pipe-steps">
